@@ -6,7 +6,6 @@
  */
 
 #include "FillPathImplementation.h"
-#include <AK/Format.h>
 #include <AK/Function.h>
 #include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Path.h>
@@ -174,7 +173,7 @@ void Gfx::AntiAliasingPainter::draw_cubic_bezier_curve(const FloatPoint& control
 
 void Gfx::AntiAliasingPainter::draw_circle(IntPoint center, int radius, Color color)
 {
-    draw_ellipse_part(center, radius, radius, color, true, false);
+    draw_ellipse_part(center, radius, radius, color, false);
 }
 
 void Gfx::AntiAliasingPainter::draw_ellipse(IntRect a_rect, Color color)
@@ -183,13 +182,14 @@ void Gfx::AntiAliasingPainter::draw_ellipse(IntRect a_rect, Color color)
     int radius_a = a_rect.width() / 2;
     int radius_b = a_rect.height() / 2;
     // Draw top/bottom of ellipse
-    draw_ellipse_part(center, radius_a, radius_b, color, true, false);
     // Draw left, center, right of ellipse
+    // color.set_alpha(50);
     if (radius_a != radius_b)
-        draw_ellipse_part(center, radius_b, radius_a, color, false, true);
+        draw_ellipse_part(center, radius_b, radius_a, color, true);
+    draw_ellipse_part(center, radius_a, radius_b, color, false);
 }
 
-void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, int radius_b, Color color, bool fill_remaining_pixels, bool flip_x_and_y)
+void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, int radius_b, Color color, bool flip_x_and_y)
 {
     /*
       Algorithm from: https://cs.uwaterloo.ca/research/tr/1984/CS-84-38.pdf
@@ -261,7 +261,7 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
         while (min_squared_error < 0) {
             y += prediction_overshot;
             previous_error = min_squared_error;
-            min_squared_error += y + y + prediction_overshot;
+            min_squared_error += y + y - prediction_overshot;
         }
 
         if (min_squared_error + previous_error > 0)
@@ -270,6 +270,12 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
 
     auto correct = [&] {
         int error = y - y_hat;
+
+        // // FIXME: The alpha values for the edges are too low, reducing the error
+        // // here works has a quick fix, but is probably not the right place.
+        // // (This issue seems to exist in the base algorithm)
+        // error /= 4;
+
         delta2_y += error;
         delta_y += error;
     };
@@ -281,7 +287,7 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
             swap(x, y);
         auto pixel_colour = color;
         pixel_colour.set_alpha(alpha);
-        m_underlying_painter.set_pixel(center + IntPoint { x, y }, pixel_colour, alpha <= 255);
+        m_underlying_painter.set_pixel(center + IntPoint { x, y }, pixel_colour, true);
     };
 
     auto fill = [&](int x, int ymax, int ymin, int alpha) {
@@ -291,7 +297,19 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
         }
     };
 
+    // auto xfill = [&](int y, int xmax, int xmin, int alpha) {
+    //     while (xmin <= xmax) {
+    //         pixel(xmin, y, alpha);
+    //         xmin += 1;
+    //     }
+    // };
+
+    bool fst = false;
     auto symmetric_pixel = [&](int x, int y, int alpha) {
+        if (fst) {
+          fst =false;
+          return;
+        }
         pixel(x, y, alpha);
         pixel(x, -y - 1, alpha);
         pixel(-x - 1, -y - 1, alpha);
@@ -304,10 +322,15 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
         }
     };
 
+    // These are calculated incrementally (as it is possibly a tiny bit faster)
+    // i * b_squared
+    int ib_squared = 0;
+    // q * a_squared
+    int qa_squared = q * a_squared;
+
     auto in_symmetric_region = [&] {
-        // FIXME: The condition for the ellipse can be calculated incrementally
-        // in the loop rather than with multiplication here (could be faster)
-        return is_circle ? i < q : b_squared * i < a_squared * q;
+        // Main fix two stop cond here
+        return is_circle ? i < q : ib_squared <= qa_squared;
     };
 
     // Draws a 8 octants for a circle or 4 quadrants for a (partial) elipse
@@ -320,35 +343,50 @@ void Gfx::AntiAliasingPainter::draw_ellipse_part(IntPoint center, int radius_a, 
         if (edge_intersection_area >= 0) {
             // Single pixel on perimeter
             symmetric_pixel(i, q, (edge_intersection_area + old_area) / 2);
-            fill(i, q - 1, -q, intensity);
-            fill(-i - 1, q - 1, -q, intensity);
+            // if (flip_x_and_y || is_circle) {
+              fill(i, q - 1, -q, intensity);
+              fill(-i - 1, q - 1, -q, intensity);
+            // } else {
+            //   // xfill(-q - 1, i - 1, -i, intensity);
+            //   // xfill(q, i - 1, -i, intensity);
+            // }
         } else {
             // Two pixels on perimeter
             edge_intersection_area += subpixel_resolution;
             symmetric_pixel(i, q, old_area / 2);
             q -= 1;
-            fill(i, q - 1, -q, intensity);
-            fill(-i - 1, q - 1, -q, intensity);
+            qa_squared -= a_squared;
+            // if (flip_x_and_y || is_circle) {
+              fill(i, q - 1, -q, intensity);
+              fill(-i - 1, q - 1, -q, intensity);
+            // }
             if (in_symmetric_region()) {
                 symmetric_pixel(i, q, (edge_intersection_area + subpixel_resolution) / 2);
                 if (is_circle) {
                     fill(q, i - 1, -i, intensity);
                     fill(-q - 1, i - 1, -i, intensity);
+                } else if (!flip_x_and_y) {
+                    // TODO
+                    // xfill(-q - 1, i - 1, -i, intensity);
+                    // xfill(q, i - 1, -i, intensity);
+                    // xfill(-q - 1, i - 1, -i, intensity);
+                    // xfill(q + 1, i + 1, -i - 1, intensity);
                 }
             } else {
                 edge_intersection_area += subpixel_resolution;
             }
         }
         i += 1;
+        ib_squared += b_squared;
     }
 
-    if (fill_remaining_pixels) {
+    // Main fix 1: Only do this for circles
+    if (is_circle) {
         int alpha = edge_intersection_area / 2;
-        int x = is_circle ? q : i - 1;
-        pixel(x, q, alpha);
-        pixel(-x - 1, q, alpha);
-        pixel(-x - 1, -q - 1, alpha);
-        pixel(x, -q - 1, alpha);
+        pixel(q, q, alpha);
+        pixel(-q - 1, q, alpha);
+        pixel(-q - 1, -q - 1, alpha);
+        pixel(q, -q - 1, alpha);
     }
 }
 
