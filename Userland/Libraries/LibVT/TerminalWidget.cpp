@@ -987,7 +987,7 @@ void TerminalWidget::terminal_history_changed(int delta)
 
 void TerminalWidget::terminal_did_resize(u16 columns, u16 rows)
 {
-    auto pixel_size = widget_size_for_font(font());
+    auto pixel_size = widget_size_for_font(font(), m_terminal.columns(), m_terminal.rows());
     m_pixel_width = pixel_size.width();
     m_pixel_height = pixel_size.height();
 
@@ -1145,6 +1145,8 @@ void TerminalWidget::did_change_font()
     m_line_height = font().glyph_height() + m_line_spacing;
     if (!size().is_empty())
         relayout(size());
+    if (on_font_change)
+        on_font_change();
 }
 
 void TerminalWidget::clear_including_history()
@@ -1229,11 +1231,18 @@ void TerminalWidget::set_color_scheme(StringView name)
     update();
 }
 
-Gfx::IntSize TerminalWidget::widget_size_for_font(Gfx::Font const& font) const
+Gfx::IntSize TerminalWidget::recommended_min_size()
+{
+    constexpr u16 recommended_min_columns = 33;
+    constexpr u16 recommended_min_rows = 3;
+    return widget_size_for_font(font(), recommended_min_columns, recommended_min_rows);
+}
+
+Gfx::IntSize TerminalWidget::widget_size_for_font(Gfx::Font const& font, u16 columns, u16 rows) const
 {
     return {
-        (frame_thickness() * 2) + (m_inset * 2) + (m_terminal.columns() * font.glyph_width('x')) + m_scrollbar->width(),
-        (frame_thickness() * 2) + (m_inset * 2) + (m_terminal.rows() * (font.glyph_height() + m_line_spacing))
+        (frame_thickness() * 2) + (m_inset * 2) + (columns * font.glyph_width('x')) + m_scrollbar->width(),
+        (frame_thickness() * 2) + (m_inset * 2) + (rows * (font.glyph_height() + m_line_spacing))
     };
 }
 
@@ -1263,7 +1272,7 @@ constexpr Gfx::Color TerminalWidget::terminal_color_to_rgb(VT::Color color) cons
 void TerminalWidget::set_font_and_resize_to_fit(Gfx::Font const& font)
 {
     set_font(font);
-    resize(widget_size_for_font(font));
+    resize(widget_size_for_font(font, m_terminal.columns(), m_terminal.rows()));
 }
 
 // Used for sending data that was not directly typed by the user.

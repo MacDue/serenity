@@ -87,6 +87,7 @@ public:
     Function<void(StringView)> on_title_change;
     Function<void(Gfx::IntSize const&)> on_terminal_size_change;
     Function<void()> on_command_exit;
+    Function<void()> on_font_change;
 
     GUI::Menu& context_menu() { return *m_context_menu; }
 
@@ -95,6 +96,8 @@ public:
     void set_font_and_resize_to_fit(Gfx::Font const&);
 
     void set_color_scheme(StringView);
+
+    Gfx::IntSize recommended_min_size();
 
 private:
     TerminalWidget(int ptm_fd, bool automatic_size_policy);
@@ -136,7 +139,7 @@ private:
     Gfx::IntRect glyph_rect(u16 row, u16 column);
     Gfx::IntRect row_rect(u16 row);
 
-    Gfx::IntSize widget_size_for_font(Gfx::Font const&) const;
+    Gfx::IntSize widget_size_for_font(Gfx::Font const&, u16 rows, u16 columns) const;
 
     void update_cursor();
     void invalidate_cursor();

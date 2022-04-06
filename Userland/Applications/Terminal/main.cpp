@@ -295,8 +295,12 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     terminal->on_terminal_size_change = [&](auto& size) {
         window->resize(size);
     };
+    terminal->on_font_change = [&] {
+        window->set_minimum_size(terminal->recommended_min_size());
+    };
     terminal->apply_size_increments_to_window(*window);
     window->set_icon(app_icon.bitmap_for_size(16));
+    terminal->on_font_change();
 
     Config::monitor_domain("Terminal");
     TerminalChangeListener listener { terminal };
