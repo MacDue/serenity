@@ -34,7 +34,8 @@ public:
     void fill_rect_with_rounded_corners(IntRect const&, Color, int top_left_radius, int top_right_radius, int bottom_right_radius, int bottom_left_radius);
 
 private:
-    void draw_ellipse_part(IntPoint a_rect, int radius_a, int radius_b, Color, bool flip_x_and_y);
+    struct FillRange { int min_x { 0 }, max_x { 0 }, i, q; };
+    FillRange draw_ellipse_part(IntPoint a_rect, int radius_a, int radius_b, Color, bool flip_x_and_y, Optional<FillRange> previous_fillrange);
 
     enum class AntiAliasPolicy {
         OnlyEnds,
