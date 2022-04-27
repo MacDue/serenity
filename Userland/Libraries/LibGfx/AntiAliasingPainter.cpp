@@ -209,6 +209,7 @@ void Gfx::AntiAliasingPainter::draw_ellipse(IntRect a_rect, Color color)
     if (radius_a == radius_b)
         return draw_circle(center, radius_a, color);
     auto x_paint_range = draw_ellipse_part(center, radius_a, radius_b, color, false, {});
+    // FIXME: This paints some extra fill pixels that are clipped
     draw_ellipse_part(center, radius_b, radius_a, color, true, x_paint_range);
 }
 
