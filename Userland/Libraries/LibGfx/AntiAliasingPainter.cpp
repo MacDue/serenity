@@ -209,7 +209,8 @@ void Gfx::AntiAliasingPainter::draw_ellipse(IntRect a_rect, Color color)
     }
     [[maybe_unused]] auto final_point_1 = draw_ellipse_part(center, radius_a, radius_b, color, false, {});
     draw_ellipse_part(center.translated(radius_a*2*0, 0), radius_b, radius_a, color, true, final_point_1);
-
+    // final_point_1 = draw_ellipse_part(center.translated(radius_a*2*0, radius_b*2), radius_a, radius_b, color, false, {});
+    // draw_ellipse_part(center.translated(radius_a*2*0, radius_b*2), radius_b, radius_a, color, true, final_point_1);
     // IntPoint a { final_point_1.i, final_point_1.q};
     // IntPoint b { f2.q, f2.i};
 
@@ -370,25 +371,31 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
         delta_y += error;
     };
 
+    int min_fill_x = 0x7FFFFFFF;
+    int max_fill_x = 0;
     auto pixel = [&](int x, int y, int alpha) {
+        min_fill_x = min(x, min_fill_x);
+        max_fill_x = max(x, max_fill_x);
         if (alpha <= 0 || alpha > 255)
             return;
         if (flip_x_and_y)
             swap(x, y);
+
+        if (fill_range.has_value()) {
+            if (x >= fill_range->min_x && x <= fill_range->max_x) {
+                return;
+            }
+        }
         auto pixel_colour = color;
         // dbgln("{}", (alpha*255)/color.alpha());
         pixel_colour.set_alpha((alpha * color.alpha())/255);
         m_underlying_painter.set_pixel(center + IntPoint { x, y }, pixel_colour, true);
     };
 
-    int min_fill_x = 0x7FFFFFFF;
-    int max_fill_x = 0;
     auto fill = [&](int x, int ymax, int ymin, int alpha) {
-        min_fill_x = min(x, min_fill_x);
-        max_fill_x = max(x, max_fill_x);
-        auto o = color;
-        color = flip_x_and_y ? Color::NamedColor::Red : Color::NamedColor::Cyan;
-        color.set_alpha(o.alpha());
+        // auto o = color;
+        // color = flip_x_and_y ? Color::NamedColor::Red : Color::NamedColor::Cyan;
+        // color.set_alpha(o.alpha());
         while (ymin <= ymax) {
             if (flip_x_and_y && fill_range.has_value()) {
                 if (ymin >= fill_range->min_x && ymin <= fill_range->max_x) {
@@ -399,7 +406,7 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
             pixel(x, ymin, alpha);
             ymin += 1;
         }
-        color = o;
+        // color = o;
     };
 
     auto symmetric_pixel = [&](int x, int y, int alpha) {
@@ -444,7 +451,7 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
             qa_squared -= a_squared;
             fill(i, q - 1, -q, intensity);
             fill(-i - 1, q - 1, -q, intensity);
-            if (in_symmetric_region()) {
+            if (in_symmetric_region() || !is_circle) {
                 symmetric_pixel(i, q, (edge_intersection_area + subpixel_resolution) / 2);
                 if (is_circle) {
                     fill(q, i - 1, -i, intensity);
