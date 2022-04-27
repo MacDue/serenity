@@ -11,6 +11,7 @@
 
 #include "FillPathImplementation.h"
 #include <AK/Function.h>
+#include <AK/NumericLimits.h>
 #include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Path.h>
 
@@ -193,6 +194,8 @@ void Gfx::AntiAliasingPainter::draw_cubic_bezier_curve(FloatPoint const& control
 
 void Gfx::AntiAliasingPainter::draw_circle(IntPoint center, int radius, Color color)
 {
+    if (radius <= 0)
+        return;
     draw_ellipse_part(center, radius, radius, color, false, {});
 }
 
@@ -201,84 +204,16 @@ void Gfx::AntiAliasingPainter::draw_ellipse(IntRect a_rect, Color color)
     auto center = a_rect.center();
     int radius_a = a_rect.width() / 2;
     int radius_b = a_rect.height() / 2;
-    if (!radius_a || !radius_b)
+    if (radius_a <= 0 || radius_b <= 0)
         return;
-    if (radius_a == radius_b) {
-        draw_ellipse_part(center, radius_a, radius_a, color, false, {});
-        return;
-    }
-    [[maybe_unused]] auto final_point_1 = draw_ellipse_part(center, radius_a, radius_b, color, false, {});
-    draw_ellipse_part(center.translated(radius_a*2*0, 0), radius_b, radius_a, color, true, final_point_1);
-    // final_point_1 = draw_ellipse_part(center.translated(radius_a*2*0, radius_b*2), radius_a, radius_b, color, false, {});
-    // draw_ellipse_part(center.translated(radius_a*2*0, radius_b*2), radius_b, radius_a, color, true, final_point_1);
-    // IntPoint a { final_point_1.i, final_point_1.q};
-    // IntPoint b { f2.q, f2.i};
-
-    // int end_dist = a.pixels_moved(b);
-    // if (end_dist <= 1) {
-        dbgln("Good: {}, {}", radius_a, radius_b);
-    // } else {
-    //     dbgln("Bad: {}", end_dist);
-    // }
-
-    // auto t1 = final_point_1;
-    // auto t2 = final_point_2;
-    // IntRect fill_rect;
-    // if (final_point_1.x() == final_point_2.x()) {
-    //     // m_underlying_painter.fill_rect({
-
-    //     // })
-    //     final_point_1 -= IntPoint{1, 1};
-    //     IntPoint top_corner { -final_point_1.x() - 1, -final_point_1.y() - 1 };
-    //     auto p1 = final_point_1 - top_corner;
-    //     fill_rect = IntRect{
-    //         top_corner.x(),
-    //         top_corner.y(),
-    //         p1.x() + 1, p1.y() +1
-    //     };
-    // } else if (final_point_1.y() == final_point_2.y()) {
-    //     final_point_2 -= IntPoint{1, 1};
-    //     IntPoint top_corner { -final_point_2.x() - 1, -final_point_2.y() - 1 };
-    //     auto p1 = final_point_2 - top_corner;
-    //     fill_rect = IntRect{
-    //         top_corner.x(),
-    //         top_corner.y(),
-    //         p1.x() + 1, p1.y() + 1
-    //     };
-    // } else {
-    //     if (final_point_1.x() < final_point_2.x()) {
-    //     final_point_1 -= IntPoint{0, 1};
-    //     IntPoint top_corner { -final_point_1.x() - 1, -final_point_1.y() - 1 };
-    //     auto p1 = final_point_1 - top_corner;
-    //     fill_rect = IntRect{
-    //         top_corner.x(),
-    //         top_corner.y(),
-    //         p1.x() + 1, p1.y() +1
-    //     };
-    //     } else {
-    //                 final_point_2 -= IntPoint{1, 0};
-    //     IntPoint top_corner { -final_point_2.x() - 1, -final_point_2.y() - 1 };
-    //     auto p1 = final_point_2 - top_corner;
-    //     fill_rect = IntRect{
-    //         top_corner.x(),
-    //         top_corner.y(),
-    //         p1.x() + 1, p1.y() +1
-    //     };
-    //     }
-    //     // TODO case:
-    //         // Cyan
-    //         //     Red
-    // }
-    // m_underlying_painter.fill_rect(fill_rect.translated(center), color);
-    // m_underlying_painter.set_pixel(t1 + center, Color::NamedColor::Red);
-    // m_underlying_painter.set_pixel(t2 + center, Color::NamedColor::Cyan);
-//    m_underlying_painter.set_pixel(final_point_1 + center, Color::NamedColor::DarkCyan);
-//     m_underlying_painter.set_pixel(final_point_2 + center, Color::NamedColor::DarkRed);
-
+    if (radius_a == radius_b)
+        return draw_circle(center, radius_a, color);
+    auto x_paint_range = draw_ellipse_part(center, radius_a, radius_b, color, false, {});
+    draw_ellipse_part(center, radius_b, radius_a, color, true, x_paint_range);
 }
 
-Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
-    IntPoint center, int radius_a, int radius_b, Color color, bool flip_x_and_y, Optional<Gfx::AntiAliasingPainter::FillRange> fill_range)
+Gfx::AntiAliasingPainter::Range Gfx::AntiAliasingPainter::draw_ellipse_part(
+    IntPoint center, int radius_a, int radius_b, Color color, bool flip_x_and_y, Optional<Range> x_clip)
 {
     /*
       Algorithm from: https://cs.uwaterloo.ca/research/tr/1984/CS-84-38.pdf
@@ -361,8 +296,9 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
         int error = y - y_hat;
 
         if (!is_circle) {
-            // FIXME: The alpha values for the edges are too low, reducing the error
-            // here works has a quick fix, but is probably not the right place.
+            // FIXME: For ellipses the alpha values seem too low, which
+            // can make them look overly pointy. This fixes that, though there's
+            // probably a better solution to be found.
             // (This issue seems to exist in the base algorithm)
             error /= 4;
         }
@@ -371,42 +307,27 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
         delta_y += error;
     };
 
-    int min_fill_x = 0x7FFFFFFF;
-    int max_fill_x = 0;
+    int min_paint_x = NumericLimits<int>::max();
+    int max_paint_x = NumericLimits<int>::min();
     auto pixel = [&](int x, int y, int alpha) {
-        min_fill_x = min(x, min_fill_x);
-        max_fill_x = max(x, max_fill_x);
         if (alpha <= 0 || alpha > 255)
             return;
         if (flip_x_and_y)
             swap(x, y);
-
-        if (fill_range.has_value()) {
-            if (x >= fill_range->min_x && x <= fill_range->max_x) {
-                return;
-            }
-        }
+        if (x_clip.has_value() && x_clip->contains_inclusive(x))
+            return;
+        min_paint_x = min(x, min_paint_x);
+        max_paint_x = max(x, max_paint_x);
         auto pixel_colour = color;
-        // dbgln("{}", (alpha*255)/color.alpha());
         pixel_colour.set_alpha((alpha * color.alpha())/255);
         m_underlying_painter.set_pixel(center + IntPoint { x, y }, pixel_colour, true);
     };
 
     auto fill = [&](int x, int ymax, int ymin, int alpha) {
-        // auto o = color;
-        // color = flip_x_and_y ? Color::NamedColor::Red : Color::NamedColor::Cyan;
-        // color.set_alpha(o.alpha());
         while (ymin <= ymax) {
-            if (flip_x_and_y && fill_range.has_value()) {
-                if (ymin >= fill_range->min_x && ymin <= fill_range->max_x) {
-                    ymin = fill_range->max_x + 1;
-                    if (ymin > ymax) break;
-                }
-            }
             pixel(x, ymin, alpha);
             ymin += 1;
         }
-        // color = o;
     };
 
     auto symmetric_pixel = [&](int x, int y, int alpha) {
@@ -451,7 +372,7 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
             qa_squared -= a_squared;
             fill(i, q - 1, -q, intensity);
             fill(-i - 1, q - 1, -q, intensity);
-            if (in_symmetric_region() || !is_circle) {
+            if (!is_circle || in_symmetric_region()) {
                 symmetric_pixel(i, q, (edge_intersection_area + subpixel_resolution) / 2);
                 if (is_circle) {
                     fill(q, i - 1, -i, intensity);
@@ -473,8 +394,7 @@ Gfx::AntiAliasingPainter::FillRange Gfx::AntiAliasingPainter::draw_ellipse_part(
         pixel(q, -q - 1, alpha);
     }
 
-    dbgln("{}, {}", i, q);
-    return FillRange { min_fill_x, max_fill_x, i, q };
+    return Range { min_paint_x, max_paint_x };
 }
 
 void Gfx::AntiAliasingPainter::fill_rect_with_rounded_corners(IntRect const& a_rect, Color color, int radius)
