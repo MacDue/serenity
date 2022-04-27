@@ -38,7 +38,8 @@ private:
         int min;
         int max;
 
-        inline bool contains_inclusive(int n) const {
+        inline bool contains_inclusive(int n) const
+        {
             return n >= min && n <= max;
         }
     };

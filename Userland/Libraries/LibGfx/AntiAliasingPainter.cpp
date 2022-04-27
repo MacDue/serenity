@@ -217,6 +217,9 @@ Gfx::AntiAliasingPainter::Range Gfx::AntiAliasingPainter::draw_ellipse_part(
 {
     /*
       Algorithm from: https://cs.uwaterloo.ca/research/tr/1984/CS-84-38.pdf
+
+      This method can draw a whole circle with a whole circle in one call using
+      8-way symmetry, or an ellipse in two calls using 4-way symmetry.
     */
 
     center *= m_underlying_painter.scale();
@@ -224,7 +227,7 @@ Gfx::AntiAliasingPainter::Range Gfx::AntiAliasingPainter::draw_ellipse_part(
     radius_b *= m_underlying_painter.scale();
 
     // If this is a ellipse everything can be drawn in one pass with 8 way symmetry
-    const bool is_circle = radius_a == radius_b;
+    bool const is_circle = radius_a == radius_b;
 
     // These happen to be the same here, but are treated separately in the paper:
     // intensity is the fill alpha
@@ -240,8 +243,8 @@ Gfx::AntiAliasingPainter::Range Gfx::AntiAliasingPainter::draw_ellipse_part(
     int delta_y = 0;
     int delta2_y = 0;
 
-    const int a_squared = radius_a * radius_a;
-    const int b_squared = radius_b * radius_b;
+    int const a_squared = radius_a * radius_a;
+    int const b_squared = radius_b * radius_b;
 
     // Exact and predicted values of f(i) -- the ellipse equation scaled by subpixel_resolution
     int y = subpixel_resolution * radius_b;
@@ -319,7 +322,7 @@ Gfx::AntiAliasingPainter::Range Gfx::AntiAliasingPainter::draw_ellipse_part(
         min_paint_x = min(x, min_paint_x);
         max_paint_x = max(x, max_paint_x);
         auto pixel_colour = color;
-        pixel_colour.set_alpha((alpha * color.alpha())/255);
+        pixel_colour.set_alpha((alpha * color.alpha()) / 255);
         m_underlying_painter.set_pixel(center + IntPoint { x, y }, pixel_colour, true);
     };
 
