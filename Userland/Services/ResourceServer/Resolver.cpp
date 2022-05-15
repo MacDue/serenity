@@ -67,7 +67,8 @@ ErrorOr<void> Resolver::try_load_resouce_paths()
     return {};
 }
 
-ErrorOr<void> Resolver::save_resource_paths() {
+ErrorOr<void> Resolver::save_resource_paths()
+{
     // TODO
     return {};
 }
