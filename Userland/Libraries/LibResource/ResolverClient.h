@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022, MacDue <macdue@dueutil.tech>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #pragma once
 
 #include <AK/Function.h>
