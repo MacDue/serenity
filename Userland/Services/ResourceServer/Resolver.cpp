@@ -54,9 +54,14 @@ bool Resolver::remove_resource_path(String resource_path)
     return removed;
 }
 
+static String resource_paths_txt_path()
+{
+    return String::formatted("{}/ResourcePaths.txt", Core::StandardPaths::config_directory());
+}
+
 ErrorOr<void> Resolver::try_load_resouce_paths()
 {
-    auto file = TRY(Core::Stream::File::open(String::formatted("{}/ResourcePaths.txt", Core::StandardPaths::config_directory()), Core::Stream::OpenMode::Read));
+    auto file = TRY(Core::Stream::File::open(resource_paths_txt_path(), Core::Stream::OpenMode::Read));
     auto resource_paths = TRY(Core::Stream::BufferedFile::create(move(file)));
     auto buffer = TRY(ByteBuffer::create_uninitialized(256));
     while (TRY(resource_paths->can_read_line())) {
@@ -69,7 +74,13 @@ ErrorOr<void> Resolver::try_load_resouce_paths()
 
 ErrorOr<void> Resolver::save_resource_paths()
 {
-    // TODO
+    auto file = TRY(Core::Stream::File::open(resource_paths_txt_path(), Core::Stream::OpenMode::Write));
+    constexpr char newline = '\n';
+    for (auto const& resource_path : m_resource_paths) {
+        TRY(file->write(resource_path.bytes()));
+        TRY(file->write(ReadonlyBytes { &newline, 1 }));
+    }
+    file->close();
     return {};
 }
 

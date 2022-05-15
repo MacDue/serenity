@@ -6,6 +6,7 @@
 
 #include <AK/HashMap.h>
 #include <ResourceServer/ConnectionFromClient.h>
+#include <ResourceServer/Resolver.h>
 
 namespace ResourceServer {
 
@@ -21,19 +22,19 @@ void ConnectionFromClient::die()
     s_connections.remove(client_id());
 }
 
-Messages::ResourceServer::ResolveResponse ConnectionFromClient::resolve(const AK::String&)
+Messages::ResourceServer::ResolveResponse ConnectionFromClient::resolve(const AK::String& partial_path)
 {
-    return String("");
+    return Resolver::the().resolve(partial_path);
 }
 
-Messages::ResourceServer::AddResourcePathResponse ConnectionFromClient::add_resource_path(const AK::String&)
+Messages::ResourceServer::AddResourcePathResponse ConnectionFromClient::add_resource_path(const AK::String& resource_path)
 {
-    return true;
+    return !Resolver::the().add_resource_path(resource_path).is_error();
 }
 
-Messages::ResourceServer::RemoveResourcePathResponse ConnectionFromClient::remove_resource_path(const AK::String&)
+Messages::ResourceServer::RemoveResourcePathResponse ConnectionFromClient::remove_resource_path(const AK::String& resource_path)
 {
-    return true;
+    return Resolver::the().remove_resource_path(resource_path);
 }
 
 }
