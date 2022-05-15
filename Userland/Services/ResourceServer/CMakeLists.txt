@@ -10,9 +10,8 @@ compile_ipc(ResourceClient.ipc ResourceClientEndpoint.h)
 
 set(SOURCES
     ConnectionFromClient.cpp
+    Resolver.cpp
     main.cpp
-    ResourceServerEndpoint.h
-    ResourceClientEndpoint.h
 )
 
 serenity_bin(ResourceServer)

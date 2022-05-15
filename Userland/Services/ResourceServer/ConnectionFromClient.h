@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <ResourceServer/ResourceServerEndpoint.h>
-#include <ResourceServer/ResourceClientEndpoint.h>
 #include <LibIPC/ConnectionFromClient.h>
+#include <ResourceServer/ResourceClientEndpoint.h>
+#include <ResourceServer/ResourceServerEndpoint.h>
 
 namespace ResourceServer {
 
@@ -26,6 +26,5 @@ public:
 
 private:
     explicit ConnectionFromClient(NonnullOwnPtr<Core::Stream::LocalSocket>, int client_id);
-
 };
 }
