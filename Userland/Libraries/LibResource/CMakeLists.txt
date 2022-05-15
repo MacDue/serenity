@@ -1,0 +1,6 @@
+set(SOURCES
+    ResolverClient.cpp
+)
+
+serenity_lib(LibResource resource)
+target_link_libraries(LibResource LibCore LibIPC)
