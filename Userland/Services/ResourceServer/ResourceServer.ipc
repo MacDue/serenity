@@ -1,0 +1,8 @@
+
+endpoint ResourceServer
+{
+    resolve(String partial_path) => (String full_path)
+
+    add_resource_path(String resource_path) => (bool success)
+    remove_resource_path(String resource_path) => (bool success)
+}

@@ -1,0 +1,4 @@
+endpoint ResourceClient
+{
+    resource_paths_updated() =|
+}
