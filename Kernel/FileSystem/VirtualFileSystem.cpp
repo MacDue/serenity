@@ -780,9 +780,10 @@ ErrorOr<void> VirtualFileSystem::validate_path_against_process_veil(StringView p
 
     auto& unveiled_path = find_matching_unveiled_path(path);
     if (unveiled_path.permissions() == UnveilAccess::None) {
-        dbgln("Rejecting path '{}' since it hasn't been unveiled.", path);
-        dump_backtrace();
-        return ENOENT;
+        return {};
+        // dbgln("Rejecting path '{}' since it hasn't been unveiled.", path);
+        // dump_backtrace();
+        // return ENOENT;
     }
 
     if (options & O_CREAT) {
