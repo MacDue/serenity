@@ -25,6 +25,8 @@ public:
     virtual Messages::ResourceServer::RemoveResourcePathResponse remove_resource_path(const AK::String&) override;
 
 private:
+    void notify_resource_paths_updated();
+
     explicit ConnectionFromClient(NonnullOwnPtr<Core::Stream::LocalSocket>, int client_id);
 };
 }

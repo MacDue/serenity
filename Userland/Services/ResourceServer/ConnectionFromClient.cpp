@@ -29,12 +29,26 @@ Messages::ResourceServer::ResolveResponse ConnectionFromClient::resolve(const AK
 
 Messages::ResourceServer::AddResourcePathResponse ConnectionFromClient::add_resource_path(const AK::String& resource_path)
 {
-    return !Resolver::the().add_resource_path(resource_path).is_error();
+    if (!Resolver::the().add_resource_path(resource_path).is_error()) {
+        notify_resource_paths_updated();
+        return true;
+    }
+    return false;
 }
 
 Messages::ResourceServer::RemoveResourcePathResponse ConnectionFromClient::remove_resource_path(const AK::String& resource_path)
 {
-    return Resolver::the().remove_resource_path(resource_path);
+    if (Resolver::the().remove_resource_path(resource_path)) {
+        notify_resource_paths_updated();
+        return true;
+    }
+    return false;
+}
+
+void ConnectionFromClient::notify_resource_paths_updated()
+{
+    for (auto& [_, client] : s_connections)
+        client->async_resource_paths_updated();
 }
 
 }
