@@ -4,7 +4,7 @@ list(APPEND REQUIRED_TARGETS
     arp base64 basename cat chmod chown clear comm cp cut date dd df diff dirname dmesg du echo env expr false fgrep
     file find grep groups head host hostname id ifconfig kill killall ln logout ls mkdir mount mv nproc
     pgrep pidof ping pmap ps readlink realpath reboot rm rmdir route seq shutdown sleep sort stat stty su tail test
-    touch tr true umount uname uniq uptime w wc which whoami xargs yes less
+    touch tr true umount uname uniq uptime w wc which whoami xargs yes less icontheme
 )
 list(APPEND RECOMMENDED_TARGETS
     adjtime aplay abench asctl bt checksum chres cksum copy fortune gunzip gzip init install keymap lsirq lsof lspci man mknod mktemp
@@ -235,3 +235,4 @@ target_link_libraries(xargs LibMain)
 target_link_libraries(xml LibMain LibXML)
 target_link_libraries(yes LibMain)
 target_link_libraries(zip LibArchive LibCompress LibCrypto LibMain)
+target_link_libraries(icontheme LibMain LibResource)
