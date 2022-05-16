@@ -11,19 +11,19 @@
 #include <LibIPC/MultiServer.h>
 #include <LibMain/Main.h>
 #include <ResourceServer/ConnectionFromClient.h>
-#include <ResourceServer/Resolver.h>
+#include <ResourceServer/PathResolver.h>
 
 ErrorOr<int> serenity_main(Main::Arguments)
 {
     Core::EventLoop event_loop;
     auto server = TRY(IPC::MultiServer<ResourceServer::ConnectionFromClient>::try_create());
 
-    auto& resolver = ResourceServer::Resolver::the();
-    (void)resolver.try_load_resouce_paths();
+    auto& path_resolver = ResourceServer::PathResolver::the();
+    (void)path_resolver.try_load_resouce_paths();
 
-    resolver.on_resource_paths_changed = [&] {
+    path_resolver.on_resource_paths_changed = [&] {
         event_loop.deferred_invoke([&] {
-            auto result = resolver.save_resource_paths();
+            auto result = path_resolver.save_resource_paths();
             if (result.is_error())
                 warnln("Failed to save resource paths");
         });

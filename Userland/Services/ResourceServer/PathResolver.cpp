@@ -10,17 +10,17 @@
 #include <LibCore/File.h>
 #include <LibCore/StandardPaths.h>
 #include <LibCore/Stream.h>
-#include <ResourceServer/Resolver.h>
+#include <ResourceServer/PathResolver.h>
 
 namespace ResourceServer {
 
-Resolver& Resolver::the()
+PathResolver& PathResolver::the()
 {
-    static Resolver the_resolver;
-    return the_resolver;
+    static PathResolver the_PathResolver;
+    return the_PathResolver;
 }
 
-String Resolver::resolve(StringView partial_path) const
+String PathResolver::resolve(StringView partial_path) const
 {
     if (partial_path.starts_with('/'))
         return partial_path;
@@ -34,7 +34,7 @@ String Resolver::resolve(StringView partial_path) const
     return LexicalPath::join("/res", partial_path).string();
 }
 
-ErrorOr<void> Resolver::add_resource_path(String resource_path)
+ErrorOr<void> PathResolver::add_resource_path(String resource_path)
 {
     if (m_resource_paths.find(resource_path) != m_resource_paths.end()) {
         return {};
@@ -44,7 +44,7 @@ ErrorOr<void> Resolver::add_resource_path(String resource_path)
     return {};
 }
 
-bool Resolver::remove_resource_path(String resource_path)
+bool PathResolver::remove_resource_path(String resource_path)
 {
     bool removed = m_resource_paths.remove_first_matching([&](auto& path) {
         return path == resource_path;
@@ -59,7 +59,7 @@ static String resource_paths_txt_path()
     return String::formatted("{}/ResourcePaths.txt", Core::StandardPaths::config_directory());
 }
 
-ErrorOr<void> Resolver::try_load_resouce_paths()
+ErrorOr<void> PathResolver::try_load_resouce_paths()
 {
     auto file = TRY(Core::Stream::File::open(resource_paths_txt_path(), Core::Stream::OpenMode::Read));
     auto resource_paths = TRY(Core::Stream::BufferedFile::create(move(file)));
@@ -72,7 +72,7 @@ ErrorOr<void> Resolver::try_load_resouce_paths()
     return {};
 }
 
-ErrorOr<void> Resolver::save_resource_paths()
+ErrorOr<void> PathResolver::save_resource_paths()
 {
     auto file = TRY(Core::Stream::File::open(resource_paths_txt_path(), Core::Stream::OpenMode::Write));
     constexpr char newline = '\n';

@@ -6,7 +6,7 @@
 
 #include <AK/HashMap.h>
 #include <ResourceServer/ConnectionFromClient.h>
-#include <ResourceServer/Resolver.h>
+#include <ResourceServer/PathResolver.h>
 
 namespace ResourceServer {
 
@@ -24,12 +24,12 @@ void ConnectionFromClient::die()
 
 Messages::ResourceServer::ResolveResponse ConnectionFromClient::resolve(const AK::String& partial_path)
 {
-    return Resolver::the().resolve(partial_path);
+    return PathResolver::the().resolve(partial_path);
 }
 
 Messages::ResourceServer::AddResourcePathResponse ConnectionFromClient::add_resource_path(const AK::String& resource_path)
 {
-    if (!Resolver::the().add_resource_path(resource_path).is_error()) {
+    if (!PathResolver::the().add_resource_path(resource_path).is_error()) {
         notify_resource_paths_updated();
         return true;
     }
@@ -38,7 +38,7 @@ Messages::ResourceServer::AddResourcePathResponse ConnectionFromClient::add_reso
 
 Messages::ResourceServer::RemoveResourcePathResponse ConnectionFromClient::remove_resource_path(const AK::String& resource_path)
 {
-    if (Resolver::the().remove_resource_path(resource_path)) {
+    if (PathResolver::the().remove_resource_path(resource_path)) {
         notify_resource_paths_updated();
         return true;
     }

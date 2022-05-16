@@ -13,9 +13,9 @@
 
 namespace ResourceServer {
 
-class Resolver {
+class PathResolver {
 public:
-    static Resolver& the();
+    static PathResolver& the();
 
     String resolve(StringView partial_path) const;
     ErrorOr<void> add_resource_path(String resource_path);

@@ -10,7 +10,7 @@ compile_ipc(ResourceClient.ipc ResourceClientEndpoint.h)
 
 set(SOURCES
     ConnectionFromClient.cpp
-    Resolver.cpp
+    PathResolver.cpp
     main.cpp
 )
 
