@@ -21,6 +21,7 @@
 #include <LibGfx/PNGWriter.h>
 #include <LibGfx/QOIWriter.h>
 #include <LibMain/Main.h>
+#include <LibResource/ResolverClient.h>
 #include <unistd.h>
 
 class MandelbrotSet {
@@ -399,6 +400,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     auto app = TRY(GUI::Application::try_create(arguments));
 
+    TRY(Core::System::pledge("stdio thread recvfd sendfd rpath wpath cpath unix"));
+
+    auto& resource_resolver = Resource::ResolverClient::the();
+
     TRY(Core::System::pledge("stdio thread recvfd sendfd rpath wpath cpath"));
 
 #if 0
@@ -439,7 +444,14 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
             mandelbrot->export_image(export_path.value(), ImageType::QOI);
         })));
 
-    export_submenu.set_icon(TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/save.png")));
+    Resource::PathWatcher resource_path_watcher;
+
+    auto load_export_icon = [&]() -> ErrorOr<void> {
+        export_submenu.set_icon(TRY(resource_resolver.try_resolve_and_load_bitmap("icons/16x16/save.png")));
+        return {};
+    };
+    TRY(load_export_icon());
+    resource_path_watcher.on_resource_paths_updated = [&] { (void)load_export_icon(); };
 
     TRY(file_menu->try_add_separator());
     TRY(file_menu->try_add_action(GUI::CommonActions::make_quit_action([&](auto&) { app->quit(); })));
