@@ -127,6 +127,15 @@ function(serenity_app target_name)
     set(small_icon "${SerenityOS_SOURCE_DIR}/Base/res/icons/16x16/${SERENITY_APP_ICON}.png")
     set(medium_icon "${SerenityOS_SOURCE_DIR}/Base/res/icons/32x32/${SERENITY_APP_ICON}.png")
 
+    execute_process(COMMAND "mktemp"
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE icon_name
+        RESULT_VARIABLE foo)
+
+    file(WRITE "${icon_name}" "${SERENITY_APP_ICON}")
+
+    embed_resource("${target_name}" serenity_icon_n "${icon_name}")
+
     if (EXISTS "${small_icon}")
         embed_resource("${target_name}" serenity_icon_s "${small_icon}")
     else()

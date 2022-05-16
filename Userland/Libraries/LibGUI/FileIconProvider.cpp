@@ -173,46 +173,18 @@ Icon FileIconProvider::icon_for_executable(String const& path)
         return s_executable_icon;
     }
 
-    // If any of the required sections are missing then use the defaults
     Icon icon;
-    struct IconSection {
-        char const* section_name;
-        int image_size;
-    };
-
-    static constexpr Array<IconSection, 2> icon_sections = {
-        IconSection { .section_name = "serenity_icon_s", .image_size = 16 },
-        IconSection { .section_name = "serenity_icon_m", .image_size = 32 }
-    };
-
-    bool had_error = false;
-    for (auto const& icon_section : icon_sections) {
-        auto section = image.lookup_section(icon_section.section_name);
-
-        RefPtr<Gfx::Bitmap> bitmap;
-        if (!section.has_value()) {
-            bitmap = s_executable_icon.bitmap_for_size(icon_section.image_size);
-        } else {
-            // FIXME: Use the ImageDecoder service.
-            auto frame_or_error = Gfx::PNGImageDecoderPlugin(reinterpret_cast<u8 const*>(section->raw_data()), section->size()).frame(0);
-            if (!frame_or_error.is_error()) {
-                bitmap = frame_or_error.value().image;
-            }
-        }
-
-        if (!bitmap) {
-            dbgln("Failed to find embedded icon and failed to clone default icon for application {} at icon size {}", path, icon_section.image_size);
-            had_error = true;
-            continue;
-        }
-
-        icon.set_bitmap_for_size(icon_section.image_size, std::move(bitmap));
+    auto section = image.lookup_section("serenity_icon_n");
+    if (section.has_value()) {
+        auto maybe_icon = Icon::try_create_default_icon(section->bytes());
+        if (!maybe_icon.is_error())
+            icon = maybe_icon.release_value();
+        else
+            icon = s_executable_icon;
+    } else {
+        icon = s_executable_icon;
     }
 
-    if (had_error) {
-        app_icon_cache.set(path, s_executable_icon);
-        return s_executable_icon;
-    }
     app_icon_cache.set(path, icon);
     return icon;
 }
