@@ -15,5 +15,5 @@ set(SOURCES
 )
 
 serenity_bin(Taskbar)
-target_link_libraries(Taskbar LibGUI LibDesktop LibConfig LibMain)
+target_link_libraries(Taskbar LibGUI LibDesktop LibConfig LibMain LibResource)
 serenity_install_headers(Services/Taskbar)
