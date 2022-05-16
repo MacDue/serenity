@@ -14,6 +14,7 @@
 #include <LibGUI/TableView.h>
 #include <LibGUI/Window.h>
 #include <LibMain/Main.h>
+#include <LibResource/PathResolverClient.h>
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
@@ -23,7 +24,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     Config::pledge_domain("ClipboardHistory");
     Config::monitor_domain("ClipboardHistory");
 
+    auto edit_copy_icon_path = Resource::resolve_path("icons/16x16/edit-copy.png");
+
     TRY(Core::System::pledge("stdio recvfd sendfd rpath"));
+    TRY(Core::System::unveil("/tmp/portal/resource", "rw"));
     TRY(Core::System::unveil("/res", "r"));
     TRY(Core::System::unveil(nullptr, nullptr));
     auto app_icon = TRY(GUI::Icon::try_create_default_icon("edit-copy"));
@@ -67,7 +71,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     applet_window->set_has_alpha_channel(true);
     auto icon_widget = TRY(applet_window->try_set_main_widget<GUI::ImageWidget>());
     icon_widget->set_tooltip("Clipboard History");
-    icon_widget->load_from_file("/res/icons/16x16/edit-copy.png");
+    icon_widget->load_from_file(edit_copy_icon_path);
     icon_widget->on_click = [&main_window = *main_window] {
         main_window.show();
         main_window.move_to_front();

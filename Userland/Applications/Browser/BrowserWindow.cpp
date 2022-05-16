@@ -38,6 +38,7 @@
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <LibWebView/OutOfProcessWebView.h>
+#include <LibResource/PathResolverClient.h>
 
 namespace Browser {
 
@@ -290,7 +291,7 @@ void BrowserWindow::build_menus()
     }
 
     settings_menu.add_separator();
-    auto open_settings_action = GUI::Action::create("&Settings", Gfx::Bitmap::try_load_from_file("/res/icons/16x16/settings.png").release_value_but_fixme_should_propagate_errors(),
+    auto open_settings_action = GUI::Action::create("&Settings", Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/settings.png")).release_value_but_fixme_should_propagate_errors(),
         [](auto&) {
             Core::Process::spawn("/bin/BrowserSettings");
         });

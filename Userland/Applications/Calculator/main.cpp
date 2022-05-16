@@ -17,15 +17,20 @@
 #include <LibMain/Main.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <LibResource/PathResolverClient.h>
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     TRY(Core::System::pledge("stdio recvfd sendfd rpath unix"));
     auto app = TRY(GUI::Application::try_create(arguments));
 
-    TRY(Core::System::pledge("stdio recvfd sendfd rpath"));
     TRY(Core::System::unveil("/res", "r"));
+    TRY(Core::System::unveil("/tmp/portal/resource", "rw"));
     TRY(Core::System::unveil(nullptr, nullptr));
+
+    auto pi_icon_path = Resource::resolve_path("icons/calculator/pi.png");
+    auto eulers_icon_path = Resource::resolve_path("icons/calculator/eulers.png");
+    TRY(Core::System::pledge("stdio recvfd sendfd rpath"));
 
     auto app_icon = GUI::Icon::default_icon("app-calculator");
 
@@ -57,10 +62,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     }));
 
     auto& constants_menu = window->add_menu("&Constants");
-    constants_menu.add_action(GUI::Action::create("&Pi", TRY(Gfx::Bitmap::try_load_from_file("/res/icons/calculator/pi.png")), [&](auto&) {
+    constants_menu.add_action(GUI::Action::create("&Pi", TRY(Gfx::Bitmap::try_load_from_file(pi_icon_path)), [&](auto&) {
         widget->set_entry(KeypadValue { 31415926535, 10 });
     }));
-    constants_menu.add_action(GUI::Action::create("&Euler's Constant", TRY(Gfx::Bitmap::try_load_from_file("/res/icons/calculator/eulers.png")), [&](auto&) {
+    constants_menu.add_action(GUI::Action::create("&Euler's Constant", TRY(Gfx::Bitmap::try_load_from_file(eulers_icon_path)), [&](auto&) {
         widget->set_entry(KeypadValue { 27182818284, 10 });
     }));
 

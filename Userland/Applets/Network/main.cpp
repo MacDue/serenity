@@ -15,6 +15,7 @@
 #include <LibGUI/Window.h>
 #include <LibGfx/Bitmap.h>
 #include <LibMain/Main.h>
+#include <LibResource/PathResolverClient.h>
 #include <serenity.h>
 #include <spawn.h>
 #include <stdio.h>
@@ -25,8 +26,8 @@ class NetworkWidget final : public GUI::ImageWidget {
 public:
     static ErrorOr<NonnullRefPtr<NetworkWidget>> try_create(bool notifications)
     {
-        NonnullRefPtr<Gfx::Bitmap> connected_icon = TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/network.png"));
-        NonnullRefPtr<Gfx::Bitmap> disconnected_icon = TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/network-disconnected.png"));
+        NonnullRefPtr<Gfx::Bitmap> connected_icon = TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/network.png")));
+        NonnullRefPtr<Gfx::Bitmap> disconnected_icon = TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/network-disconnected.png")));
         return adopt_nonnull_ref_or_enomem(new (nothrow) NetworkWidget(notifications, move(connected_icon), move(disconnected_icon)));
     }
 
@@ -174,6 +175,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     TRY(Core::System::unveil("/res", "r"));
     TRY(Core::System::unveil("/tmp/portal/notify", "rw"));
+    TRY(Core::System::unveil("/tmp/portal/resource", "rw"));
     TRY(Core::System::unveil("/proc/net/adapters", "r"));
     TRY(Core::System::unveil("/bin/SystemMonitor", "x"));
     TRY(Core::System::unveil(nullptr, nullptr));
@@ -194,7 +196,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     window->set_has_alpha_channel(true);
     window->resize(16, 16);
     auto icon = TRY(window->try_set_main_widget<NetworkWidget>(display_notifications));
-    icon->load_from_file("/res/icons/16x16/network.png");
+    icon->load_from_file(Resource::resolve_path("icons/16x16/network.png"));
     window->resize(16, 16);
     window->show();
 

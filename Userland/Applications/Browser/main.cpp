@@ -86,6 +86,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     TRY(Core::System::unveil("/tmp/portal/image", "rw"));
     TRY(Core::System::unveil("/tmp/portal/webcontent", "rw"));
     TRY(Core::System::unveil("/tmp/portal/request", "rw"));
+    TRY(Core::System::unveil("/tmp/portal/resource", "rw"));
     TRY(Core::System::unveil("/bin/BrowserSettings", "x"));
     TRY(Core::System::unveil(nullptr, nullptr));
 

@@ -23,6 +23,7 @@
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/Palette.h>
 #include <LibMain/Main.h>
+#include <LibResource/PathResolverClient.h>
 
 class AudioWidget final : public GUI::Widget {
     C_OBJECT_ABSTRACT(AudioWidget)
@@ -37,11 +38,11 @@ public:
     static ErrorOr<NonnullRefPtr<AudioWidget>> try_create()
     {
         Array<VolumeBitmapPair, 5> volume_level_bitmaps = {
-            { { 66, TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/audio-volume-high.png")) },
-                { 33, TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/audio-volume-medium.png")) },
-                { 1, TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/audio-volume-low.png")) },
-                { 0, TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/audio-volume-zero.png")) },
-                { 0, TRY(Gfx::Bitmap::try_load_from_file("/res/icons/16x16/audio-volume-muted.png")) } }
+            { { 66, TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/audio-volume-high.png"))) },
+                { 33, TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/audio-volume-medium.png"))) },
+                { 1, TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/audio-volume-low.png"))) },
+                { 0, TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/audio-volume-zero.png"))) },
+                { 0, TRY(Gfx::Bitmap::try_load_from_file(Resource::resolve_path("icons/16x16/audio-volume-muted.png"))) } }
         };
         auto audio_client = TRY(Audio::ConnectionFromClient::try_create());
         NonnullRefPtr<AudioWidget> audio_widget = TRY(adopt_nonnull_ref_or_enomem(new (nothrow) AudioWidget(move(audio_client), move(volume_level_bitmaps))));
@@ -242,6 +243,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto app = TRY(GUI::Application::try_create(arguments));
     Config::pledge_domain("AudioApplet");
     TRY(Core::System::unveil("/tmp/portal/audio", "rw"));
+    TRY(Core::System::unveil("/tmp/portal/resource", "rw"));
     TRY(Core::System::unveil("/res", "r"));
     TRY(Core::System::unveil(nullptr, nullptr));
 

@@ -19,6 +19,7 @@
 #include <LibGUI/Toolbar.h>
 #include <LibGUI/Window.h>
 #include <LibMain/Main.h>
+#include <LibResource/PathResolverClient.h>
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
