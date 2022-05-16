@@ -1,5 +1,5 @@
 set(SOURCES
-    ResolverClient.cpp
+    PathResolverClient.cpp
 )
 
 serenity_lib(LibResource resource)
