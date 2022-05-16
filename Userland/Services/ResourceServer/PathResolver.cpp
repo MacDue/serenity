@@ -41,6 +41,7 @@ ErrorOr<void> PathResolver::add_resource_path(String resource_path)
     }
     TRY(m_resource_paths.try_append(move(resource_path)));
     notify_resource_paths_changed();
+    dbgln("Added resource path {}", resource_path);
     return {};
 }
 

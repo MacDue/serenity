@@ -30,7 +30,7 @@ ErrorOr<int> serenity_main(Main::Arguments)
     };
 
     TRY(Core::System::pledge("stdio accept rpath"));
-    TRY(Core::System::unveil("/home/anon/.config", "rw"));
+    TRY(Core::System::unveil("/home/anon/.config", "rwc"));
     TRY(Core::System::unveil(nullptr, nullptr));
 
     return event_loop.exec();
