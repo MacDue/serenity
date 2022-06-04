@@ -66,7 +66,7 @@
     }
 
     @GUI::GroupBox {
-        title: "Highlight radius"
+        title: "Highlight size"
 
         fixed_height: 80
 
