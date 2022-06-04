@@ -132,7 +132,11 @@ endpoint WindowServer
     apply_cursor_theme(String name) =|
     get_cursor_theme() => (String name)
 
-    set_cursor_highlight(int radius, Gfx::Color color) =|
+    set_cursor_highlight_radius(int radius) =|
+    get_cursor_highlight_radius() => (int radius)
+
+    set_cursor_highlight_color(Gfx::Color color) =|
+    get_cursor_highlight_color() => (Gfx::Color color)
 
     set_system_fonts(String default_font_query, String fixed_width_font_query) => (bool success)
 

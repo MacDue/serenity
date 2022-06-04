@@ -325,7 +325,11 @@ public:
     MultiScaleBitmaps const* overlay_rect_shadow() const { return m_overlay_rect_shadow.ptr(); }
 
     void apply_cursor_theme(String const& name);
-    void set_cursor_highlight(int radius, Gfx::Color const & color);
+
+    void set_cursor_highlight_radius(int radius);
+    void set_cursor_highlight_color(Gfx::Color const & color);
+
+    bool is_cursor_highlight_enabled() const;
 
 private:
     explicit WindowManager(Gfx::PaletteImpl const&);

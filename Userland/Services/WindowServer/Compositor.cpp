@@ -851,9 +851,8 @@ Gfx::IntRect Compositor::current_cursor_rect() const
     auto& wm = WindowManager::the();
     auto& current_cursor = m_current_cursor ? *m_current_cursor : wm.active_cursor();
     Gfx::IntRect cursor_rect { ScreenInput::the().cursor_location().translated(-current_cursor.params().hotspot()), current_cursor.size() };
-    auto highlight_radius = wm.cursor_highlight_radius();
-    if (highlight_radius > 0) {
-        auto highlight_diameter = highlight_radius * 2;
+    if (wm.is_cursor_highlight_enabled()) {
+        auto highlight_diameter = wm.cursor_highlight_radius() * 2;
         cursor_rect.inflate(
             highlight_diameter - cursor_rect.width(),
             highlight_diameter - cursor_rect.height());
@@ -969,8 +968,7 @@ void CompositorScreenData::draw_cursor(Screen& screen, Gfx::IntRect const & curs
     auto cursor_src_rect = current_cursor.source_rect(compositor.m_current_cursor_frame);
     auto cursor_blit_pos = current_cursor.rect().centered_within(cursor_rect).location();
 
-    auto highlight_radius = WindowManager::the().cursor_highlight_radius();
-    if (highlight_radius > 0) {
+    if (wm.is_cursor_highlight_enabled()) {
         Gfx::AntiAliasingPainter aa_back_painter { *m_back_painter };
         aa_back_painter.fill_ellipse(cursor_rect, wm.cursor_highlight_color());
     }

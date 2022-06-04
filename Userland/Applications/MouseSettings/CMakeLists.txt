@@ -19,6 +19,7 @@ set(SOURCES
     ThemeWidgetGML.h
     HighlightWidget.cpp
     HighlightWidgetGML.h
+    HighlightPreviewWidget.cpp
 )
 
 serenity_app(MouseSettings ICON app-mouse)
