@@ -6,6 +6,7 @@ serenity_component(
 
 compile_gml(Mouse.gml MouseWidgetGML.h mouse_widget_gml)
 compile_gml(Theme.gml ThemeWidgetGML.h theme_widget_gml)
+compile_gml(Highlight.gml HighlightWidgetGML.h highlight_widget_gml)
 
 set(SOURCES
     main.cpp
@@ -16,6 +17,8 @@ set(SOURCES
     ThemeWidget.cpp
     ThemeWidget.h
     ThemeWidgetGML.h
+    HighlightWidget.cpp
+    HighlightWidgetGML.h
 )
 
 serenity_app(MouseSettings ICON app-mouse)

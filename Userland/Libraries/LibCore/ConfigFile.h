@@ -44,6 +44,7 @@ public:
     String read_entry(String const& group, String const& key, String const& default_value = String()) const;
     int read_num_entry(String const& group, String const& key, int default_value = 0) const;
     bool read_bool_entry(String const& group, String const& key, bool default_value = false) const;
+    Color read_color_entry(String const& group, String const& key, Color default_value = Color::NamedColor::Black) const;
 
     void write_entry(String const& group, String const& key, String const& value);
     void write_num_entry(String const& group, String const& key, int value);

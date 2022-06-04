@@ -58,7 +58,7 @@ struct CompositorScreenData {
 
     void init_bitmaps(Compositor&, Screen&);
     void flip_buffers(Screen&);
-    void draw_cursor(Screen&, Gfx::IntRect const&);
+    void draw_cursor(Screen&, Gfx::IntRect const &);
     bool restore_cursor_back(Screen&, Gfx::IntRect&);
 
     template<typename F>

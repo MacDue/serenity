@@ -160,6 +160,37 @@ bool ConfigFile::read_bool_entry(String const& group, String const& key, bool de
     return value == "1" || value.equals_ignoring_case("true"sv);
 }
 
+Color ConfigFile::read_color_entry(String const& group, String const& key, Color default_value) const {
+    auto value = read_entry(group, key);
+    if (value.is_empty())
+        return default_value;
+    enum NextValue { Red, Green, Blue, Alpha, Finished } next_load { Red };
+    Color color_value;
+    value.view().for_each_split_view(',', false, [&](auto const & view) {
+        auto int_value = view.to_int();
+        switch (next_load) {
+            case Red:
+                color_value.set_red(int_value.value_or(0));
+                next_load = Green;
+                break;
+            case Green:
+                color_value.set_green(int_value.value_or(0));
+                next_load = Blue;
+                break;
+            case Blue:
+                color_value.set_blue(int_value.value_or(0));
+                next_load = Alpha;
+                break;
+            case Alpha:
+                color_value.set_alpha(int_value.value_or(255));
+                next_load = Finished;
+                break;
+            default: return;
+        }
+    });
+    return color_value;
+}
+
 void ConfigFile::write_entry(String const& group, String const& key, String const& value)
 {
     m_groups.ensure(group).ensure(key) = value;

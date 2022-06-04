@@ -153,6 +153,9 @@ public:
     Cursor const& eyedropper_cursor() const { return *m_eyedropper_cursor; }
     Cursor const& zoom_cursor() const { return *m_zoom_cursor; }
 
+    int cursor_highlight_radius() const { return m_cursor_highlight_radius; }
+    Gfx::Color cursor_highlight_color() const { return m_cursor_highlight_color; }
+
     Gfx::Font const& font() const;
     Gfx::Font const& window_title_font() const;
 
@@ -322,6 +325,7 @@ public:
     MultiScaleBitmaps const* overlay_rect_shadow() const { return m_overlay_rect_shadow.ptr(); }
 
     void apply_cursor_theme(String const& name);
+    void set_cursor_highlight(int radius, Gfx::Color const & color);
 
 private:
     explicit WindowManager(Gfx::PaletteImpl const&);
@@ -354,6 +358,8 @@ private:
 
     void do_move_to_front(Window&, bool, bool);
 
+    bool verify_config_saved();
+
     [[nodiscard]] static WindowStack& get_rendering_window_stacks(WindowStack*&);
 
     RefPtr<Cursor> m_hidden_cursor;
@@ -374,6 +380,8 @@ private:
     RefPtr<Cursor> m_crosshair_cursor;
     RefPtr<Cursor> m_eyedropper_cursor;
     RefPtr<Cursor> m_zoom_cursor;
+    int m_cursor_highlight_radius { 0 };
+    Gfx::Color m_cursor_highlight_color;
 
     RefPtr<MultiScaleBitmaps> m_overlay_rect_shadow;
 

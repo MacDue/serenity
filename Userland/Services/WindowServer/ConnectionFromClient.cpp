@@ -809,6 +809,11 @@ void ConnectionFromClient::apply_cursor_theme(String const& name)
     WindowManager::the().apply_cursor_theme(name);
 }
 
+void ConnectionFromClient::set_cursor_highlight(int radius, Gfx::Color const & color)
+{
+    WindowManager::the().set_cursor_highlight(radius, color);
+}
+
 Messages::WindowServer::GetCursorThemeResponse ConnectionFromClient::get_cursor_theme()
 {
     auto config = Core::ConfigFile::open("/etc/WindowServer.ini").release_value_but_fixme_should_propagate_errors();
