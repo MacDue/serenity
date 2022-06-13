@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020, Andreas Kling <kling@serenityos.org>
  * Copyright (c) 2021, Sam Atkins <atkinssj@serenityos.org>
+ * Copyright (c) 2022, MacDue <macdue@dueutil.tech>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -248,6 +249,8 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     Gfx::AntiAliasingPainter aa_painter { painter };
 
     // Paint a little tile sheet for the corners
+    // TODO: Support various line styles on the corners (dotted, dashes, etc)
+
     // Paint the outer (minimal) corner rounded rectangle:
     aa_painter.fill_rect_with_rounded_corners(corner_mask_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left);
 
@@ -271,6 +274,8 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     inner_bottom_left.vertical_radius = max(0, inner_bottom_left.vertical_radius - int_width(borders_data.bottom.width));
     aa_painter.fill_rect_with_rounded_corners(inner_corner_mask_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
 
+    // TODO: Support dual color corners. Other browsers will render a rounded corner between two borders of
+    // different colors using both colours, normally split at a 45 degree angle (though the exact angle is interpolated).
     auto blit_corner = [&](Gfx::IntPoint const& position, Gfx::IntRect const& src_rect, Color corner_color) {
         context.painter().blit_filtered(position, *corner_bitmap, src_rect, [&](auto const& corner_pixel) {
             return corner_color.with_alpha((corner_color.alpha() * corner_pixel.alpha()) / 255);
