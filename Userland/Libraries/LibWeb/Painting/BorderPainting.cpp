@@ -160,10 +160,10 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& re
     float p1_step = 0;
     float p2_step = 0;
 
-    bool has_top_left_radius = border_radii_data.top_left.horizontal_radius > 0;
-    bool has_top_right_radius = border_radii_data.top_right.horizontal_radius > 0;
-    bool has_bottom_left_radius = border_radii_data.bottom_left.horizontal_radius > 0;
-    bool has_bottom_right_radius = border_radii_data.bottom_right.horizontal_radius > 0;
+    bool has_top_left_radius = bool(border_radii_data.top_left);
+    bool has_top_right_radius = bool(border_radii_data.top_right);
+    bool has_bottom_left_radius = bool(border_radii_data.bottom_left);
+    bool has_bottom_right_radius = bool(border_radii_data.bottom_right);
 
     switch (edge) {
     case BorderEdge::Top:
@@ -242,64 +242,87 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     auto border_color_no_alpha = borders_data.top.color;
     border_color_no_alpha.set_alpha(255);
 
-    if (!border_radii_data.has_any_radius()) {
-        Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, border_radii_data, borders_data);
-        Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, border_radii_data, borders_data);
-        Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, border_radii_data, borders_data);
-        Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, border_radii_data, borders_data);
-        return;
-    }
+    Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, border_radii_data, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, border_radii_data, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, border_radii_data, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, border_radii_data, borders_data);
 
     if (borders_data.top.width <= 0 && borders_data.right.width <= 0 && borders_data.left.width <= 0 && borders_data.bottom.width <= 0)
         return;
 
-    auto allocate_mask_bitmap = [&]{
-        return MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, border_rect.size()));
+    auto int_width = [&](auto value) -> int {
+        return ceil(value);
     };
-    static auto border_bitmap = allocate_mask_bitmap();
 
-    auto bitmap_border_rect = border_rect;
-    bitmap_border_rect.set_location({0, 0});
+    // Cache a small bitmap, just large enough to fit the corners (without the inner rectangle)
+    auto expand_width = abs(int_width(borders_data.left.width) - int_width(borders_data.right.width));
+    auto expand_height = abs(int_width(borders_data.top.width) - int_width(borders_data.bottom.width));
+    Gfx::IntRect corner_mask_rect {
+        0, 0,
+        max(
+            top_left.horizontal_radius + top_right.horizontal_radius + expand_width,
+            bottom_left.horizontal_radius + bottom_right.horizontal_radius + expand_height),
+        max(
+            top_left.vertical_radius + bottom_left.vertical_radius + expand_width,
+            top_right.vertical_radius + bottom_right.vertical_radius + expand_height)
+    };
+    auto allocate_mask_bitmap = [&]{
+        return MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corner_mask_rect.size()));
+    };
+    static auto corner_bitmap = allocate_mask_bitmap();
 
-    Gfx::Painter painter { border_bitmap };
-    if (border_bitmap->rect().contains(bitmap_border_rect)) {
-        painter.clear_rect(bitmap_border_rect, Gfx::Color());
+    Gfx::Painter painter { corner_bitmap };
+    if (corner_bitmap->rect().contains(corner_mask_rect)) {
+        painter.clear_rect(corner_mask_rect, Gfx::Color());
     } else {
-        border_bitmap = allocate_mask_bitmap();
-        painter = Gfx::Painter { border_bitmap };
+        corner_bitmap = allocate_mask_bitmap();
+        painter = Gfx::Painter { corner_bitmap };
     }
 
     Gfx::AntiAliasingPainter aa_painter { painter };
 
-    aa_painter.fill_rect_with_rounded_corners(bitmap_border_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left, Gfx::AntiAliasingPainter::BlendMode::Normal);
+    aa_painter.fill_rect_with_rounded_corners(corner_mask_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left, Gfx::AntiAliasingPainter::BlendMode::Normal);
 
-    auto int_ceil = [&](auto value) -> int {
-        return ceil(value);
-    };
 
-    auto inner_border_rect = bitmap_border_rect.shrunken(
-        int_ceil(borders_data.top.width),
-        int_ceil(borders_data.right.width),
-        int_ceil(borders_data.bottom.width),
-        int_ceil(borders_data.left.width));
+    auto inner_corner_mask_rect = corner_mask_rect.shrunken(
+        int_width(borders_data.top.width),
+        int_width(borders_data.right.width),
+        int_width(borders_data.bottom.width),
+        int_width(borders_data.left.width));
 
     auto inner_top_left = top_left;
     auto inner_top_right = top_right;
     auto inner_bottom_right = bottom_right;
     auto inner_bottom_left = bottom_left;
 
-    inner_top_left.horizontal_radius = max(0, inner_top_left.horizontal_radius - int_ceil(borders_data.left.width));
-    inner_top_left.vertical_radius = max(0, inner_top_left.vertical_radius -int_ceil(borders_data.top.width));
-    inner_top_right.horizontal_radius = max(0, inner_top_right.horizontal_radius - int_ceil(borders_data.right.width));
-    inner_top_right.vertical_radius = max(0, inner_top_right.vertical_radius - int_ceil(borders_data.top.width));
-    inner_bottom_right.horizontal_radius = max(0, inner_bottom_right.horizontal_radius - int_ceil(borders_data.right.width));
-    inner_bottom_right.vertical_radius = max(0, inner_bottom_right.vertical_radius - int_ceil(borders_data.bottom.width));
-    inner_bottom_left.horizontal_radius = max(0, inner_bottom_left.horizontal_radius - int_ceil(borders_data.left.width));
-    inner_bottom_left.vertical_radius = max(0, inner_bottom_left.vertical_radius - int_ceil(borders_data.bottom.width));
+    inner_top_left.horizontal_radius = max(0, inner_top_left.horizontal_radius - int_width(borders_data.left.width));
+    inner_top_left.vertical_radius = max(0, inner_top_left.vertical_radius - int_width(borders_data.top.width));
 
-    aa_painter.fill_rect_with_rounded_corners(inner_border_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
+    inner_top_right.horizontal_radius = max(0, inner_top_right.horizontal_radius - int_width(borders_data.right.width));
+    inner_top_right.vertical_radius = max(0, inner_top_right.vertical_radius - int_width(borders_data.top.width));
 
-    context.painter().blit(border_rect.location(), border_bitmap, bitmap_border_rect, borders_data.top.color.alpha()/255.);
+    inner_bottom_right.horizontal_radius = max(0, inner_bottom_right.horizontal_radius - int_width(borders_data.right.width));
+    inner_bottom_right.vertical_radius = max(0, inner_bottom_right.vertical_radius - int_width(borders_data.bottom.width));
+
+    inner_bottom_left.horizontal_radius = max(0, inner_bottom_left.horizontal_radius - int_width(borders_data.left.width));
+    inner_bottom_left.vertical_radius = max(0, inner_bottom_left.vertical_radius - int_width(borders_data.bottom.width));
+
+    aa_painter.fill_rect_with_rounded_corners(inner_corner_mask_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
+
+    if (top_left)
+        context.painter().blit(border_rect.top_left(), corner_bitmap, top_left.as_rect(), borders_data.top.color.alpha()/255.);
+
+    if (top_right)
+        context.painter().blit(border_rect.top_right().translated(-top_right.horizontal_radius + 1, 0), corner_bitmap, top_right.as_rect().translated(corner_mask_rect.width() - top_right.horizontal_radius, 0) , borders_data.top.color.alpha()/255.);
+
+    if (bottom_right)
+        context.painter().blit(border_rect.bottom_right().translated(-bottom_right.horizontal_radius + 1, -bottom_right.vertical_radius + 1), corner_bitmap, bottom_right.as_rect().translated(corner_mask_rect.width() - bottom_right.horizontal_radius, corner_mask_rect.height() - bottom_right.vertical_radius), borders_data.top.color.alpha()/255.);
+
+    if (bottom_left)
+        context.painter().blit(border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1), corner_bitmap, bottom_left.as_rect().translated(0, corner_mask_rect.height() - bottom_left.vertical_radius), borders_data.top.color.alpha()/255.);
+
+    // context.painter().blit(corner_mask_rect.centered_within(border_rect).location(),
+    //     corner_bitmap, corner_mask_rect);
 }
 
 }
