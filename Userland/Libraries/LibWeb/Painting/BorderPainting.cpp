@@ -151,6 +151,16 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     auto bottom_right = border_radii_data.bottom_right.as_corner();
     auto bottom_left = border_radii_data.bottom_left.as_corner();
 
+    // Disable border radii if the corresponding borders don't exist:
+    if (borders_data.bottom.width <= 0 && borders_data.left.width <= 0)
+        bottom_left = { 0, 0 };
+    if (borders_data.bottom.width <= 0 && borders_data.right.width <= 0)
+        bottom_right = { 0, 0 };
+    if (borders_data.top.width <= 0 && borders_data.left.width <= 0)
+        top_left = { 0, 0 };
+    if (borders_data.top.width <= 0 && borders_data.right.width <= 0)
+        top_right = { 0, 0 };
+
     auto int_width = [&](auto value) -> int {
         return ceil(value);
     };
@@ -211,20 +221,29 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
             top_left.vertical_radius + bottom_left.vertical_radius + expand_width,
             top_right.vertical_radius + bottom_right.vertical_radius + expand_height)
     };
-    auto allocate_mask_bitmap = [&] {
-        return MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corner_mask_rect.size()));
+    auto allocate_mask_bitmap = [&]() -> RefPtr<Gfx::Bitmap> {
+        auto bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corner_mask_rect.size());
+        if (!bitmap.is_error())
+            return bitmap.release_value();
+        return nullptr;
     };
-    static auto corner_bitmap = allocate_mask_bitmap();
+    static thread_local auto corner_bitmap = allocate_mask_bitmap();
 
     // Only reallocate the corner bitmap is the existing one is too small.
     // (should mean no more allocations after the first paint -- amortised zero allocations :^))
-    Gfx::Painter painter { corner_bitmap };
-    if (corner_bitmap->rect().contains(corner_mask_rect)) {
-        painter.clear_rect(corner_mask_rect, Gfx::Color());
-    } else {
-        corner_bitmap = allocate_mask_bitmap();
-        painter = Gfx::Painter { corner_bitmap };
-    }
+    Gfx::Painter painter = ({
+        Optional<Gfx::Painter> painter;
+        if (corner_bitmap && corner_bitmap->rect().contains(corner_mask_rect)) {
+            painter = Gfx::Painter { *corner_bitmap };
+            painter->clear_rect(corner_mask_rect, Gfx::Color());
+        } else {
+            corner_bitmap = allocate_mask_bitmap();
+            if (!corner_bitmap)
+                return warnln("Failed to allocate border corner bitmap with size {}", corner_mask_rect.size());
+            painter = Gfx::Painter { *corner_bitmap };
+        }
+        *painter;
+    });
 
     Gfx::AntiAliasingPainter aa_painter { painter };
 
@@ -253,7 +272,7 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     aa_painter.fill_rect_with_rounded_corners(inner_corner_mask_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
 
     auto blit_corner = [&](Gfx::IntPoint const& position, Gfx::IntRect const& src_rect, Color corner_color) {
-        context.painter().blit_filtered(position, corner_bitmap, src_rect, [&](auto const& corner_pixel) {
+        context.painter().blit_filtered(position, *corner_bitmap, src_rect, [&](auto const& corner_pixel) {
             return corner_color.with_alpha((corner_color.alpha() * corner_pixel.alpha()) / 255);
         });
     };
