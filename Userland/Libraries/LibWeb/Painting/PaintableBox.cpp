@@ -178,7 +178,7 @@ void PaintableBox::paint_border(PaintContext& context) const
         .bottom = computed_values().border_bottom(),
         .left = computed_values().border_left(),
     };
-    paint_all_borders(context, absolute_border_box_rect(), normalized_border_radii_data(Painting::RelativeToWidthOnly::Yes), borders_data);
+    paint_all_borders(context, absolute_border_box_rect(), normalized_border_radii_data(), borders_data);
 }
 
 void PaintableBox::paint_background(PaintContext& context) const

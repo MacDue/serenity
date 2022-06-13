@@ -8,6 +8,7 @@
 #include <LibGfx/Painter.h>
 #include <LibWeb/Painting/BorderPainting.h>
 #include <LibWeb/Painting/PaintContext.h>
+#include <LibGfx/AntiAliasingPainter.h>
 
 namespace Web::Painting {
 
@@ -70,10 +71,8 @@ BorderRadiiData normalized_border_radii_data(Layout::Node const& node, Gfx::Floa
     return BorderRadiiData { top_left_radius_px, top_right_radius_px, bottom_right_radius_px, bottom_left_radius_px };
 }
 
-void paint_border(PaintContext& context, BorderEdge edge, Gfx::FloatRect const& a_rect, BorderRadiiData const& border_radii_data, BordersData const& borders_data)
+void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& rect, BorderRadiiData const& border_radii_data, BordersData const& borders_data)
 {
-    auto rect = a_rect.to_rounded<float>();
-
     auto const& border_data = [&] {
         switch (edge) {
         case BorderEdge::Top:
@@ -96,11 +95,11 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::FloatRect const& 
     int int_width = max((int)width, 1);
 
     struct Points {
-        Gfx::FloatPoint p1;
-        Gfx::FloatPoint p2;
+        Gfx::IntPoint p1;
+        Gfx::IntPoint p2;
     };
 
-    auto points_for_edge = [](BorderEdge edge, Gfx::FloatRect const& rect) -> Points {
+    auto points_for_edge = [](BorderEdge edge, Gfx::IntRect const& rect) -> Points {
         switch (edge) {
         case BorderEdge::Top:
             return { rect.top_left(), rect.top_right() };
@@ -208,116 +207,99 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::FloatRect const& 
 
 void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rect, BorderRadiiData const& border_radii_data, BordersData const& borders_data)
 {
-    auto const border_rect = bordered_rect;
+    Gfx::IntRect border_rect = bordered_rect.to_rounded<int>();
 
-    // FIXME: Support elliptical border radii.
-    auto const top_left_radius = border_radii_data.top_left.horizontal_radius;
-    auto const top_right_radius = border_radii_data.top_right.horizontal_radius;
-    auto const bottom_right_radius = border_radii_data.bottom_right.horizontal_radius;
-    auto const bottom_left_radius = border_radii_data.bottom_left.horizontal_radius;
+    auto top_left = border_radii_data.top_left.as_corner();
+    auto top_right = border_radii_data.top_right.as_corner();
+    auto bottom_right = border_radii_data.bottom_right.as_corner();
+    auto bottom_left = border_radii_data.bottom_left.as_corner();
 
-    Gfx::FloatRect top_border_rect = {
-        border_rect.x() + top_left_radius,
+    Gfx::IntRect top_border_rect = {
+        border_rect.x() + top_left.horizontal_radius,
         border_rect.y(),
-        border_rect.width() - top_left_radius - top_right_radius,
+        border_rect.width() - top_left.horizontal_radius - top_right.horizontal_radius,
         border_rect.height()
     };
-    Gfx::FloatRect right_border_rect = {
+    Gfx::IntRect right_border_rect = {
         border_rect.x(),
-        border_rect.y() + top_right_radius,
+        border_rect.y() + top_right.vertical_radius,
         border_rect.width(),
-        border_rect.height() - top_right_radius - bottom_right_radius
+        border_rect.height() - top_right.vertical_radius - bottom_right.vertical_radius
     };
-    Gfx::FloatRect bottom_border_rect = {
-        border_rect.x() + bottom_left_radius,
+    Gfx::IntRect bottom_border_rect = {
+        border_rect.x() + bottom_left.horizontal_radius,
         border_rect.y(),
-        border_rect.width() - bottom_left_radius - bottom_right_radius,
+        border_rect.width() - bottom_left.horizontal_radius - bottom_right.horizontal_radius,
         border_rect.height()
     };
-    Gfx::FloatRect left_border_rect = {
+    Gfx::IntRect left_border_rect = {
         border_rect.x(),
-        border_rect.y() + top_left_radius,
+        border_rect.y() + top_left.vertical_radius,
         border_rect.width(),
-        border_rect.height() - top_left_radius - bottom_left_radius
+        border_rect.height() - top_left.vertical_radius - bottom_left.vertical_radius
     };
 
-    Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, border_radii_data, borders_data);
+    auto border_color_no_alpha = borders_data.top.color;
+    border_color_no_alpha.set_alpha(255);
 
-    // Draws a quarter circle clockwise
-    auto draw_quarter_circle = [&](Gfx::FloatPoint const& from, Gfx::FloatPoint const& to, Gfx::Color color, int thickness) {
-        Gfx::FloatPoint center = { 0, 0 };
-        Gfx::FloatPoint offset = { 0, 0 };
-        Gfx::FloatPoint circle_position = { 0, 0 };
+    if (!border_radii_data.has_any_radius()) {
+        Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, border_radii_data, borders_data);
+        Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, border_radii_data, borders_data);
+        Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, border_radii_data, borders_data);
+        Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, border_radii_data, borders_data);
+        return;
+    }
 
-        auto radius = fabsf(from.x() - to.x());
+    if (borders_data.top.width <= 0 && borders_data.right.width <= 0 && borders_data.left.width <= 0 && borders_data.bottom.width <= 0)
+        return;
 
-        if (from.x() < to.x() && from.y() > to.y()) {
-            // top-left
-            center.set_x(radius);
-            center.set_y(radius);
-            offset.set_y(1);
-        } else if (from.x() < to.x() && from.y() < to.y()) {
-            // top-right
-            circle_position.set_x(from.x());
-            center.set_y(radius);
-            offset.set_x(-1);
-            offset.set_y(1);
-        } else if (from.x() > to.x() && from.y() < to.y()) {
-            // bottom-right
-            circle_position.set_x(to.x());
-            circle_position.set_y(from.y());
-            offset.set_x(-1);
-        } else if (from.x() > to.x() && from.y() > to.y()) {
-            // bottom-left
-            circle_position.set_y(to.y());
-            center.set_x(radius);
-        } else {
-            // You are lying about your intentions of drawing a quarter circle, your coordinates are (partly) the same!
-            return;
-        }
+    auto allocate_mask_bitmap = [&]{
+        return MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, border_rect.size()));
+    };
+    static auto border_bitmap = allocate_mask_bitmap();
 
-        Gfx::FloatRect circle_rect = {
-            border_rect.x() + circle_position.x(),
-            border_rect.y() + circle_position.y(),
-            radius,
-            radius
-        };
+    auto bitmap_border_rect = border_rect;
+    bitmap_border_rect.set_location({0, 0});
 
-        context.painter().draw_circle_arc_intersecting(
-            Gfx::enclosing_int_rect(circle_rect),
-            (center + offset).to_rounded<int>(),
-            radius,
-            color,
-            thickness);
+    Gfx::Painter painter { border_bitmap };
+    if (border_bitmap->rect().contains(bitmap_border_rect)) {
+        painter.clear_rect(bitmap_border_rect, Gfx::Color());
+    } else {
+        border_bitmap = allocate_mask_bitmap();
+        painter = Gfx::Painter { border_bitmap };
+    }
+
+    Gfx::AntiAliasingPainter aa_painter { painter };
+
+    aa_painter.fill_rect_with_rounded_corners(bitmap_border_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left, Gfx::AntiAliasingPainter::BlendMode::Normal);
+
+    auto int_ceil = [&](auto value) -> int {
+        return ceil(value);
     };
 
-    // FIXME: Which color to use?
-    if (top_left_radius != 0) {
-        Gfx::FloatPoint arc_start = { 0, top_left_radius };
-        Gfx::FloatPoint arc_end = { top_left_radius, 0 };
-        draw_quarter_circle(arc_start, arc_end, borders_data.top.color, borders_data.top.width);
-    }
+    auto inner_border_rect = bitmap_border_rect.shrunken(
+        int_ceil(borders_data.top.width),
+        int_ceil(borders_data.right.width),
+        int_ceil(borders_data.bottom.width),
+        int_ceil(borders_data.left.width));
 
-    if (top_right_radius != 0) {
-        Gfx::FloatPoint arc_start = { top_left_radius + top_border_rect.width(), 0 };
-        Gfx::FloatPoint arc_end = { bordered_rect.width(), top_right_radius };
-        draw_quarter_circle(arc_start, arc_end, borders_data.top.color, borders_data.top.width);
-    }
+    auto inner_top_left = top_left;
+    auto inner_top_right = top_right;
+    auto inner_bottom_right = bottom_right;
+    auto inner_bottom_left = bottom_left;
 
-    if (bottom_right_radius != 0) {
-        Gfx::FloatPoint arc_start = { bordered_rect.width(), top_right_radius + right_border_rect.height() };
-        Gfx::FloatPoint arc_end = { bottom_border_rect.width() + bottom_left_radius, bordered_rect.height() };
-        draw_quarter_circle(arc_start, arc_end, borders_data.bottom.color, borders_data.bottom.width);
-    }
+    inner_top_left.horizontal_radius = max(0, inner_top_left.horizontal_radius - int_ceil(borders_data.left.width));
+    inner_top_left.vertical_radius = max(0, inner_top_left.vertical_radius -int_ceil(borders_data.top.width));
+    inner_top_right.horizontal_radius = max(0, inner_top_right.horizontal_radius - int_ceil(borders_data.right.width));
+    inner_top_right.vertical_radius = max(0, inner_top_right.vertical_radius - int_ceil(borders_data.top.width));
+    inner_bottom_right.horizontal_radius = max(0, inner_bottom_right.horizontal_radius - int_ceil(borders_data.right.width));
+    inner_bottom_right.vertical_radius = max(0, inner_bottom_right.vertical_radius - int_ceil(borders_data.bottom.width));
+    inner_bottom_left.horizontal_radius = max(0, inner_bottom_left.horizontal_radius - int_ceil(borders_data.left.width));
+    inner_bottom_left.vertical_radius = max(0, inner_bottom_left.vertical_radius - int_ceil(borders_data.bottom.width));
 
-    if (bottom_left_radius != 0) {
-        Gfx::FloatPoint arc_start = { bottom_left_radius, bordered_rect.height() };
-        Gfx::FloatPoint arc_end = { 0, bordered_rect.height() - bottom_left_radius };
-        draw_quarter_circle(arc_start, arc_end, borders_data.bottom.color, borders_data.bottom.width);
-    }
+    aa_painter.fill_rect_with_rounded_corners(inner_border_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
+
+    context.painter().blit(border_rect.location(), border_bitmap, bitmap_border_rect, borders_data.top.color.alpha()/255.);
 }
 
 }
