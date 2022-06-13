@@ -5,10 +5,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Painter.h>
 #include <LibWeb/Painting/BorderPainting.h>
 #include <LibWeb/Painting/PaintContext.h>
-#include <LibGfx/AntiAliasingPainter.h>
 
 namespace Web::Painting {
 
@@ -149,7 +149,7 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& re
             p2.translate_by(int_width / 2, -int_width / 2);
             break;
         }
-        context.painter().draw_line({ (int)p1.x(), (int)p1.y() }, { (int)p2.x(), (int)p2.y() }, color, int_width, gfx_line_style);
+        context.painter().draw_line(p1, p2, color, int_width, gfx_line_style);
         return;
     }
 
@@ -210,6 +210,7 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     auto border_color_no_alpha = borders_data.top.color;
     border_color_no_alpha.set_alpha(255);
 
+    // Paint the strait line part of the border:
     Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, borders_data);
     Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, borders_data);
     Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, borders_data);
@@ -227,13 +228,13 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
             top_left.vertical_radius + bottom_left.vertical_radius + expand_width,
             top_right.vertical_radius + bottom_right.vertical_radius + expand_height)
     };
-    auto allocate_mask_bitmap = [&]{
+    auto allocate_mask_bitmap = [&] {
         return MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corner_mask_rect.size()));
     };
     static auto corner_bitmap = allocate_mask_bitmap();
 
     // Only reallocate the corner bitmap is the existing one is too small.
-    // (should mean no more allocations after the first paint)
+    // (should mean no more allocations after the first paint -- amortised zero allocations :^))
     Gfx::Painter painter { corner_bitmap };
     if (corner_bitmap->rect().contains(corner_mask_rect)) {
         painter.clear_rect(corner_mask_rect, Gfx::Color());
@@ -244,44 +245,48 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
 
     Gfx::AntiAliasingPainter aa_painter { painter };
 
-    aa_painter.fill_rect_with_rounded_corners(corner_mask_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left, Gfx::AntiAliasingPainter::BlendMode::Normal);
+    // Paint a little tile sheet for the corners
+    // Paint the outer (minimal) corner rounded rectangle:
+    aa_painter.fill_rect_with_rounded_corners(corner_mask_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left);
 
+    // Subtract the inner corner rectangle:
     auto inner_corner_mask_rect = corner_mask_rect.shrunken(
         int_width(borders_data.top.width),
         int_width(borders_data.right.width),
         int_width(borders_data.bottom.width),
         int_width(borders_data.left.width));
-
     auto inner_top_left = top_left;
     auto inner_top_right = top_right;
     auto inner_bottom_right = bottom_right;
     auto inner_bottom_left = bottom_left;
-
     inner_top_left.horizontal_radius = max(0, inner_top_left.horizontal_radius - int_width(borders_data.left.width));
     inner_top_left.vertical_radius = max(0, inner_top_left.vertical_radius - int_width(borders_data.top.width));
-
     inner_top_right.horizontal_radius = max(0, inner_top_right.horizontal_radius - int_width(borders_data.right.width));
     inner_top_right.vertical_radius = max(0, inner_top_right.vertical_radius - int_width(borders_data.top.width));
-
     inner_bottom_right.horizontal_radius = max(0, inner_bottom_right.horizontal_radius - int_width(borders_data.right.width));
     inner_bottom_right.vertical_radius = max(0, inner_bottom_right.vertical_radius - int_width(borders_data.bottom.width));
-
     inner_bottom_left.horizontal_radius = max(0, inner_bottom_left.horizontal_radius - int_width(borders_data.left.width));
     inner_bottom_left.vertical_radius = max(0, inner_bottom_left.vertical_radius - int_width(borders_data.bottom.width));
-
     aa_painter.fill_rect_with_rounded_corners(inner_corner_mask_rect, border_color_no_alpha, inner_top_left, inner_top_right, inner_bottom_right, inner_bottom_left, Gfx::AntiAliasingPainter::BlendMode::AlphaSubtract);
 
+    auto blit_corner = [&](Gfx::IntPoint const& position, Gfx::IntRect const& src_rect, Color corner_color) {
+        context.painter().blit_filtered(position, corner_bitmap, src_rect, [&](auto const& corner_pixel) {
+            return corner_color.with_alpha(corner_pixel.alpha());
+        });
+    };
+
+    // Blit the corners into to their corresponding locations:
     if (top_left)
-        context.painter().blit(border_rect.top_left(), corner_bitmap, top_left.as_rect(), borders_data.top.color.alpha()/255.);
+        blit_corner(border_rect.top_left(), top_left.as_rect(), borders_data.top.color);
 
     if (top_right)
-        context.painter().blit(border_rect.top_right().translated(-top_right.horizontal_radius + 1, 0), corner_bitmap, top_right.as_rect().translated(corner_mask_rect.width() - top_right.horizontal_radius, 0) , borders_data.top.color.alpha()/255.);
+        blit_corner(border_rect.top_right().translated(-top_right.horizontal_radius + 1, 0), top_right.as_rect().translated(corner_mask_rect.width() - top_right.horizontal_radius, 0), borders_data.top.color);
 
     if (bottom_right)
-        context.painter().blit(border_rect.bottom_right().translated(-bottom_right.horizontal_radius + 1, -bottom_right.vertical_radius + 1), corner_bitmap, bottom_right.as_rect().translated(corner_mask_rect.width() - bottom_right.horizontal_radius, corner_mask_rect.height() - bottom_right.vertical_radius), borders_data.top.color.alpha()/255.);
+        blit_corner(border_rect.bottom_right().translated(-bottom_right.horizontal_radius + 1, -bottom_right.vertical_radius + 1), bottom_right.as_rect().translated(corner_mask_rect.width() - bottom_right.horizontal_radius, corner_mask_rect.height() - bottom_right.vertical_radius), borders_data.bottom.color);
 
     if (bottom_left)
-        context.painter().blit(border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1), corner_bitmap, bottom_left.as_rect().translated(0, corner_mask_rect.height() - bottom_left.vertical_radius), borders_data.top.color.alpha()/255.);
+        blit_corner(border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1), bottom_left.as_rect().translated(0, corner_mask_rect.height() - bottom_left.vertical_radius), borders_data.bottom.color);
 }
 
 }

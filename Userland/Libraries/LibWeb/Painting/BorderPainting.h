@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Forward.h>
 #include <LibWeb/CSS/ComputedValues.h>
-#include <LibGfx/AntiAliasingPainter.h>
 
 namespace Web::Painting {
 
@@ -16,14 +16,16 @@ struct BorderRadiusData {
     float horizontal_radius { 0 };
     float vertical_radius { 0 };
 
-    Gfx::AntiAliasingPainter::CornerRadius as_corner() const {
+    Gfx::AntiAliasingPainter::CornerRadius as_corner() const
+    {
         return Gfx::AntiAliasingPainter::CornerRadius {
             static_cast<int>(horizontal_radius),
             static_cast<int>(vertical_radius)
         };
     };
 
-    inline operator bool() const {
+    inline operator bool() const
+    {
         return static_cast<int>(horizontal_radius) > 0 && static_cast<int>(vertical_radius) > 0;
     }
 };
@@ -34,7 +36,8 @@ struct BorderRadiiData {
     BorderRadiusData bottom_right;
     BorderRadiusData bottom_left;
 
-    inline bool has_any_radius() const {
+    inline bool has_any_radius() const
+    {
         return top_left || top_right || bottom_right || bottom_left;
     }
 };

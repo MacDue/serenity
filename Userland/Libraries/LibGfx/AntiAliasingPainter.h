@@ -50,7 +50,8 @@ public:
             return horizontal_radius > 0 && vertical_radius > 0;
         }
 
-        Gfx::IntRect as_rect() const {
+        Gfx::IntRect as_rect() const
+        {
             return { 0, 0, horizontal_radius, vertical_radius };
         }
     };
