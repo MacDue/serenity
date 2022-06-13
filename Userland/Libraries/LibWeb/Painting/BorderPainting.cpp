@@ -71,7 +71,7 @@ BorderRadiiData normalized_border_radii_data(Layout::Node const& node, Gfx::Floa
     return BorderRadiiData { top_left_radius_px, top_right_radius_px, bottom_right_radius_px, bottom_left_radius_px };
 }
 
-void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& rect, BorderRadiiData const& border_radii_data, BordersData const& borders_data)
+void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& rect, BordersData const& borders_data)
 {
     auto const& border_data = [&] {
         switch (edge) {
@@ -153,60 +153,14 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& re
         return;
     }
 
-    auto draw_line = [&](auto& p1, auto& p2) {
-        context.painter().draw_line({ (int)p1.x(), (int)p1.y() }, { (int)p2.x(), (int)p2.y() }, color, 1, gfx_line_style);
-    };
-
-    float p1_step = 0;
-    float p2_step = 0;
-
-    bool has_top_left_radius = bool(border_radii_data.top_left);
-    bool has_top_right_radius = bool(border_radii_data.top_right);
-    bool has_bottom_left_radius = bool(border_radii_data.bottom_left);
-    bool has_bottom_right_radius = bool(border_radii_data.bottom_right);
-
-    switch (edge) {
-    case BorderEdge::Top:
-        p1_step = has_top_left_radius ? 0 : borders_data.left.width / (float)int_width;
-        p2_step = has_top_right_radius ? 0 : borders_data.right.width / (float)int_width;
-        for (int i = 0; i < int_width; ++i) {
-            draw_line(p1, p2);
-            p1.translate_by(p1_step, 1);
-            p2.translate_by(-p2_step, 1);
-        }
-        break;
-    case BorderEdge::Right:
-        p1_step = has_top_right_radius ? 0 : borders_data.top.width / (float)int_width;
-        p2_step = has_bottom_right_radius ? 0 : borders_data.bottom.width / (float)int_width;
-        for (int i = int_width - 1; i >= 0; --i) {
-            draw_line(p1, p2);
-            p1.translate_by(-1, p1_step);
-            p2.translate_by(-1, -p2_step);
-        }
-        break;
-    case BorderEdge::Bottom:
-        p1_step = has_bottom_left_radius ? 0 : borders_data.left.width / (float)int_width;
-        p2_step = has_bottom_right_radius ? 0 : borders_data.right.width / (float)int_width;
-        for (int i = int_width - 1; i >= 0; --i) {
-            draw_line(p1, p2);
-            p1.translate_by(p1_step, -1);
-            p2.translate_by(-p2_step, -1);
-        }
-        break;
-    case BorderEdge::Left:
-        p1_step = has_top_left_radius ? 0 : borders_data.top.width / (float)int_width;
-        p2_step = has_bottom_left_radius ? 0 : borders_data.bottom.width / (float)int_width;
-        for (int i = 0; i < int_width; ++i) {
-            draw_line(p1, p2);
-            p1.translate_by(1, p1_step);
-            p2.translate_by(1, -p2_step);
-        }
-        break;
-    }
+    context.painter().fill_rect(rect, color);
 }
 
 void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rect, BorderRadiiData const& border_radii_data, BordersData const& borders_data)
 {
+    if (borders_data.top.width <= 0 && borders_data.right.width <= 0 && borders_data.left.width <= 0 && borders_data.bottom.width <= 0)
+        return;
+
     Gfx::IntRect border_rect = bordered_rect.to_rounded<int>();
 
     auto top_left = border_radii_data.top_left.as_corner();
@@ -214,47 +168,54 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     auto bottom_right = border_radii_data.bottom_right.as_corner();
     auto bottom_left = border_radii_data.bottom_left.as_corner();
 
-    Gfx::IntRect top_border_rect = {
-        border_rect.x() + top_left.horizontal_radius,
-        border_rect.y(),
-        border_rect.width() - top_left.horizontal_radius - top_right.horizontal_radius,
-        border_rect.height()
-    };
-    Gfx::IntRect right_border_rect = {
-        border_rect.x(),
-        border_rect.y() + top_right.vertical_radius,
-        border_rect.width(),
-        border_rect.height() - top_right.vertical_radius - bottom_right.vertical_radius
-    };
-    Gfx::IntRect bottom_border_rect = {
-        border_rect.x() + bottom_left.horizontal_radius,
-        border_rect.y(),
-        border_rect.width() - bottom_left.horizontal_radius - bottom_right.horizontal_radius,
-        border_rect.height()
-    };
-    Gfx::IntRect left_border_rect = {
-        border_rect.x(),
-        border_rect.y() + top_left.vertical_radius,
-        border_rect.width(),
-        border_rect.height() - top_left.vertical_radius - bottom_left.vertical_radius
-    };
-
-    auto border_color_no_alpha = borders_data.top.color;
-    border_color_no_alpha.set_alpha(255);
-
-    Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, border_radii_data, borders_data);
-    Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, border_radii_data, borders_data);
-
-    if (borders_data.top.width <= 0 && borders_data.right.width <= 0 && borders_data.left.width <= 0 && borders_data.bottom.width <= 0)
-        return;
-
     auto int_width = [&](auto value) -> int {
         return ceil(value);
     };
 
-    // Cache a small bitmap, just large enough to fit the corners (without the inner rectangle)
+    Gfx::IntRect top_border_rect = {
+        border_rect.x() + top_left.horizontal_radius,
+        border_rect.y(),
+        border_rect.width() - top_left.horizontal_radius - top_right.horizontal_radius,
+        int_width(borders_data.top.width)
+    };
+    Gfx::IntRect right_border_rect = {
+        border_rect.x() + (border_rect.width() - int_width(borders_data.right.width)),
+        border_rect.y() + top_right.vertical_radius,
+        int_width(borders_data.right.width),
+        border_rect.height() - top_right.vertical_radius - bottom_right.vertical_radius
+    };
+    Gfx::IntRect bottom_border_rect = {
+        border_rect.x() + bottom_left.horizontal_radius,
+        border_rect.y() + (border_rect.height() - int_width(borders_data.bottom.width)),
+        border_rect.width() - bottom_left.horizontal_radius - bottom_right.horizontal_radius,
+        int_width(borders_data.bottom.width)
+    };
+    Gfx::IntRect left_border_rect = {
+        border_rect.x(),
+        border_rect.y() + top_left.vertical_radius,
+        int_width(borders_data.left.width),
+        border_rect.height() - top_left.vertical_radius - bottom_left.vertical_radius
+    };
+
+    // Avoid overlapping pixels on the edges.
+    if (!top_left)
+        top_border_rect.shrink(0, 0, 0, left_border_rect.width());
+    if (!top_right)
+        top_border_rect.shrink(0, right_border_rect.width(), 0, 0);
+    if (!bottom_left)
+        bottom_border_rect.shrink(0, 0, 0, left_border_rect.width());
+    if (!bottom_right)
+        bottom_border_rect.shrink(0, right_border_rect.width(), 0, 0);
+
+    auto border_color_no_alpha = borders_data.top.color;
+    border_color_no_alpha.set_alpha(255);
+
+    Painting::paint_border(context, Painting::BorderEdge::Top, top_border_rect, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Right, right_border_rect, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Bottom, bottom_border_rect, borders_data);
+    Painting::paint_border(context, Painting::BorderEdge::Left, left_border_rect, borders_data);
+
+    // Cache the smallest possible bitmap to render just the corners for the border.
     auto expand_width = abs(int_width(borders_data.left.width) - int_width(borders_data.right.width));
     auto expand_height = abs(int_width(borders_data.top.width) - int_width(borders_data.bottom.width));
     Gfx::IntRect corner_mask_rect {
@@ -271,6 +232,8 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     };
     static auto corner_bitmap = allocate_mask_bitmap();
 
+    // Only reallocate the corner bitmap is the existing one is too small.
+    // (should mean no more allocations after the first paint)
     Gfx::Painter painter { corner_bitmap };
     if (corner_bitmap->rect().contains(corner_mask_rect)) {
         painter.clear_rect(corner_mask_rect, Gfx::Color());
@@ -282,7 +245,6 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
     Gfx::AntiAliasingPainter aa_painter { painter };
 
     aa_painter.fill_rect_with_rounded_corners(corner_mask_rect, border_color_no_alpha, top_left, top_right, bottom_right, bottom_left, Gfx::AntiAliasingPainter::BlendMode::Normal);
-
 
     auto inner_corner_mask_rect = corner_mask_rect.shrunken(
         int_width(borders_data.top.width),
@@ -320,9 +282,6 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
 
     if (bottom_left)
         context.painter().blit(border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1), corner_bitmap, bottom_left.as_rect().translated(0, corner_mask_rect.height() - bottom_left.vertical_radius), borders_data.top.color.alpha()/255.);
-
-    // context.painter().blit(corner_mask_rect.centered_within(border_rect).location(),
-    //     corner_bitmap, corner_mask_rect);
 }
 
 }
