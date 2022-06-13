@@ -240,7 +240,7 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
         } else {
             corner_bitmap = allocate_mask_bitmap();
             if (!corner_bitmap)
-                return warnln("Failed to allocate border corner bitmap with size {}", corner_mask_rect.size());
+                return dbgln("Failed to allocate border corner bitmap with size {}", corner_mask_rect.size());
             painter = Gfx::Painter { *corner_bitmap };
         }
         *painter;
