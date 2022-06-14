@@ -279,9 +279,9 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             auto bottom_left_corner_page_location = int_border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1);
 
             Gfx::IntPoint top_left_bitmap_location{0, 0};
-            Gfx::IntPoint top_right_bitmap_location{corner_bitmap->width() - top_right.horizontal_radius, 0};
-            Gfx::IntPoint bottom_right_bitmap_location{corner_bitmap->width() - bottom_right.horizontal_radius, corner_bitmap->height() - bottom_right.vertical_radius};
-            Gfx::IntPoint bottom_left_bitmap_location{0, corner_bitmap->height() - bottom_left.vertical_radius};
+            Gfx::IntPoint top_right_bitmap_location{corner_rect.width() - top_right.horizontal_radius, 0};
+            Gfx::IntPoint bottom_right_bitmap_location{corner_rect.width() - bottom_right.horizontal_radius, corner_rect.height() - bottom_right.vertical_radius};
+            Gfx::IntPoint bottom_left_bitmap_location{0, corner_rect.height() - bottom_left.vertical_radius};
 
             auto copy_page_masked = [&](auto const & mask_src, auto const & page_location) {
                 for (int row = 0; row < mask_src.height(); ++row) {
