@@ -268,28 +268,10 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
                     top_left.vertical_radius + bottom_left.vertical_radius,
                     top_right.vertical_radius + bottom_right.vertical_radius)
             };
-
-            auto allocate_corner_bitmap = [&]() -> RefPtr<Gfx::Bitmap> {
-                auto bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corner_rect.size());
-                if (!bitmap.is_error())
-                    return bitmap.release_value();
-                return nullptr;
-            };
-            static thread_local auto corner_bitmap = allocate_corner_bitmap();
-
-            Gfx::Painter corner_painter = ({
-                Optional<Gfx::Painter> painter;
-                if (corner_bitmap && corner_bitmap->rect().contains(corner_rect)) {
-                    painter = Gfx::Painter { *corner_bitmap };
-                    painter->clear_rect(corner_rect, Gfx::Color());
-                } else {
-                    corner_bitmap = allocate_corner_bitmap();
-                    if (!corner_bitmap)
-                        return dbgln("Failed to background image corner bitmap with size {}", corner_rect.size());
-                    painter = Gfx::Painter { *corner_bitmap };
-                }
-                *painter;
-            });
+            auto corner_bitmap = get_cached_corner_bitmap(corner_rect);
+            if (!corner_bitmap)
+                return;
+            Gfx::Painter corner_painter { *corner_bitmap };
 
             auto top_left_corner_page_location = int_border_rect.top_left();
             auto top_right_corner_page_location = int_border_rect.top_right().translated(-top_right.horizontal_radius + 1, 0);
@@ -307,7 +289,7 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
                         auto corner_location = mask_src.location().translated(col, row);
                         auto mask_pixel = corner_bitmap->get_pixel(corner_location);
                         u8 mask_alpha = ~mask_pixel.alpha();
-                        Color final_pixel{};
+                        auto final_pixel = Color();
                         if (mask_alpha > 0) {
                             auto page_pixel = painter.get_pixel(page_location.translated(col, row));
                             if (page_pixel.has_value())
@@ -322,7 +304,7 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             Gfx::AntiAliasingPainter corner_aa_painter { corner_painter };
             corner_aa_painter.fill_rect_with_rounded_corners(corner_rect, Color::NamedColor::Black, top_left, top_right, bottom_right, bottom_left);
 
-            // Copy the pixels under the corner mask:
+            // Copy the pixels under the corner mask (using the alpha of the mask):
             if (top_left)
                 copy_page_masked(top_left.as_rect().translated(top_left_bitmap_location), top_left_corner_page_location);
             if (top_right)
