@@ -204,10 +204,10 @@ void paint_border(PaintContext& context, BorderEdge edge, Gfx::IntRect const& re
     }
 }
 
-RefPtr<Gfx::Bitmap> get_cached_corner_bitmap(Gfx::IntRect const& corners_rect)
+RefPtr<Gfx::Bitmap> get_cached_corner_bitmap(Gfx::IntSize const& corners_size)
 {
     auto allocate_mask_bitmap = [&]() -> RefPtr<Gfx::Bitmap> {
-        auto bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corners_rect.size());
+        auto bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, corners_size);
         if (!bitmap.is_error())
             return bitmap.release_value();
         return nullptr;
@@ -216,13 +216,13 @@ RefPtr<Gfx::Bitmap> get_cached_corner_bitmap(Gfx::IntRect const& corners_rect)
     static thread_local auto corner_bitmap = allocate_mask_bitmap();
     // Only reallocate the corner bitmap is the existing one is too small.
     // (should mean no more allocations after the first paint -- amortised zero allocations :^))
-    if (corner_bitmap && corner_bitmap->rect().contains(corners_rect)) {
+    if (corner_bitmap && corner_bitmap->rect().size().contains(corners_size)) {
         Gfx::Painter painter { *corner_bitmap };
-        painter.clear_rect(corners_rect, Gfx::Color());
+        painter.clear_rect({ { 0, 0 }, corners_size }, Gfx::Color());
     } else {
         corner_bitmap = allocate_mask_bitmap();
         if (!corner_bitmap) {
-            dbgln("Failed to allocate corner bitmap with size {}", corners_rect.size());
+            dbgln("Failed to allocate corner bitmap with size {}", corners_size);
             return nullptr;
         }
     }
@@ -315,7 +315,7 @@ void paint_all_borders(PaintContext& context, Gfx::FloatRect const& bordered_rec
             top_right.vertical_radius + bottom_right.vertical_radius + expand_height)
     };
 
-    auto corner_bitmap = get_cached_corner_bitmap(corner_mask_rect);
+    auto corner_bitmap = get_cached_corner_bitmap(corner_mask_rect.size());
     if (!corner_bitmap)
         return;
     Gfx::Painter painter { *corner_bitmap };
