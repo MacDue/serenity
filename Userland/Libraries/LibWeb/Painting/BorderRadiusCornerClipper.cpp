@@ -48,7 +48,7 @@ ErrorOr<BorderRadiusCornerClipper> BorderRadiusCornerClipper::try_create(Gfx::In
 
 void BorderRadiusCornerClipper::sample_under_corners(Gfx::Painter& page_painter)
 {
-    // Generate a mask for the corner:
+    // Generate a mask for the corners:
     Gfx::Painter corner_painter { *m_corner_bitmap };
     Gfx::AntiAliasingPainter corner_aa_painter { corner_painter };
     Gfx::IntRect corner_rect { { 0, 0 }, m_data.corner_bitmap_size };
