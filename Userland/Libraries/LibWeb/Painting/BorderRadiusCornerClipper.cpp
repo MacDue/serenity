@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022, MacDue <macdue@dueutil.tech>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Painter.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
