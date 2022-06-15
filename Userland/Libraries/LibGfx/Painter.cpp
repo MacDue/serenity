@@ -1727,7 +1727,8 @@ void Painter::set_pixel(IntPoint const& p, Color color, bool blend)
     }
 }
 
-Optional<Color> Painter::get_pixel(IntPoint const& p) {
+Optional<Color> Painter::get_pixel(IntPoint const& p)
+{
     auto point = p;
     point.translate_by(state().translation);
     if (!clip_rect().contains(point / scale()))

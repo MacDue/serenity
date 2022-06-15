@@ -230,7 +230,7 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             image_rect.set_y(image_rect.y() - y_delta);
         }
 
-        auto paint_image_background = [&]{
+        auto paint_image_background = [&] {
             float initial_image_x = image_rect.x();
             float image_y = image_rect.y();
             while (image_y < clip_rect.bottom()) {
@@ -257,7 +257,7 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             auto top_left = border_radii.top_left.as_corner();
             auto top_right = border_radii.top_right.as_corner();
             auto bottom_right = border_radii.bottom_right.as_corner();
-            auto bottom_left =  border_radii.bottom_left.as_corner();
+            auto bottom_left = border_radii.bottom_left.as_corner();
 
             Gfx::IntRect corner_rect {
                 0, 0,
@@ -278,12 +278,12 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             auto bottom_right_corner_page_location = int_border_rect.bottom_right().translated(-bottom_right.horizontal_radius + 1, -bottom_right.vertical_radius + 1);
             auto bottom_left_corner_page_location = int_border_rect.bottom_left().translated(0, -bottom_left.vertical_radius + 1);
 
-            Gfx::IntPoint top_left_bitmap_location{0, 0};
-            Gfx::IntPoint top_right_bitmap_location{corner_rect.width() - top_right.horizontal_radius, 0};
-            Gfx::IntPoint bottom_right_bitmap_location{corner_rect.width() - bottom_right.horizontal_radius, corner_rect.height() - bottom_right.vertical_radius};
-            Gfx::IntPoint bottom_left_bitmap_location{0, corner_rect.height() - bottom_left.vertical_radius};
+            Gfx::IntPoint top_left_bitmap_location { 0, 0 };
+            Gfx::IntPoint top_right_bitmap_location { corner_rect.width() - top_right.horizontal_radius, 0 };
+            Gfx::IntPoint bottom_right_bitmap_location { corner_rect.width() - bottom_right.horizontal_radius, corner_rect.height() - bottom_right.vertical_radius };
+            Gfx::IntPoint bottom_left_bitmap_location { 0, corner_rect.height() - bottom_left.vertical_radius };
 
-            auto copy_page_masked = [&](auto const & mask_src, auto const & page_location) {
+            auto copy_page_masked = [&](auto const& mask_src, auto const& page_location) {
                 for (int row = 0; row < mask_src.height(); ++row) {
                     for (int col = 0; col < mask_src.width(); ++col) {
                         auto corner_location = mask_src.location().translated(col, row);
