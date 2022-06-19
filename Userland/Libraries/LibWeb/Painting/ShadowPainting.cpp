@@ -72,6 +72,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         // So instead, we generate a shadow bitmap that is just large enough to include the corners and 1px of
         // non-corner, and then we repeatedly blit sections of it. This is similar to a NinePatch on Android.
         auto double_radius = box_shadow_data.blur_radius * 2;
+        auto blurred_edge_thickness = box_shadow_data.blur_radius * 4;
 
         auto default_corner_size = Gfx::IntSize { double_radius, double_radius };
         auto top_left_corner_size = top_left_corner ? top_left_corner.as_rect().size() : default_corner_size;
@@ -84,11 +85,11 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             max(
                 top_left_corner_size.width() + top_right_corner_size.width(),
                 bottom_left_corner_size.width() + bottom_right_corner_size.width())
-                + 1 + double_radius * 2,
+                + 1 + blurred_edge_thickness,
             max(
                 top_left_corner_size.height() + bottom_left_corner_size.height(),
                 top_right_corner_size.height() + bottom_right_corner_size.height())
-                + 1 + double_radius * 2);
+                + 1 + blurred_edge_thickness);
 
         auto top_left_corner_rect = Gfx::IntRect {
             0, 0,
@@ -112,7 +113,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             bottom_left_corner_size.height() + double_radius
         };
 
-        auto blurred_edge_thickness = box_shadow_data.blur_radius * 4;
         Gfx::IntRect left_edge_rect { 0, top_left_corner_rect.height(), blurred_edge_thickness, 1 };
         Gfx::IntRect right_edge_rect { shadow_bitmap_rect.width() - blurred_edge_thickness, top_right_corner_rect.height(), blurred_edge_thickness, 1 };
         Gfx::IntRect top_edge_rect { top_left_corner_rect.width(), 0, 1, blurred_edge_thickness };
