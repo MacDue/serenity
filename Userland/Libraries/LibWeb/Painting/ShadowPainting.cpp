@@ -131,16 +131,57 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         //        a rect which discards drawing inside it. So, we run the draw operations 4 times with clip-rects
         //        covering each side of the content_rect exactly once.
 
-
         auto tl = solid_rect.top_left().translated(-double_radius*2,-double_radius*2);
         auto tr = solid_rect.top_right().translated(-top_right_corner.horizontal_radius + 1 + double_radius, -double_radius*2);
         auto bl = solid_rect.bottom_left().translated(-double_radius*2, -bottom_left_corner.vertical_radius + 1 + double_radius);
         auto br = solid_rect.bottom_right().translated(-bottom_right_corner.horizontal_radius + 1 + double_radius, -bottom_right_corner.vertical_radius + 1 + double_radius);
 
+        auto fill_solid = [&]{
+            Gfx::IntRect top_rect {
+                solid_rect.x() + (top_left_corner_rect.width() -double_radius * 2),
+                solid_rect.y(),
+                solid_rect.width() - (top_left_corner_rect.width() -double_radius * 2) - (top_right_corner_rect.width() -double_radius * 2),
+                (top_left_corner_rect.height() -double_radius * 2)
+            };
+            Gfx::IntRect right_rect {
+                solid_rect.x() + solid_rect.width() -(top_right_corner_rect.width() -double_radius * 2),
+                solid_rect.y() + (top_right_corner_rect.height() -double_radius * 2),
+                (top_right_corner_rect.width() -double_radius * 2),
+                solid_rect.height() - (top_right_corner_rect.height() -double_radius * 2) - (bottom_right_corner_rect.height() -double_radius * 2)
+            };
+            Gfx::IntRect bottom_rect {
+                solid_rect.x() + (bottom_left_corner_rect.width() -double_radius * 2),
+                solid_rect.y() + solid_rect.height() - (bottom_right_corner_rect.height() -double_radius * 2),
+                solid_rect.width() - (bottom_left_corner_rect.width() -double_radius * 2) - (bottom_right_corner_rect.width() -double_radius * 2),
+                (bottom_right_corner_rect.height() -double_radius * 2)
+            };
+            Gfx::IntRect left_rect {
+                solid_rect.x(),
+                solid_rect.y() + (top_left_corner_rect.height() -double_radius * 2),
+                (bottom_left_corner_rect.width() -double_radius * 2),
+                solid_rect.height() - (top_left_corner_rect.height() -double_radius * 2) -(bottom_left_corner_rect.height() -double_radius * 2)
+            };
+
+            Gfx::IntRect inner = {
+                left_rect.x() + left_rect.width(),
+                left_rect.y(),
+                solid_rect.width() - left_rect.width() - right_rect.width(),
+                solid_rect.height() - top_rect.height() - bottom_rect.height()
+            };
+            // auto test = Gfx::Color::from_argb(0x80000000);
+            painter.fill_rect(top_rect, box_shadow_data.color);
+            painter.fill_rect(right_rect, box_shadow_data.color);
+            painter.fill_rect(bottom_rect, box_shadow_data.color);
+            painter.fill_rect(left_rect, box_shadow_data.color);
+            painter.fill_rect(inner, box_shadow_data.color);
+        };
+
+
         auto paint_shadow = [&](Gfx::IntRect clip_rect) {
             painter.save();
             (void) clip_rect;
             painter.add_clip_rect(clip_rect);
+            fill_solid();
             // painter.fill_rect(solid_rect, box_shadow_data.color);
 
             // Paint corners
