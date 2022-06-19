@@ -141,7 +141,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             painter.save();
             (void) clip_rect;
             painter.add_clip_rect(clip_rect);
-            painter.fill_rect(solid_rect, box_shadow_data.color);
+            // painter.fill_rect(solid_rect, box_shadow_data.color);
 
             // Paint corners
             // painter.blit({ left_start, top_start }, shadow_bitmap, corner_rect);
