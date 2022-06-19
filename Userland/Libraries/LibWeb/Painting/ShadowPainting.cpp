@@ -9,10 +9,10 @@
 #include <LibGfx/Filters/FastBoxBlurFilter.h>
 #include <LibGfx/Painter.h>
 #include <LibWeb/Layout/LineBoxFragment.h>
-#include <LibWeb/Painting/PaintContext.h>
-#include <LibWeb/Painting/ShadowPainting.h>
 #include <LibWeb/Painting/BorderPainting.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
+#include <LibWeb/Painting/PaintContext.h>
+#include <LibWeb/Painting/ShadowPainting.h>
 
 namespace Web::Painting {
 
@@ -40,8 +40,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
     auto bottom_left_corner = border_radii.bottom_left.as_corner();
 
     // Note: Box-shadow layers are ordered front-to-back, so we paint them in reverse
-    for (int layer_index = box_shadow_layers.size() - 1; layer_index >= 0; layer_index--) {
-        auto& box_shadow_data = box_shadow_layers[layer_index];
+    for (auto& box_shadow_data : box_shadow_layers.in_reverse()) {
         // FIXME: Paint inset shadows.
         if (box_shadow_data.placement != ShadowPlacement::Outer)
             continue;
@@ -80,15 +79,16 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         auto bottom_left_corner_size = bottom_left_corner ? bottom_left_corner.as_rect().size() : default_corner_size;
         auto bottom_right_corner_size = bottom_right_corner ? bottom_right_corner.as_rect().size() : default_corner_size;
 
-        auto shadow_bitmap_rect = Gfx::IntRect (
+        auto shadow_bitmap_rect = Gfx::IntRect(
             0, 0,
             max(
                 top_left_corner_size.width() + top_right_corner_size.width(),
-                bottom_left_corner_size.width() + bottom_right_corner_size.width()) + 1 + double_radius * 2,
+                bottom_left_corner_size.width() + bottom_right_corner_size.width())
+                + 1 + double_radius * 2,
             max(
                 top_left_corner_size.height() + bottom_left_corner_size.height(),
-                top_right_corner_size.height() + bottom_right_corner_size.height()) + 1 + double_radius * 2
-        );
+                top_right_corner_size.height() + bottom_right_corner_size.height())
+                + 1 + double_radius * 2);
 
         auto top_left_corner_rect = Gfx::IntRect {
             0, 0,
@@ -100,13 +100,13 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             top_right_corner_size.width() + double_radius,
             top_right_corner_size.height() + double_radius
         };
-        auto bottom_right_corner_rect = Gfx::IntRect  {
+        auto bottom_right_corner_rect = Gfx::IntRect {
             shadow_bitmap_rect.width() - (bottom_right_corner_size.width() + double_radius),
             shadow_bitmap_rect.height() - (bottom_right_corner_size.height() + double_radius),
             bottom_right_corner_size.width() + double_radius,
             bottom_right_corner_size.height() + double_radius
         };
-        auto bottom_left_corner_rect = Gfx::IntRect  {
+        auto bottom_left_corner_rect = Gfx::IntRect {
             0, shadow_bitmap_rect.height() - (bottom_left_corner_size.height() + double_radius),
             bottom_left_corner_size.width() + double_radius,
             bottom_left_corner_size.height() + double_radius
@@ -128,33 +128,46 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         Gfx::AntiAliasingPainter aa_corner_painter { corner_painter };
 
         aa_corner_painter.fill_rect_with_rounded_corners(shadow_bitmap_rect.shrunken(double_radius, double_radius, double_radius, double_radius), box_shadow_data.color, top_left_corner, top_right_corner, bottom_right_corner, bottom_left_corner);
+        // FIXME: Make fast box blur faster
         Gfx::FastBoxBlurFilter filter(*shadow_bitmap);
         filter.apply_three_passes(box_shadow_data.blur_radius);
 
-        auto paint_shadow_infill = [&]{
+        auto paint_shadow_infill = [&] {
+            if (!border_radii.has_any_radius())
+                return painter.fill_rect(inner_bounding_rect, box_shadow_data.color);
+
+            auto top_left_inner_width = top_left_corner_rect.width() - blurred_edge_thickness;
+            auto top_left_inner_height = top_left_corner_rect.height() - blurred_edge_thickness;
+            auto top_right_inner_width = top_right_corner_rect.width() - blurred_edge_thickness;
+            auto top_right_inner_height = top_right_corner_rect.height() - blurred_edge_thickness;
+            auto bottom_right_inner_width = bottom_right_corner_rect.width() - blurred_edge_thickness;
+            auto bottom_right_inner_height = bottom_right_corner_rect.height() - blurred_edge_thickness;
+            auto bottom_left_inner_width = bottom_left_corner_rect.width() - blurred_edge_thickness;
+            auto bottom_left_inner_height = bottom_left_corner_rect.height() - blurred_edge_thickness;
+
             Gfx::IntRect top_rect {
-                inner_bounding_rect.x() + (top_left_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.x() + top_left_inner_width,
                 inner_bounding_rect.y(),
-                inner_bounding_rect.width() - (top_left_corner_rect.width() - blurred_edge_thickness) - (top_right_corner_rect.width() - blurred_edge_thickness),
-                (top_left_corner_rect.height() - blurred_edge_thickness)
+                inner_bounding_rect.width() - top_left_inner_width - top_right_inner_width,
+                top_left_inner_height
             };
             Gfx::IntRect right_rect {
-                inner_bounding_rect.x() + inner_bounding_rect.width() - (top_right_corner_rect.width() - blurred_edge_thickness),
-                inner_bounding_rect.y() + (top_right_corner_rect.height() - blurred_edge_thickness),
-                (top_right_corner_rect.width() - blurred_edge_thickness),
-                inner_bounding_rect.height() - (top_right_corner_rect.height() - blurred_edge_thickness) - (bottom_right_corner_rect.height() - blurred_edge_thickness)
+                inner_bounding_rect.x() + inner_bounding_rect.width() - top_right_inner_width,
+                inner_bounding_rect.y() + top_right_inner_height,
+                top_right_inner_width,
+                inner_bounding_rect.height() - top_right_inner_height - bottom_right_inner_height
             };
             Gfx::IntRect bottom_rect {
-                inner_bounding_rect.x() + (bottom_left_corner_rect.width() - blurred_edge_thickness),
-                inner_bounding_rect.y() + inner_bounding_rect.height() - (bottom_right_corner_rect.height() - blurred_edge_thickness),
-                inner_bounding_rect.width() - (bottom_left_corner_rect.width() - blurred_edge_thickness) - (bottom_right_corner_rect.width() - blurred_edge_thickness),
-                (bottom_right_corner_rect.height() - blurred_edge_thickness)
+                inner_bounding_rect.x() + bottom_left_inner_width,
+                inner_bounding_rect.y() + inner_bounding_rect.height() - bottom_right_inner_height,
+                inner_bounding_rect.width() - bottom_left_inner_width - bottom_right_inner_width,
+                bottom_right_inner_height
             };
             Gfx::IntRect left_rect {
                 inner_bounding_rect.x(),
-                inner_bounding_rect.y() + (top_left_corner_rect.height() - blurred_edge_thickness),
-                (bottom_left_corner_rect.width() - blurred_edge_thickness),
-                inner_bounding_rect.height() - (top_left_corner_rect.height() - blurred_edge_thickness) - (bottom_left_corner_rect.height() - blurred_edge_thickness)
+                inner_bounding_rect.y() + top_left_inner_height,
+                bottom_left_inner_width,
+                inner_bounding_rect.height() - top_left_inner_height - bottom_left_inner_height
             };
             Gfx::IntRect inner = {
                 left_rect.x() + left_rect.width(),
@@ -175,7 +188,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         auto top_start = inner_bounding_rect.top() - blurred_edge_thickness;
         auto bottom_start = inner_bounding_rect.top() + inner_bounding_rect.height();
 
-        auto top_left_corner_blit_pos = inner_bounding_rect.top_left().translated(-blurred_edge_thickness,-blurred_edge_thickness);
+        auto top_left_corner_blit_pos = inner_bounding_rect.top_left().translated(-blurred_edge_thickness, -blurred_edge_thickness);
         auto top_right_corner_blit_pos = inner_bounding_rect.top_right().translated(-top_right_corner_size.width() + 1 + double_radius, -blurred_edge_thickness);
         auto bottom_left_corner_blit_pos = inner_bounding_rect.bottom_left().translated(-blurred_edge_thickness, -bottom_left_corner_size.height() + 1 + double_radius);
         auto bottom_right_corner_blit_pos = inner_bounding_rect.bottom_right().translated(-bottom_right_corner_size.width() + 1 + double_radius, -bottom_right_corner_size.height() + 1 + double_radius);
@@ -186,6 +199,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
             paint_shadow_infill();
 
+            // Corners
             painter.blit(top_left_corner_blit_pos, shadow_bitmap, top_left_corner_rect);
             painter.blit(top_right_corner_blit_pos, shadow_bitmap, top_right_corner_rect);
             painter.blit(bottom_left_corner_blit_pos, shadow_bitmap, bottom_left_corner_rect);
@@ -205,8 +219,30 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         };
 
         // FIXME: Painter only lets us define a clip-rect which discards drawing outside of it, whereas here we want
-        //        a rect which discards drawing inside it. So, we run the draw operations 4 times with clip-rects
+        //        a rect which discards drawing inside it. So, we run the draw operations 4 to 8 times with clip-rects
         //        covering each side of the content_rect exactly once.
+
+        // If we were painting a shadow without a border radius we'd want to clip everything inside the box below.
+        // If painting a shadow with rounded corners (but still rectangular) we want to clip everything inside
+        // the box except the corners. This gives us an upper bound of 8 shadow paints now :^(.
+        // (However, this does not seem to be the costly part in profiling).
+        //
+        // ┌───┬────────┬───┐
+        // │   │xxxxxxxx│   │
+        // ├───┼────────┼───┤
+        // │xxx│xxxxxxxx│xxx│
+        // │xxx│xxxxxxxx│xxx│
+        // │xxx│xxxxxxxx│xxx│
+        // │xxx│xxxxxxxx│xxx│
+        // │xxx│xxxxxxxx│xxx│
+        // ├───┼────────┼───┤
+        // │   │ xxxxxx │   │
+        // └───┴────────┴───┘
+
+        // How many times would you like to paint the shadow sir?
+        // Yes.
+
+        // FIXME: Could reduce the shadow paints from 8 to 4 for shadows with all corner radii 50%.
 
         // Everything above content_rect, including sides
         paint_shadow({ 0, 0, painter.target()->width(), content_rect.top() });
@@ -221,21 +257,25 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         paint_shadow({ content_rect.right() + 1, content_rect.top(), painter.target()->width(), content_rect.height() });
 
         if (top_left_corner) {
+            // Inside the top left corner (the part outside the border radius)
             auto top_left = top_left_corner.as_rect().translated(content_rect.top_left());
             paint_shadow(top_left);
         }
 
         if (top_right_corner) {
+            // Inside the top right corner (the part outside the border radius)
             auto top_right = top_right_corner.as_rect().translated(content_rect.top_right().translated(-top_right_corner.horizontal_radius + 1, 0));
             paint_shadow(top_right);
         }
 
         if (bottom_right_corner) {
+            // Inside the bottom right corner (the part outside the border radius)
             auto bottom_right = bottom_right_corner.as_rect().translated(content_rect.bottom_right().translated(-bottom_right_corner.horizontal_radius + 1, -bottom_right_corner.vertical_radius + 1));
             paint_shadow(bottom_right);
         }
 
         if (bottom_left_corner) {
+            // Inside the bottom left corner (the part outside the border radius)
             auto bottom_left = bottom_left_corner.as_rect().translated(content_rect.bottom_left().translated(0, -bottom_left_corner.vertical_radius + 1));
             paint_shadow(bottom_left);
         }
