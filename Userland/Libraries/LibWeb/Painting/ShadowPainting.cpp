@@ -61,7 +61,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         }
 
         auto expansion = box_shadow_data.spread_distance - (box_shadow_data.blur_radius * 2);
-        Gfx::IntRect solid_rect = {
+        Gfx::IntRect inner_bounding_rect = {
             content_rect.x() + box_shadow_data.offset_x - expansion,
             content_rect.y() + box_shadow_data.offset_y - expansion,
             content_rect.width() + 2 * expansion,
@@ -73,12 +73,12 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         // So instead, we generate a shadow bitmap that is just large enough to include the corners and 1px of
         // non-corner, and then we repeatedly blit sections of it. This is similar to a NinePatch on Android.
         auto double_radius = box_shadow_data.blur_radius * 2;
-        auto corner_size_test = Gfx::IntSize { double_radius, double_radius };
 
-        auto top_left_corner_size = top_left_corner ? top_left_corner.as_rect().size() : corner_size_test;
-        auto top_right_corner_size = top_right_corner ? top_right_corner.as_rect().size() : corner_size_test;
-        auto bottom_left_corner_size = bottom_left_corner ? bottom_left_corner.as_rect().size() : corner_size_test;
-        auto bottom_right_corner_size = bottom_right_corner ? bottom_right_corner.as_rect().size() : corner_size_test;
+        auto default_corner_size = Gfx::IntSize { double_radius, double_radius };
+        auto top_left_corner_size = top_left_corner ? top_left_corner.as_rect().size() : default_corner_size;
+        auto top_right_corner_size = top_right_corner ? top_right_corner.as_rect().size() : default_corner_size;
+        auto bottom_left_corner_size = bottom_left_corner ? bottom_left_corner.as_rect().size() : default_corner_size;
+        auto bottom_right_corner_size = bottom_right_corner ? bottom_right_corner.as_rect().size() : default_corner_size;
 
         auto shadow_bitmap_rect = Gfx::IntRect (
             0, 0,
@@ -89,8 +89,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
                 top_left_corner_size.height() + bottom_left_corner_size.height(),
                 top_right_corner_size.height() + bottom_right_corner_size.height()) + 1 + double_radius * 2
         );
-
-        auto corner_size = box_shadow_data.blur_radius * 4;
 
         auto top_left_corner_rect = Gfx::IntRect {
             0, 0,
@@ -114,10 +112,11 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             bottom_left_corner_size.height() + double_radius
         };
 
-        Gfx::IntRect left_edge_rect { 0, top_left_corner_rect.height(), corner_size, 1 };
-        Gfx::IntRect right_edge_rect { shadow_bitmap_rect.width() - corner_size, top_right_corner_rect.height(), corner_size, 1 };
-        Gfx::IntRect top_edge_rect { top_left_corner_rect.width(), 0, 1, corner_size };
-        Gfx::IntRect bottom_edge_rect { bottom_left_corner_rect.width(), shadow_bitmap_rect.height() - corner_size, 1, corner_size };
+        auto blurred_edge_thickness = box_shadow_data.blur_radius * 4;
+        Gfx::IntRect left_edge_rect { 0, top_left_corner_rect.height(), blurred_edge_thickness, 1 };
+        Gfx::IntRect right_edge_rect { shadow_bitmap_rect.width() - blurred_edge_thickness, top_right_corner_rect.height(), blurred_edge_thickness, 1 };
+        Gfx::IntRect top_edge_rect { top_left_corner_rect.width(), 0, 1, blurred_edge_thickness };
+        Gfx::IntRect bottom_edge_rect { bottom_left_corner_rect.width(), shadow_bitmap_rect.height() - blurred_edge_thickness, 1, blurred_edge_thickness };
 
         auto shadows_bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, shadow_bitmap_rect.size());
         if (shadows_bitmap.is_error()) {
@@ -132,41 +131,36 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         Gfx::FastBoxBlurFilter filter(*shadow_bitmap);
         filter.apply_three_passes(box_shadow_data.blur_radius);
 
-        auto left_start = solid_rect.left() - corner_size;
-        auto right_start = solid_rect.left() + solid_rect.width();
-        auto top_start = solid_rect.top() - corner_size;
-        auto bottom_start = solid_rect.top() + solid_rect.height();
-
-        [[maybe_unused]] auto fill_solid = [&]{
+        auto paint_shadow_infill = [&]{
             Gfx::IntRect top_rect {
-                solid_rect.x() + (top_left_corner_rect.width() -double_radius * 2),
-                solid_rect.y(),
-                solid_rect.width() - (top_left_corner_rect.width() -double_radius * 2) - (top_right_corner_rect.width() -double_radius * 2),
-                (top_left_corner_rect.height() -double_radius * 2)
+                inner_bounding_rect.x() + (top_left_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.y(),
+                inner_bounding_rect.width() - (top_left_corner_rect.width() - blurred_edge_thickness) - (top_right_corner_rect.width() - blurred_edge_thickness),
+                (top_left_corner_rect.height() - blurred_edge_thickness)
             };
             Gfx::IntRect right_rect {
-                solid_rect.x() + solid_rect.width() -(top_right_corner_rect.width() -double_radius * 2),
-                solid_rect.y() + (top_right_corner_rect.height() -double_radius * 2),
-                (top_right_corner_rect.width() -double_radius * 2),
-                solid_rect.height() - (top_right_corner_rect.height() -double_radius * 2) - (bottom_right_corner_rect.height() -double_radius * 2)
+                inner_bounding_rect.x() + inner_bounding_rect.width() - (top_right_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.y() + (top_right_corner_rect.height() - blurred_edge_thickness),
+                (top_right_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.height() - (top_right_corner_rect.height() - blurred_edge_thickness) - (bottom_right_corner_rect.height() - blurred_edge_thickness)
             };
             Gfx::IntRect bottom_rect {
-                solid_rect.x() + (bottom_left_corner_rect.width() -double_radius * 2),
-                solid_rect.y() + solid_rect.height() - (bottom_right_corner_rect.height() -double_radius * 2),
-                solid_rect.width() - (bottom_left_corner_rect.width() -double_radius * 2) - (bottom_right_corner_rect.width() -double_radius * 2),
-                (bottom_right_corner_rect.height() -double_radius * 2)
+                inner_bounding_rect.x() + (bottom_left_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.y() + inner_bounding_rect.height() - (bottom_right_corner_rect.height() - blurred_edge_thickness),
+                inner_bounding_rect.width() - (bottom_left_corner_rect.width() - blurred_edge_thickness) - (bottom_right_corner_rect.width() - blurred_edge_thickness),
+                (bottom_right_corner_rect.height() - blurred_edge_thickness)
             };
             Gfx::IntRect left_rect {
-                solid_rect.x(),
-                solid_rect.y() + (top_left_corner_rect.height() -double_radius * 2),
-                (bottom_left_corner_rect.width() -double_radius * 2),
-                solid_rect.height() - (top_left_corner_rect.height() -double_radius * 2) -(bottom_left_corner_rect.height() -double_radius * 2)
+                inner_bounding_rect.x(),
+                inner_bounding_rect.y() + (top_left_corner_rect.height() - blurred_edge_thickness),
+                (bottom_left_corner_rect.width() - blurred_edge_thickness),
+                inner_bounding_rect.height() - (top_left_corner_rect.height() - blurred_edge_thickness) - (bottom_left_corner_rect.height() - blurred_edge_thickness)
             };
             Gfx::IntRect inner = {
                 left_rect.x() + left_rect.width(),
                 left_rect.y(),
-                solid_rect.width() - left_rect.width() - right_rect.width(),
-                solid_rect.height() - top_rect.height() - bottom_rect.height()
+                inner_bounding_rect.width() - left_rect.width() - right_rect.width(),
+                inner_bounding_rect.height() - top_rect.height() - bottom_rect.height()
             };
 
             painter.fill_rect(top_rect, box_shadow_data.color);
@@ -176,32 +170,37 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             painter.fill_rect(inner, box_shadow_data.color);
         };
 
-        [[maybe_unused]]  auto tl = solid_rect.top_left().translated(-double_radius*2,-double_radius*2);
-        [[maybe_unused]] auto tr = solid_rect.top_right().translated(-top_right_corner_size.width() + 1 + double_radius, -double_radius*2);
-        [[maybe_unused]] auto bl = solid_rect.bottom_left().translated(-double_radius*2, -bottom_left_corner_size.height() + 1 + double_radius);
-        [[maybe_unused]] auto br = solid_rect.bottom_right().translated(-bottom_right_corner_size.width() + 1 + double_radius, -bottom_right_corner_size.height() + 1 + double_radius);
+        auto left_start = inner_bounding_rect.left() - blurred_edge_thickness;
+        auto right_start = inner_bounding_rect.left() + inner_bounding_rect.width();
+        auto top_start = inner_bounding_rect.top() - blurred_edge_thickness;
+        auto bottom_start = inner_bounding_rect.top() + inner_bounding_rect.height();
+
+        auto top_left_corner_blit_pos = inner_bounding_rect.top_left().translated(-blurred_edge_thickness,-blurred_edge_thickness);
+        auto top_right_corner_blit_pos = inner_bounding_rect.top_right().translated(-top_right_corner_size.width() + 1 + double_radius, -blurred_edge_thickness);
+        auto bottom_left_corner_blit_pos = inner_bounding_rect.bottom_left().translated(-blurred_edge_thickness, -bottom_left_corner_size.height() + 1 + double_radius);
+        auto bottom_right_corner_blit_pos = inner_bounding_rect.bottom_right().translated(-bottom_right_corner_size.width() + 1 + double_radius, -bottom_right_corner_size.height() + 1 + double_radius);
 
         auto paint_shadow = [&](Gfx::IntRect clip_rect) {
             Gfx::PainterStateSaver save { painter };
             painter.add_clip_rect(clip_rect);
 
-            fill_solid();
+            paint_shadow_infill();
 
-            painter.blit(tl, shadow_bitmap, top_left_corner_rect);
-            painter.blit(tr, shadow_bitmap, top_right_corner_rect);
-            painter.blit(bl, shadow_bitmap, bottom_left_corner_rect);
-            painter.blit(br, shadow_bitmap, bottom_right_corner_rect);
+            painter.blit(top_left_corner_blit_pos, shadow_bitmap, top_left_corner_rect);
+            painter.blit(top_right_corner_blit_pos, shadow_bitmap, top_right_corner_rect);
+            painter.blit(bottom_left_corner_blit_pos, shadow_bitmap, bottom_left_corner_rect);
+            painter.blit(bottom_right_corner_blit_pos, shadow_bitmap, bottom_right_corner_rect);
 
             // Horizontal edges
-            for (auto x = solid_rect.left() + (bottom_left_corner_size.width() - double_radius); x <= solid_rect.right() - (bottom_right_corner_size.width() - double_radius); ++x)
+            for (auto x = inner_bounding_rect.left() + (bottom_left_corner_size.width() - double_radius); x <= inner_bounding_rect.right() - (bottom_right_corner_size.width() - double_radius); ++x)
                 painter.blit({ x, bottom_start }, shadow_bitmap, bottom_edge_rect);
-            for (auto x = solid_rect.left() + (top_left_corner_size.width() - double_radius); x <= solid_rect.right() - (top_right_corner_size.width() - double_radius); ++x)
+            for (auto x = inner_bounding_rect.left() + (top_left_corner_size.width() - double_radius); x <= inner_bounding_rect.right() - (top_right_corner_size.width() - double_radius); ++x)
                 painter.blit({ x, top_start }, shadow_bitmap, top_edge_rect);
 
             // Vertical edges
-            for (auto y = solid_rect.top() + (top_right_corner_size.height() - double_radius); y <= solid_rect.bottom() - (bottom_right_corner_size.height() - double_radius); ++y)
+            for (auto y = inner_bounding_rect.top() + (top_right_corner_size.height() - double_radius); y <= inner_bounding_rect.bottom() - (bottom_right_corner_size.height() - double_radius); ++y)
                 painter.blit({ right_start, y }, shadow_bitmap, right_edge_rect);
-            for (auto y = solid_rect.top() + (top_left_corner_size.height() - double_radius); y <= solid_rect.bottom() - (bottom_left_corner_size.height() - double_radius); ++y)
+            for (auto y = inner_bounding_rect.top() + (top_left_corner_size.height() - double_radius); y <= inner_bounding_rect.bottom() - (bottom_left_corner_size.height() - double_radius); ++y)
                 painter.blit({ left_start, y }, shadow_bitmap, left_edge_rect);
         };
 
@@ -244,7 +243,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
     if (corner_radius_clipper.has_value())
         corner_radius_clipper->blit_corner_clipping(painter);
-
 }
 
 void paint_text_shadow(PaintContext& context, Layout::LineBoxFragment const& fragment, Vector<ShadowData> const& shadow_layers)
