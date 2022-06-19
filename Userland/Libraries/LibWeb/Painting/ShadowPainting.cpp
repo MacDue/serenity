@@ -12,6 +12,7 @@
 #include <LibWeb/Painting/PaintContext.h>
 #include <LibWeb/Painting/ShadowPainting.h>
 #include <LibWeb/Painting/BorderPainting.h>
+#include <LibWeb/Painting/BorderRadiusCornerClipper.h>
 
 namespace Web::Painting {
 
@@ -20,13 +21,16 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
     if (box_shadow_layers.is_empty())
         return;
 
+    if (!border_radii.has_any_radius())
+        return;
     auto& painter = context.painter();
 
     [[maybe_unused]] auto top_left_corner = border_radii.top_left.as_corner();
     [[maybe_unused]] auto top_right_corner = border_radii.top_right.as_corner();
     [[maybe_unused]] auto bottom_right_corner = border_radii.bottom_right.as_corner();
     [[maybe_unused]] auto bottom_left_corner = border_radii.bottom_left.as_corner();
-
+        auto clipper = MUST(BorderRadiusCornerClipper::create(content_rect, border_radii, true));
+        clipper.sample_under_corners(painter);
     // Note: Box-shadow layers are ordered front-to-back, so we paint them in reverse
     for (int layer_index = box_shadow_layers.size() - 1; layer_index >= 0; layer_index--) {
         auto& box_shadow_data = box_shadow_layers[layer_index];
@@ -57,7 +61,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             content_rect.width() + 2 * expansion,
             content_rect.height() + 2 * expansion
         };
-        painter.fill_rect(solid_rect, box_shadow_data.color);
+        // fill_rect_masked(painter, solid_rect, content_rect, box_shadow_data.color);
 
         // Calculating and blurring the box-shadow full size is expensive, and wasteful - aside from the corners,
         // all vertical strips of the shadow are identical, and the same goes for horizontal ones.
@@ -126,10 +130,18 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         // FIXME: Painter only lets us define a clip-rect which discards drawing outside of it, whereas here we want
         //        a rect which discards drawing inside it. So, we run the draw operations 4 times with clip-rects
         //        covering each side of the content_rect exactly once.
+
+
+        auto tl = solid_rect.top_left().translated(-double_radius*2,-double_radius*2);
+        auto tr = solid_rect.top_right().translated(-top_right_corner.horizontal_radius + 1 + double_radius, -double_radius*2);
+        auto bl = solid_rect.bottom_left().translated(-double_radius*2, -bottom_left_corner.vertical_radius + 1 + double_radius);
+        auto br = solid_rect.bottom_right().translated(-bottom_right_corner.horizontal_radius + 1 + double_radius, -bottom_right_corner.vertical_radius + 1 + double_radius);
+
         auto paint_shadow = [&](Gfx::IntRect clip_rect) {
             painter.save();
             (void) clip_rect;
-            // painter.add_clip_rect(clip_rect);
+            painter.add_clip_rect(clip_rect);
+            painter.fill_rect(solid_rect, box_shadow_data.color);
 
             // Paint corners
             // painter.blit({ left_start, top_start }, shadow_bitmap, corner_rect);
@@ -137,10 +149,10 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             // painter.blit({ left_start, bottom_start }, shadow_bitmap, corner_rect.translated(0, corner_rect.height() + 1));
             // painter.blit({ right_start, bottom_start }, shadow_bitmap, corner_rect.translated(corner_rect.width() + 1, corner_rect.height() + 1));
 
-            painter.blit(solid_rect.top_left().translated(-double_radius*2,-double_radius*2), shadow_bitmap, top_left_corner_rect);
-            painter.blit(solid_rect.top_right().translated(-top_right_corner.horizontal_radius + 1 + double_radius, -double_radius*2), shadow_bitmap, top_right_corner_rect);
-            painter.blit(solid_rect.bottom_left().translated(-double_radius*2, -bottom_left_corner.vertical_radius + 1 + double_radius), shadow_bitmap, bottom_left_corner_rect);
-            painter.blit(solid_rect.bottom_right().translated(-bottom_right_corner.horizontal_radius + 1 + double_radius, -bottom_right_corner.vertical_radius + 1 + double_radius), shadow_bitmap, bottom_right_corner_rect);
+            painter.blit(tl, shadow_bitmap, top_left_corner_rect);
+            painter.blit(tr, shadow_bitmap, top_right_corner_rect);
+            painter.blit(bl, shadow_bitmap, bottom_left_corner_rect);
+            painter.blit(br, shadow_bitmap, bottom_right_corner_rect);
 
             // Horizontal edges
             for (auto x = solid_rect.left() + (bottom_left_corner.horizontal_radius - double_radius); x <= solid_rect.right() - (bottom_right_corner.horizontal_radius - double_radius); ++x)
@@ -160,7 +172,32 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         };
 
         // Everything above content_rect, including sides
+        // paint_shadow(content_rect);
+
+        // Everything above content_rect, including sides
         paint_shadow({ 0, 0, painter.target()->width(), content_rect.top() });
+
+        // Everything below content_rect, including sides
+        paint_shadow({ 0, content_rect.bottom() + 1, painter.target()->width(), painter.target()->height() });
+
+        // Everything directly to the left of content_rect
+        paint_shadow({ 0, content_rect.top(), content_rect.left(), content_rect.height() });
+
+        // Everything directly to the right of content_rect
+        paint_shadow({ content_rect.right() + 1, content_rect.top(), painter.target()->width(), content_rect.height() });
+
+        auto top_left = top_left_corner.as_rect().translated(content_rect.top_left());
+        auto top_right = top_right_corner.as_rect().translated(content_rect.top_right().translated(-top_right_corner.horizontal_radius + 1, 0));
+        auto bottom_right = bottom_right_corner.as_rect().translated(content_rect.bottom_right().translated(-bottom_right_corner.horizontal_radius + 1, -bottom_right_corner.vertical_radius + 1));
+        auto bottom_left = bottom_left_corner.as_rect().translated(content_rect.bottom_left().translated(0, -bottom_left_corner.vertical_radius + 1));
+
+        paint_shadow(top_left);
+        paint_shadow(top_right);
+        paint_shadow(bottom_right);
+        paint_shadow(bottom_left);
+
+        // painter.fill_rect(top_left_corner_rect, Gfx::Color::NamedColor::Red);
+
 
         // // Everything below content_rect, including sides
         // paint_shadow({ 0, content_rect.bottom() + 1, painter.target()->width(), painter.target()->height() });
@@ -173,6 +210,8 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
             // painter.fill_rect(corner_rect.translated(solid_rect.location()), Gfx::Color::NamedColor::Red);
     }
+
+    clipper.blit_corner_clipping(painter);
 }
 
 void paint_text_shadow(PaintContext& context, Layout::LineBoxFragment const& fragment, Vector<ShadowData> const& shadow_layers)
