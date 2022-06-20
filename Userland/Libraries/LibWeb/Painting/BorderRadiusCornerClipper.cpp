@@ -10,7 +10,7 @@
 
 namespace Web::Painting {
 
-ErrorOr<BorderRadiusCornerClipper> BorderRadiusCornerClipper::create(Gfx::IntRect const& border_rect, BorderRadiiData const& border_radii, bool inverse)
+ErrorOr<BorderRadiusCornerClipper> BorderRadiusCornerClipper::create(Gfx::IntRect const& border_rect, BorderRadiiData const& border_radii, CornerClip corner_clip)
 {
     VERIFY(border_radii.has_any_radius());
 
@@ -43,7 +43,7 @@ ErrorOr<BorderRadiusCornerClipper> BorderRadiusCornerClipper::create(Gfx::IntRec
         .corner_bitmap_size = corners_bitmap_size
     };
 
-    return BorderRadiusCornerClipper { corner_data, corner_bitmap.release_nonnull(), inverse };
+    return BorderRadiusCornerClipper { corner_data, corner_bitmap.release_nonnull(), corner_clip };
 }
 
 void BorderRadiusCornerClipper::sample_under_corners(Gfx::Painter& page_painter)
@@ -61,7 +61,7 @@ void BorderRadiusCornerClipper::sample_under_corners(Gfx::Painter& page_painter)
                 auto corner_location = mask_src.location().translated(col, row);
                 auto mask_pixel = m_corner_bitmap->get_pixel(corner_location);
                 u8 mask_alpha = mask_pixel.alpha();
-                if (!m_inverse_clip)
+                if (m_corner_clip == CornerClip::Outside)
                     mask_alpha = ~mask_pixel.alpha();
                 auto final_pixel = Color();
                 if (mask_alpha > 0) {

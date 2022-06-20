@@ -23,7 +23,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
     auto& painter = context.painter();
 
-
     auto top_left_corner = border_radii.top_left.as_corner();
     auto top_right_corner = border_radii.top_right.as_corner();
     auto bottom_right_corner = border_radii.bottom_right.as_corner();
@@ -32,7 +31,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
     Optional<BorderRadiusCornerClipper> corner_radius_clipper {};
 
     if (border_radii.has_any_radius()) {
-        auto clipper = BorderRadiusCornerClipper::create(content_rect, border_radii, true);
+        auto clipper = BorderRadiusCornerClipper::create(content_rect, border_radii, CornerClip::Inside);
         if (!clipper.is_error())
             corner_radius_clipper = clipper.release_value();
     }

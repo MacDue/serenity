@@ -11,9 +11,14 @@
 
 namespace Web::Painting {
 
+enum class CornerClip {
+    Outside,
+    Inside
+};
+
 class BorderRadiusCornerClipper {
 public:
-    static ErrorOr<BorderRadiusCornerClipper> create(Gfx::IntRect const& border_rect, BorderRadiiData const& border_radii, bool inverse = false);
+    static ErrorOr<BorderRadiusCornerClipper> create(Gfx::IntRect const& border_rect, BorderRadiiData const& border_radii, CornerClip corner_clip = CornerClip::Outside);
 
     void sample_under_corners(Gfx::Painter& page_painter);
     void blit_corner_clipping(Gfx::Painter& page_painter);
@@ -40,12 +45,12 @@ private:
 
     NonnullRefPtr<Gfx::Bitmap> m_corner_bitmap;
     bool m_has_sampled { false };
-    bool m_inverse_clip { false };
+    CornerClip m_corner_clip { false };
 
-    BorderRadiusCornerClipper(CornerData corner_data, NonnullRefPtr<Gfx::Bitmap> corner_bitmap, bool inverse_clip)
+    BorderRadiusCornerClipper(CornerData corner_data, NonnullRefPtr<Gfx::Bitmap> corner_bitmap, CornerClip corner_clip)
         : m_data(move(corner_data))
         , m_corner_bitmap(corner_bitmap)
-        , m_inverse_clip { inverse_clip }
+        , m_corner_clip(corner_clip)
     {
     }
 };
