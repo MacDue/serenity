@@ -23,6 +23,12 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
     auto& painter = context.painter();
 
+
+    auto top_left_corner = border_radii.top_left.as_corner();
+    auto top_right_corner = border_radii.top_right.as_corner();
+    auto bottom_right_corner = border_radii.bottom_right.as_corner();
+    auto bottom_left_corner = border_radii.bottom_left.as_corner();
+
     Optional<BorderRadiusCornerClipper> corner_radius_clipper {};
 
     if (border_radii.has_any_radius()) {
@@ -33,11 +39,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
     if (corner_radius_clipper.has_value())
         corner_radius_clipper->sample_under_corners(painter);
-
-    auto top_left_corner = border_radii.top_left.as_corner();
-    auto top_right_corner = border_radii.top_right.as_corner();
-    auto bottom_right_corner = border_radii.bottom_right.as_corner();
-    auto bottom_left_corner = border_radii.bottom_left.as_corner();
 
     // Note: Box-shadow layers are ordered front-to-back, so we paint them in reverse
     for (auto& box_shadow_data : box_shadow_layers.in_reverse()) {
@@ -59,6 +60,23 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             continue;
         }
 
+        auto top_left_shadow_corner = top_left_corner;
+        auto top_right_shadow_corner = top_right_corner;
+        auto bottom_right_shadow_corner = bottom_right_corner;
+        auto bottom_left_shadow_corner = bottom_left_corner;
+
+        auto spread_corner = [&](auto& corner) {
+            if (corner) {
+                corner.horizontal_radius += box_shadow_data.spread_distance;
+                corner.vertical_radius += box_shadow_data.spread_distance;
+            }
+        };
+
+        spread_corner(top_left_shadow_corner);
+        spread_corner(top_right_shadow_corner);
+        spread_corner(bottom_right_shadow_corner);
+        spread_corner(bottom_left_shadow_corner);
+
         auto expansion = box_shadow_data.spread_distance - (box_shadow_data.blur_radius * 2);
         Gfx::IntRect inner_bounding_rect = {
             content_rect.x() + box_shadow_data.offset_x - expansion,
@@ -75,10 +93,10 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         auto blurred_edge_thickness = box_shadow_data.blur_radius * 4;
 
         auto default_corner_size = Gfx::IntSize { double_radius, double_radius };
-        auto top_left_corner_size = top_left_corner ? top_left_corner.as_rect().size() : default_corner_size;
-        auto top_right_corner_size = top_right_corner ? top_right_corner.as_rect().size() : default_corner_size;
-        auto bottom_left_corner_size = bottom_left_corner ? bottom_left_corner.as_rect().size() : default_corner_size;
-        auto bottom_right_corner_size = bottom_right_corner ? bottom_right_corner.as_rect().size() : default_corner_size;
+        auto top_left_corner_size = top_left_shadow_corner ? top_left_shadow_corner.as_rect().size() : default_corner_size;
+        auto top_right_corner_size = top_right_shadow_corner ? top_right_shadow_corner.as_rect().size() : default_corner_size;
+        auto bottom_left_corner_size = bottom_left_shadow_corner ? bottom_left_shadow_corner.as_rect().size() : default_corner_size;
+        auto bottom_right_corner_size = bottom_right_shadow_corner ? bottom_right_shadow_corner.as_rect().size() : default_corner_size;
 
         auto shadow_bitmap_rect = Gfx::IntRect(
             0, 0,
@@ -127,7 +145,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         Gfx::Painter corner_painter { *shadow_bitmap };
         Gfx::AntiAliasingPainter aa_corner_painter { corner_painter };
 
-        aa_corner_painter.fill_rect_with_rounded_corners(shadow_bitmap_rect.shrunken(double_radius, double_radius, double_radius, double_radius), box_shadow_data.color, top_left_corner, top_right_corner, bottom_right_corner, bottom_left_corner);
+        aa_corner_painter.fill_rect_with_rounded_corners(shadow_bitmap_rect.shrunken(double_radius, double_radius, double_radius, double_radius), box_shadow_data.color, top_left_shadow_corner, top_right_shadow_corner, bottom_right_shadow_corner, bottom_left_shadow_corner);
         // FIXME: Make fast box blur faster
         Gfx::FastBoxBlurFilter filter(*shadow_bitmap);
         filter.apply_three_passes(box_shadow_data.blur_radius);
