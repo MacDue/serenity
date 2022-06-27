@@ -1,3 +1,7 @@
+#if defined(__GNUC__) && !defined(__clang__)
+#    pragma GCC optimize("O3")
+#endif
+
 #include <AK/Array.h>
 #include <AK/CircularQueue.h>
 #include <AK/Vector.h>
@@ -44,18 +48,8 @@ constexpr Array shg_table {
     24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24
 };
 
-ALWAYS_INLINE static constexpr u8 red_value(Color color)
-{
-    return (color.alpha() == 0) ? 0xFF : color.red();
-}
-ALWAYS_INLINE static constexpr u8 green_value(Color color)
-{
-    return (color.alpha() == 0) ? 0xFF : color.green();
-}
-ALWAYS_INLINE static constexpr u8 blue_value(Color color)
-{
-    return (color.alpha() == 0) ? 0xFF : color.blue();
-}
+static constexpr auto MAX_BLUR_RADIUS = 180;
+static constexpr auto TRANSPARENT_WHITE = Color(Color::NamedColor::White).with_alpha(0);
 
 struct BlurStack {
     BlurStack(size_t size)
@@ -65,16 +59,6 @@ struct BlurStack {
 
     struct Iterator {
         friend BlurStack;
-
-        Color const& operator*() const
-        {
-            return m_data.at(m_idx);
-        }
-
-        Color const* operator->() const
-        {
-            return &m_data.at(m_idx);
-        }
 
         Color& operator*()
         {
@@ -86,11 +70,18 @@ struct BlurStack {
             return &m_data.at(m_idx);
         }
 
-        Iterator next() const
+        Iterator operator++()
         {
-            return Iterator((m_idx + 1) % m_data.size(), m_data);
+            m_idx = (m_idx + 1) % m_data.size();
+            return *this;
         }
 
+        Iterator operator++(int)
+        {
+            auto prev_it = *this;
+            ++*(this);
+            return prev_it;
+        }
     private:
         Iterator(size_t idx, Span<Color> data)
             : m_idx(idx)
@@ -109,11 +100,12 @@ struct BlurStack {
     }
 
 private:
-    Vector<Color, 361> m_data;
+    Vector<Color, MAX_BLUR_RADIUS * 2 + 1> m_data;
 };
 
 void StackBlurFilter::process_rgba(size_t radius)
 {
+    VERIFY(radius <= MAX_BLUR_RADIUS);
     if (radius == 0)
         return;
 
@@ -123,84 +115,90 @@ void StackBlurFilter::process_rgba(size_t radius)
     auto radius_plus_1 = radius + 1;
     auto sum_factor = radius_plus_1 * (radius_plus_1 + 1) / 2;
 
-    auto get_pixel = [&](int x, int y) { return m_bitmap.get_pixel<StorageFormat::BGRA8888>(x, y); };
-    auto set_pixel = [&](int x, int y, Color color) { return m_bitmap.set_pixel<StorageFormat::BGRA8888>(x, y, color); };
+    auto get_pixel = [&](int x, int y) {
+        auto color = m_bitmap.get_pixel<StorageFormat::BGRA8888>(x, y);
+        if (color.alpha() == 0)
+            return TRANSPARENT_WHITE;
+        return color;
+    };
+    auto set_pixel = [&](int x, int y, Color color) {
+        return m_bitmap.set_pixel<StorageFormat::BGRA8888>(x, y, color);
+    };
 
     BlurStack blur_stack { div };
     auto const stack_start = blur_stack.iterator_from_position(0);
     auto const stack_end = blur_stack.iterator_from_position(radius_plus_1);
-    auto stack = stack_start;
+    auto stack_iterator = stack_start;
 
     auto mul_sum = mul_table[radius];
     auto shg_sum = shg_table[radius];
 
     for (size_t y = 0; y < height; y++) {
-        stack = stack_start;
+        stack_iterator = stack_start;
 
         auto color = get_pixel(0, y);
 
         for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack = color;
-            stack = stack.next();
+            *stack_iterator = color;
+            ++stack_iterator;
         }
 
-        size_t red_in_sum = 0;
-        size_t green_in_sum = 0;
-        size_t blue_in_sum = 0;
-        size_t alpha_in_sum = 0;
-        size_t red_out_sum = radius_plus_1 * red_value(color);
-        size_t green_out_sum = radius_plus_1 * green_value(color);
-        size_t blue_out_sum = radius_plus_1 * blue_value(color);
-        size_t alpha_out_sum = radius_plus_1 * color.alpha();
-        size_t red_sum = sum_factor * red_value(color);
-        size_t green_sum = sum_factor * green_value(color);
-        size_t blue_sum = sum_factor * blue_value(color);
-        size_t alpha_sum = sum_factor * color.alpha();
+        u32 red_in_sum = 0;
+        u32 green_in_sum = 0;
+        u32 blue_in_sum = 0;
+        u32 alpha_in_sum = 0;
+        u32 red_out_sum = radius_plus_1 * color.red();
+        u32 green_out_sum = radius_plus_1 * color.green();
+        u32 blue_out_sum = radius_plus_1 * color.blue();
+        u32 alpha_out_sum = radius_plus_1 * color.alpha();
+        u32 red_sum = sum_factor * color.red();
+        u32 green_sum = sum_factor * color.green();
+        u32 blue_sum = sum_factor * color.blue();
+        u32 alpha_sum = sum_factor * color.alpha();
 
-        for (size_t i = 1; i < radius_plus_1; i++) {
+        for (u32 i = 1; i <= radius; i++) {
             auto color = get_pixel(min(i, width - 1), y);
 
             auto rbs = radius_plus_1 - i;
-            *stack = color;
-            red_sum += red_value(color) * rbs;
-            green_sum += green_value(color) * rbs;
-            blue_sum += blue_value(color) * rbs;
+            *stack_iterator = color;
+            red_sum += color.red() * rbs;
+            green_sum += color.green() * rbs;
+            blue_sum += color.blue() * rbs;
             alpha_sum += color.alpha() * rbs;
 
-            red_in_sum += red_value(color);
-            green_in_sum += green_value(color);
-            blue_in_sum += blue_value(color);
+            red_in_sum += color.red();
+            green_in_sum += color.green();
+            blue_in_sum += color.blue();
             alpha_in_sum += color.alpha();
 
-            stack = stack.next();
+            ++stack_iterator;
         }
 
-        auto stack_in = stack_start;
-        auto stack_out = stack_end;
+        auto stack_in_iterator = stack_start;
+        auto stack_out_iterator = stack_end;
 
         for (size_t x = 0; x < width; x++) {
             auto alpha_initial = (alpha_sum * mul_sum) >> shg_sum;
-            if (alpha_initial != 0) {
+            if (alpha_initial != 0)
                 set_pixel(x, y, Color(((red_sum * mul_sum) >> shg_sum), ((green_sum * mul_sum) >> shg_sum), ((blue_sum * mul_sum) >> shg_sum), alpha_initial));
-            } else {
-                set_pixel(x, y, Color(Color::NamedColor::White).with_alpha(0));
-            }
+            else
+                set_pixel(x, y, TRANSPARENT_WHITE);
 
             red_sum -= red_out_sum;
             green_sum -= green_out_sum;
             blue_sum -= blue_out_sum;
             alpha_sum -= alpha_out_sum;
 
-            red_out_sum -= red_value(*stack_in);
-            green_out_sum -= green_value(*stack_in);
-            blue_out_sum -= blue_value(*stack_in);
-            alpha_out_sum -= stack_in->alpha();
+            red_out_sum -= stack_in_iterator->red();
+            green_out_sum -= stack_in_iterator->green();
+            blue_out_sum -= stack_in_iterator->blue();
+            alpha_out_sum -= stack_in_iterator->alpha();
 
             auto color = get_pixel(min(x + radius_plus_1, width - 1), y);
-            *stack_in = color;
-            red_in_sum += red_value(color);
-            green_in_sum += green_value(color);
-            blue_in_sum += blue_value(color);
+            *stack_in_iterator = color;
+            red_in_sum += color.red();
+            green_in_sum += color.green();
+            blue_in_sum += color.blue();
             alpha_in_sum += color.alpha();
 
             red_sum += red_in_sum;
@@ -208,20 +206,20 @@ void StackBlurFilter::process_rgba(size_t radius)
             blue_sum += blue_in_sum;
             alpha_sum += alpha_in_sum;
 
-            stack_in = stack_in.next();
+            ++stack_in_iterator;
 
-            color = *stack_out;
-            red_out_sum += red_value(color);
-            green_out_sum += green_value(color);
-            blue_out_sum += blue_value(color);
+            color = *stack_out_iterator;
+            red_out_sum += color.red();
+            green_out_sum += color.green();
+            blue_out_sum += color.blue();
             alpha_out_sum += color.alpha();
 
-            red_in_sum -= red_value(color);
-            green_in_sum -= green_value(color);
-            blue_in_sum -= blue_value(color);
+            red_in_sum -= color.red();
+            green_in_sum -= color.green();
+            blue_in_sum -= color.blue();
             alpha_in_sum -= color.alpha();
 
-            stack_out = stack_out.next();
+            ++stack_out_iterator;
         }
     }
 
@@ -229,74 +227,73 @@ void StackBlurFilter::process_rgba(size_t radius)
         auto color = get_pixel(x, 0);
 
         for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack = color;
-            stack = stack.next();
+            *stack_iterator = color;
+            ++stack_iterator;
         }
 
-        size_t red_in_sum = 0;
-        size_t green_in_sum = 0;
-        size_t blue_in_sum = 0;
-        size_t alpha_in_sum = 0;
-        size_t red_out_sum = radius_plus_1 * red_value(color);
-        size_t green_out_sum = radius_plus_1 * green_value(color);
-        size_t blue_out_sum = radius_plus_1 * blue_value(color);
-        size_t alpha_out_sum = radius_plus_1 * color.alpha();
-        size_t red_sum = sum_factor * red_value(color);
-        size_t green_sum = sum_factor * green_value(color);
-        size_t blue_sum = sum_factor * blue_value(color);
-        size_t alpha_sum = sum_factor * color.alpha();
+        u32 red_in_sum = 0;
+        u32 green_in_sum = 0;
+        u32 blue_in_sum = 0;
+        u32 alpha_in_sum = 0;
+        u32 red_out_sum = radius_plus_1 * color.red();
+        u32 green_out_sum = radius_plus_1 * color.green();
+        u32 blue_out_sum = radius_plus_1 * color.blue();
+        u32 alpha_out_sum = radius_plus_1 * color.alpha();
+        u32 red_sum = sum_factor * color.red();
+        u32 green_sum = sum_factor * color.green();
+        u32 blue_sum = sum_factor * color.blue();
+        u32 alpha_sum = sum_factor * color.alpha();
 
-        stack = stack_start;
+        stack_iterator = stack_start;
 
         for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack = color;
-            stack = stack.next();
+            *stack_iterator = color;
+            ++stack_iterator;
         }
 
         for (size_t i = 1; i <= radius; i++) {
             auto color = get_pixel(x, min(i, height - 1));
 
             auto rbs = radius_plus_1 - i;
-            *stack = color;
-            red_sum += red_value(color) * rbs;
-            green_sum += green_value(color) * rbs;
-            blue_sum += blue_value(color) * rbs;
+            *stack_iterator = color;
+            red_sum += color.red() * rbs;
+            green_sum += color.green() * rbs;
+            blue_sum += color.blue() * rbs;
             alpha_sum += color.alpha() * rbs;
 
-            red_in_sum += red_value(color);
-            green_in_sum += green_value(color);
-            blue_in_sum += blue_value(color);
+            red_in_sum += color.red();
+            green_in_sum += color.green();
+            blue_in_sum += color.blue();
             alpha_in_sum += color.alpha();
 
-            stack = stack.next();
+            ++stack_iterator;
         }
 
-        auto stack_in = stack_start;
-        auto stack_out = stack_end;
+        auto stack_in_iterator = stack_start;
+        auto stack_out_iterator = stack_end;
 
         for (size_t y = 0; y < height; y++) {
             auto alpha_initial = (alpha_sum * mul_sum) >> shg_sum;
-            if (alpha_initial != 0) {
+            if (alpha_initial != 0)
                 set_pixel(x, y, Color(((red_sum * mul_sum) >> shg_sum), ((green_sum * mul_sum) >> shg_sum), ((blue_sum * mul_sum) >> shg_sum), alpha_initial));
-            } else {
-                set_pixel(x, y, Color(Color::NamedColor::White).with_alpha(0));
-            }
+            else
+                set_pixel(x, y, TRANSPARENT_WHITE);
 
             red_sum -= red_out_sum;
             green_sum -= green_out_sum;
             blue_sum -= blue_out_sum;
             alpha_sum -= alpha_out_sum;
 
-            red_out_sum -= red_value(*stack_in);
-            green_out_sum -= green_value(*stack_in);
-            blue_out_sum -= blue_value(*stack_in);
-            alpha_out_sum -= stack_in->alpha();
+            red_out_sum -= stack_in_iterator->red();
+            green_out_sum -= stack_in_iterator->green();
+            blue_out_sum -= stack_in_iterator->blue();
+            alpha_out_sum -= stack_in_iterator->alpha();
 
             auto color = get_pixel(x, min(y + radius_plus_1, height - 1));
-            *stack_in = color;
-            red_in_sum += red_value(color);
-            green_in_sum += green_value(color);
-            blue_in_sum += blue_value(color);
+            *stack_in_iterator = color;
+            red_in_sum += color.red();
+            green_in_sum += color.green();
+            blue_in_sum += color.blue();
             alpha_in_sum += color.alpha();
 
             red_sum += red_in_sum;
@@ -304,20 +301,20 @@ void StackBlurFilter::process_rgba(size_t radius)
             blue_sum += blue_in_sum;
             alpha_sum += alpha_in_sum;
 
-            stack_in = stack_in.next();
+            ++stack_in_iterator;
 
-            color = *stack_out;
-            red_out_sum += red_value(color);
-            green_out_sum += green_value(color);
-            blue_out_sum += blue_value(color);
+            color = *stack_out_iterator;
+            red_out_sum += color.red();
+            green_out_sum += color.green();
+            blue_out_sum += color.blue();
             alpha_out_sum += color.alpha();
 
-            red_in_sum -= red_value(color);
-            green_in_sum -= green_value(color);
-            blue_in_sum -= blue_value(color);
+            red_in_sum -= color.red();
+            green_in_sum -= color.green();
+            blue_in_sum -= color.blue();
             alpha_in_sum -= color.alpha();
 
-            stack_out = stack_out.next();
+            ++stack_out_iterator;
         }
     }
 }
