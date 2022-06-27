@@ -13,6 +13,7 @@ set(SOURCES
     DisjointRectSet.cpp
     Filters/ColorBlindnessFilter.cpp
     Filters/FastBoxBlurFilter.cpp
+    Filters/StackBlurFilter.cpp
     Filters/LumaFilter.cpp
     Font/BitmapFont.cpp
     Font/Emoji.cpp
