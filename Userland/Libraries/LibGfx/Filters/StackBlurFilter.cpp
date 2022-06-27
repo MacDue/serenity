@@ -16,7 +16,7 @@
 
 namespace Gfx {
 
-constexpr Array<u16, 255> mul_table {
+constexpr Array<u16, 255> mult_table {
     512, 512, 456, 512, 328, 456, 335, 512, 405, 328, 271, 456, 388, 335, 292,
     512, 454, 405, 364, 328, 298, 271, 496, 456, 420, 388, 360, 335, 312, 292,
     273, 512, 482, 454, 428, 405, 383, 364, 345, 328, 312, 298, 284, 271, 259,
@@ -36,7 +36,7 @@ constexpr Array<u16, 255> mul_table {
     289, 287, 285, 282, 280, 278, 275, 273, 271, 269, 267, 265, 263, 261, 259
 };
 
-constexpr Array<u8, 255> shg_table {
+constexpr Array<u8, 255> shift_table {
     9, 11, 12, 13, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17,
     17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19,
     19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20,
@@ -109,6 +109,7 @@ private:
     Vector<Color, 512> m_data;
 };
 
+// This is an implementation of StackBlur by Mario Klingemann (https://observablehq.com/@jobleonard/mario-klingemans-stackblur)
 void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
 {
     // TODO: Implement a plain RGB version of this (if required)
@@ -143,8 +144,9 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
     auto const stack_end = blur_stack.iterator_from_position(radius_plus_1);
     auto stack_iterator = stack_start;
 
-    auto mul_sum = mul_table[radius];
-    auto shg_sum = shg_table[radius];
+    // Note: `(value * sum_mult[radius]) >> shift_table[radius]` closely approximates a division by the radius squared.
+    auto const sum_mult = mult_table[radius];
+    auto const sum_shift = shift_table[radius];
 
     for (uint y = 0; y < height; y++) {
         stack_iterator = stack_start;
@@ -188,9 +190,9 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         auto stack_out_iterator = stack_end;
 
         for (uint x = 0; x < width; x++) {
-            auto alpha = (alpha_sum * mul_sum) >> shg_sum;
+            auto alpha = (alpha_sum * sum_mult) >> sum_shift;
             if (alpha != 0)
-                set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
+                set_pixel(x, y, Color((red_sum * sum_mult) >> sum_shift, (green_sum * sum_mult) >> sum_shift, (blue_sum * sum_mult) >> sum_shift, alpha));
             else
                 set_pixel(x, y, fill_color);
 
@@ -275,9 +277,9 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         auto stack_out_iterator = stack_end;
 
         for (uint y = 0; y < height; y++) {
-            auto alpha = (alpha_sum * mul_sum) >> shg_sum;
+            auto alpha = (alpha_sum * sum_mult) >> sum_shift;
             if (alpha != 0)
-                set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
+                set_pixel(x, y, Color((red_sum * sum_mult) >> sum_shift, (green_sum * sum_mult) >> sum_shift, (blue_sum * sum_mult) >> sum_shift, alpha));
             else
                 set_pixel(x, y, fill_color);
 
