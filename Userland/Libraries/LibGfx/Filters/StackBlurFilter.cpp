@@ -112,16 +112,20 @@ private:
 void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
 {
     // TODO: Implement a plain RGB version of this (if required)
+
+    using uint = unsigned;
+
     if (radius == 0)
         return;
 
     fill_color = fill_color.with_alpha(0);
 
-    size_t width = m_bitmap.width();
-    size_t height = m_bitmap.height();
-    unsigned div = 2 * radius + 1;
-    unsigned radius_plus_1 = radius + 1;
-    unsigned sum_factor = radius_plus_1 * (radius_plus_1 + 1) / 2;
+    uint width = m_bitmap.width();
+    uint height = m_bitmap.height();
+
+    uint div = 2 * radius + 1;
+    uint radius_plus_1 = radius + 1;
+    uint sum_factor = radius_plus_1 * (radius_plus_1 + 1) / 2;
 
     auto get_pixel = [&](int x, int y) {
         auto color = m_bitmap.get_pixel<StorageFormat::BGRA8888>(x, y);
@@ -142,30 +146,27 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
     auto mul_sum = mul_table[radius];
     auto shg_sum = shg_table[radius];
 
-    for (size_t y = 0; y < height; y++) {
+    for (uint y = 0; y < height; y++) {
         stack_iterator = stack_start;
 
         auto color = get_pixel(0, y);
+        for (uint i = 0; i < radius_plus_1; i++)
+            *(stack_iterator++) = color;
 
-        for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack_iterator = color;
-            ++stack_iterator;
-        }
+        uint red_in_sum = 0;
+        uint green_in_sum = 0;
+        uint blue_in_sum = 0;
+        uint alpha_in_sum = 0;
+        uint red_out_sum = radius_plus_1 * color.red();
+        uint green_out_sum = radius_plus_1 * color.green();
+        uint blue_out_sum = radius_plus_1 * color.blue();
+        uint alpha_out_sum = radius_plus_1 * color.alpha();
+        uint red_sum = sum_factor * color.red();
+        uint green_sum = sum_factor * color.green();
+        uint blue_sum = sum_factor * color.blue();
+        uint alpha_sum = sum_factor * color.alpha();
 
-        u32 red_in_sum = 0;
-        u32 green_in_sum = 0;
-        u32 blue_in_sum = 0;
-        u32 alpha_in_sum = 0;
-        u32 red_out_sum = radius_plus_1 * color.red();
-        u32 green_out_sum = radius_plus_1 * color.green();
-        u32 blue_out_sum = radius_plus_1 * color.blue();
-        u32 alpha_out_sum = radius_plus_1 * color.alpha();
-        u32 red_sum = sum_factor * color.red();
-        u32 green_sum = sum_factor * color.green();
-        u32 blue_sum = sum_factor * color.blue();
-        u32 alpha_sum = sum_factor * color.alpha();
-
-        for (u32 i = 1; i <= radius; i++) {
+        for (uint i = 1; i <= radius; i++) {
             auto color = get_pixel(min(i, width - 1), y);
 
             auto rbs = radius_plus_1 - i;
@@ -186,7 +187,7 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         auto stack_in_iterator = stack_start;
         auto stack_out_iterator = stack_end;
 
-        for (size_t x = 0; x < width; x++) {
+        for (uint x = 0; x < width; x++) {
             auto alpha = (alpha_sum * mul_sum) >> shg_sum;
             if (alpha != 0)
                 set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
@@ -232,35 +233,27 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         }
     }
 
-    for (size_t x = 0; x < width; x++) {
-        auto color = get_pixel(x, 0);
-
-        for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack_iterator = color;
-            ++stack_iterator;
-        }
-
-        u32 red_in_sum = 0;
-        u32 green_in_sum = 0;
-        u32 blue_in_sum = 0;
-        u32 alpha_in_sum = 0;
-        u32 red_out_sum = radius_plus_1 * color.red();
-        u32 green_out_sum = radius_plus_1 * color.green();
-        u32 blue_out_sum = radius_plus_1 * color.blue();
-        u32 alpha_out_sum = radius_plus_1 * color.alpha();
-        u32 red_sum = sum_factor * color.red();
-        u32 green_sum = sum_factor * color.green();
-        u32 blue_sum = sum_factor * color.blue();
-        u32 alpha_sum = sum_factor * color.alpha();
-
+    for (uint x = 0; x < width; x++) {
         stack_iterator = stack_start;
 
-        for (size_t i = 0; i < radius_plus_1; i++) {
-            *stack_iterator = color;
-            ++stack_iterator;
-        }
+        auto color = get_pixel(x, 0);
+        for (uint i = 0; i < radius_plus_1; i++)
+            *(stack_iterator++) = color;
 
-        for (size_t i = 1; i <= radius; i++) {
+        uint red_in_sum = 0;
+        uint green_in_sum = 0;
+        uint blue_in_sum = 0;
+        uint alpha_in_sum = 0;
+        uint red_out_sum = radius_plus_1 * color.red();
+        uint green_out_sum = radius_plus_1 * color.green();
+        uint blue_out_sum = radius_plus_1 * color.blue();
+        uint alpha_out_sum = radius_plus_1 * color.alpha();
+        uint red_sum = sum_factor * color.red();
+        uint green_sum = sum_factor * color.green();
+        uint blue_sum = sum_factor * color.blue();
+        uint alpha_sum = sum_factor * color.alpha();
+
+        for (uint i = 1; i <= radius; i++) {
             auto color = get_pixel(x, min(i, height - 1));
 
             auto rbs = radius_plus_1 - i;
@@ -281,7 +274,7 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         auto stack_in_iterator = stack_start;
         auto stack_out_iterator = stack_end;
 
-        for (size_t y = 0; y < height; y++) {
+        for (uint y = 0; y < height; y++) {
             auto alpha = (alpha_sum * mul_sum) >> shg_sum;
             if (alpha != 0)
                 set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
