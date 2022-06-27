@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2010, Mario Klingemann <mario@quasimondo.com>
+ * Copyright (c) 2022, MacDue <macdue@dueutil.tech>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #if defined(__GNUC__) && !defined(__clang__)
 #    pragma GCC optimize("O3")
 #endif
@@ -9,7 +16,7 @@
 
 namespace Gfx {
 
-constexpr Array mul_table {
+constexpr Array<u16, 255> mul_table {
     512, 512, 456, 512, 328, 456, 335, 512, 405, 328, 271, 456, 388, 335, 292,
     512, 454, 405, 364, 328, 298, 271, 496, 456, 420, 388, 360, 335, 312, 292,
     273, 512, 482, 454, 428, 405, 383, 364, 345, 328, 312, 298, 284, 271, 259,
@@ -29,7 +36,7 @@ constexpr Array mul_table {
     289, 287, 285, 282, 280, 278, 275, 273, 271, 269, 267, 265, 263, 261, 259
 };
 
-constexpr Array shg_table {
+constexpr Array<u8, 255> shg_table {
     9, 11, 12, 13, 13, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17,
     17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19,
     19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20,
@@ -48,8 +55,7 @@ constexpr Array shg_table {
     24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24
 };
 
-static constexpr auto MAX_BLUR_RADIUS = 180;
-
+// Note: This is named to be consistent with the algorithm, but it's actually a simple circular buffer.
 struct BlurStack {
     BlurStack(size_t size)
     {
@@ -81,6 +87,7 @@ struct BlurStack {
             ++*(this);
             return prev_it;
         }
+
     private:
         Iterator(size_t idx, Span<Color> data)
             : m_idx(idx)
@@ -99,12 +106,12 @@ struct BlurStack {
     }
 
 private:
-    Vector<Color, MAX_BLUR_RADIUS * 2 + 1> m_data;
+    Vector<Color, 512> m_data;
 };
 
-void StackBlurFilter::process_rgba(size_t radius, Color fill_color)
+void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
 {
-    VERIFY(radius <= MAX_BLUR_RADIUS);
+    // TODO: Implement a plain RGB version of this (if required)
     if (radius == 0)
         return;
 
@@ -112,9 +119,9 @@ void StackBlurFilter::process_rgba(size_t radius, Color fill_color)
 
     size_t width = m_bitmap.width();
     size_t height = m_bitmap.height();
-    auto div = 2 * radius + 1;
-    auto radius_plus_1 = radius + 1;
-    auto sum_factor = radius_plus_1 * (radius_plus_1 + 1) / 2;
+    unsigned div = 2 * radius + 1;
+    unsigned radius_plus_1 = radius + 1;
+    unsigned sum_factor = radius_plus_1 * (radius_plus_1 + 1) / 2;
 
     auto get_pixel = [&](int x, int y) {
         auto color = m_bitmap.get_pixel<StorageFormat::BGRA8888>(x, y);

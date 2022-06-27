@@ -1,5 +1,3 @@
-#pragma once
-
 /*
  * Copyright (c) 2022, MacDue <macdue@dueutil.tech>
  *
@@ -12,7 +10,6 @@
 
 namespace Gfx {
 
-
 class StackBlurFilter {
 public:
     StackBlurFilter(Bitmap& bitmap)
@@ -20,7 +17,8 @@ public:
     {
     }
 
-    void process_rgba(size_t radius, Color fill_color = Color::NamedColor::White);
+    // Note: The radius is a u8 for reason! This implementation can only handle radii from 0 to 255.
+    void process_rgba(u8 radius, Color fill_color = Color::NamedColor::White);
 
 private:
     Bitmap& m_bitmap;
