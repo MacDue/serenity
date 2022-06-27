@@ -12,6 +12,7 @@
 
 namespace Gfx {
 
+
 class StackBlurFilter {
 public:
     StackBlurFilter(Bitmap& bitmap)
@@ -19,7 +20,7 @@ public:
     {
     }
 
-    void process_rgba(size_t radius);
+    void process_rgba(size_t radius, Color fill_color = Color::NamedColor::White);
 
 private:
     Bitmap& m_bitmap;

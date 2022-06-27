@@ -49,7 +49,6 @@ constexpr Array shg_table {
 };
 
 static constexpr auto MAX_BLUR_RADIUS = 180;
-static constexpr auto TRANSPARENT_WHITE = Color(Color::NamedColor::White).with_alpha(0);
 
 struct BlurStack {
     BlurStack(size_t size)
@@ -60,23 +59,23 @@ struct BlurStack {
     struct Iterator {
         friend BlurStack;
 
-        Color& operator*()
+        ALWAYS_INLINE Color& operator*()
         {
             return m_data.at(m_idx);
         }
 
-        Color* operator->()
+        ALWAYS_INLINE Color* operator->()
         {
             return &m_data.at(m_idx);
         }
 
-        Iterator operator++()
+        ALWAYS_INLINE Iterator operator++()
         {
             m_idx = (m_idx + 1) % m_data.size();
             return *this;
         }
 
-        Iterator operator++(int)
+        ALWAYS_INLINE Iterator operator++(int)
         {
             auto prev_it = *this;
             ++*(this);
@@ -103,11 +102,13 @@ private:
     Vector<Color, MAX_BLUR_RADIUS * 2 + 1> m_data;
 };
 
-void StackBlurFilter::process_rgba(size_t radius)
+void StackBlurFilter::process_rgba(size_t radius, Color fill_color)
 {
     VERIFY(radius <= MAX_BLUR_RADIUS);
     if (radius == 0)
         return;
+
+    fill_color = fill_color.with_alpha(0);
 
     size_t width = m_bitmap.width();
     size_t height = m_bitmap.height();
@@ -118,9 +119,10 @@ void StackBlurFilter::process_rgba(size_t radius)
     auto get_pixel = [&](int x, int y) {
         auto color = m_bitmap.get_pixel<StorageFormat::BGRA8888>(x, y);
         if (color.alpha() == 0)
-            return TRANSPARENT_WHITE;
+            return fill_color;
         return color;
     };
+
     auto set_pixel = [&](int x, int y, Color color) {
         return m_bitmap.set_pixel<StorageFormat::BGRA8888>(x, y, color);
     };
@@ -178,11 +180,11 @@ void StackBlurFilter::process_rgba(size_t radius)
         auto stack_out_iterator = stack_end;
 
         for (size_t x = 0; x < width; x++) {
-            auto alpha_initial = (alpha_sum * mul_sum) >> shg_sum;
-            if (alpha_initial != 0)
-                set_pixel(x, y, Color(((red_sum * mul_sum) >> shg_sum), ((green_sum * mul_sum) >> shg_sum), ((blue_sum * mul_sum) >> shg_sum), alpha_initial));
+            auto alpha = (alpha_sum * mul_sum) >> shg_sum;
+            if (alpha != 0)
+                set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
             else
-                set_pixel(x, y, TRANSPARENT_WHITE);
+                set_pixel(x, y, fill_color);
 
             red_sum -= red_out_sum;
             green_sum -= green_out_sum;
@@ -273,11 +275,11 @@ void StackBlurFilter::process_rgba(size_t radius)
         auto stack_out_iterator = stack_end;
 
         for (size_t y = 0; y < height; y++) {
-            auto alpha_initial = (alpha_sum * mul_sum) >> shg_sum;
-            if (alpha_initial != 0)
-                set_pixel(x, y, Color(((red_sum * mul_sum) >> shg_sum), ((green_sum * mul_sum) >> shg_sum), ((blue_sum * mul_sum) >> shg_sum), alpha_initial));
+            auto alpha = (alpha_sum * mul_sum) >> shg_sum;
+            if (alpha != 0)
+                set_pixel(x, y, Color((red_sum * mul_sum) >> shg_sum, (green_sum * mul_sum) >> shg_sum, (blue_sum * mul_sum) >> shg_sum, alpha));
             else
-                set_pixel(x, y, TRANSPARENT_WHITE);
+                set_pixel(x, y, fill_color);
 
             red_sum -= red_out_sum;
             green_sum -= green_out_sum;
