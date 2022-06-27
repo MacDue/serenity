@@ -10,7 +10,6 @@
 #endif
 
 #include <AK/Array.h>
-#include <AK/CircularQueue.h>
 #include <AK/Vector.h>
 #include <LibGfx/Filters/StackBlurFilter.h>
 
@@ -77,7 +76,9 @@ struct BlurStack {
 
         ALWAYS_INLINE Iterator operator++()
         {
-            m_idx = (m_idx + 1) % m_data.size();
+            // Note: This seemed to profile slightly better than %
+            if (++m_idx >= m_data.size())
+                m_idx = 0;
             return *this;
         }
 
@@ -110,7 +111,8 @@ private:
 };
 
 // This is an implementation of StackBlur by Mario Klingemann (https://observablehq.com/@jobleonard/mario-klingemans-stackblur)
-void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
+// (Link is to a secondary source as the original site is now down)
+FLATTEN void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
 {
     // TODO: Implement a plain RGB version of this (if required)
 
@@ -155,6 +157,7 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         for (uint i = 0; i < radius_plus_1; i++)
             *(stack_iterator++) = color;
 
+        // All the sums here work to approximate a gaussian.
         uint red_in_sum = 0;
         uint green_in_sum = 0;
         uint blue_in_sum = 0;
@@ -171,12 +174,12 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         for (uint i = 1; i <= radius; i++) {
             auto color = get_pixel(min(i, width - 1), y);
 
-            auto rbs = radius_plus_1 - i;
+            auto bias = radius_plus_1 - i;
             *stack_iterator = color;
-            red_sum += color.red() * rbs;
-            green_sum += color.green() * rbs;
-            blue_sum += color.blue() * rbs;
-            alpha_sum += color.alpha() * rbs;
+            red_sum += color.red() * bias;
+            green_sum += color.green() * bias;
+            blue_sum += color.blue() * bias;
+            alpha_sum += color.alpha() * bias;
 
             red_in_sum += color.red();
             green_in_sum += color.green();
@@ -258,12 +261,12 @@ void StackBlurFilter::process_rgba(u8 radius, Color fill_color)
         for (uint i = 1; i <= radius; i++) {
             auto color = get_pixel(x, min(i, height - 1));
 
-            auto rbs = radius_plus_1 - i;
+            auto bias = radius_plus_1 - i;
             *stack_iterator = color;
-            red_sum += color.red() * rbs;
-            green_sum += color.green() * rbs;
-            blue_sum += color.blue() * rbs;
-            alpha_sum += color.alpha() * rbs;
+            red_sum += color.red() * bias;
+            green_sum += color.green() * bias;
+            blue_sum += color.blue() * bias;
+            alpha_sum += color.alpha() * bias;
 
             red_in_sum += color.red();
             green_in_sum += color.green();
