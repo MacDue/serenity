@@ -15,7 +15,9 @@ namespace Gfx {
 class StackBlurFilter {
 public:
     StackBlurFilter(Bitmap& bitmap)
-      : m_bitmap(bitmap) {}
+        : m_bitmap(bitmap)
+    {
+    }
 
     void process_rgba(size_t radius);
 
