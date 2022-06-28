@@ -146,7 +146,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
         Gfx::AntiAliasingPainter aa_corner_painter { corner_painter };
 
         aa_corner_painter.fill_rect_with_rounded_corners(shadow_bitmap_rect.shrunken(double_radius, double_radius, double_radius, double_radius), box_shadow_data.color, top_left_shadow_corner, top_right_shadow_corner, bottom_right_shadow_corner, bottom_left_shadow_corner);
-        // FIXME: Make fast box blur faster
         Gfx::StackBlurFilter filter(*shadow_bitmap);
         filter.process_rgba(box_shadow_data.blur_radius, box_shadow_data.color);
 
