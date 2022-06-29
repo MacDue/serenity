@@ -54,6 +54,7 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
                 painter.fill_rect(rect, color);
         };
 
+        // Our blur cannot handle radii over 255 so there's no point trying (255 is silly big anyway)
         auto blur_radius = clamp(box_shadow_data.blur_radius, 0, 255);
 
         // If there's no blurring, nor rounded corners, we can save a lot of effort.
@@ -158,10 +159,12 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
 
         auto horizontal_edge_width = min(max_edge_height, double_radius) + double_radius;
         auto vertical_edge_width = min(max_edge_width, double_radius) + double_radius;
+        auto horizontal_top_edge_width = min(max_edge_height + extra_edge_height, double_radius) + double_radius;
+        auto vertical_left_edge_width = min(max_edge_width + extra_edge_width, double_radius) + double_radius;
 
-        Gfx::IntRect left_edge_rect { 0, top_left_corner_rect.height(), vertical_edge_width + extra_edge_width, 1 };
+        Gfx::IntRect left_edge_rect { 0, top_left_corner_rect.height(), vertical_left_edge_width, 1 };
         Gfx::IntRect right_edge_rect { shadow_bitmap_rect.width() - vertical_edge_width, top_right_corner_rect.height(), vertical_edge_width, 1 };
-        Gfx::IntRect top_edge_rect { top_left_corner_rect.width(), 0, 1, horizontal_edge_width + extra_edge_height };
+        Gfx::IntRect top_edge_rect { top_left_corner_rect.width(), 0, 1, horizontal_top_edge_width };
         Gfx::IntRect bottom_edge_rect { bottom_left_corner_rect.width(), shadow_bitmap_rect.height() - horizontal_edge_width, 1, horizontal_edge_width };
 
         auto shadows_bitmap = Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, shadow_bitmap_rect.size());

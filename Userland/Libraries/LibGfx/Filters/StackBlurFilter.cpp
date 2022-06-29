@@ -11,6 +11,7 @@
 
 #include <AK/Array.h>
 #include <AK/Math.h>
+#include <AK/StringBuilder.h>
 #include <AK/Vector.h>
 #include <LibGfx/Filters/StackBlurFilter.h>
 
@@ -24,18 +25,10 @@ constexpr size_t MAX_RADIUS = 256;
 // `(value * sum_mult[radius - 2]) >> shift_table[radius - 2]` closely approximates value/(radius*radius)
 // These LUTs are the same as the original, but converted to constexpr functions rather than magic numbers.
 
-// Note: This is needed on clang since the builtin ceil is not constexpr :^(
-constexpr auto ceil(double num)
-{
-    return (static_cast<double>(static_cast<i64>(num)) == num)
-        ? static_cast<i64>(num)
-        : static_cast<i64>(num) + ((num > 0) ? 1 : 0);
-}
-
 constexpr auto shift_table = [] {
     Array<u8, MAX_RADIUS> lut {};
     for (size_t r = 2; r <= MAX_RADIUS + 1; r++) {
-        lut[r - 2] = static_cast<u8>(ceil(AK::log2(256 * (r * r + 1))));
+        lut[r - 2] = static_cast<u8>(AK::ceil_log2(256 * (r * r + 1)));
     }
     return lut;
 }();
@@ -43,7 +36,7 @@ constexpr auto shift_table = [] {
 constexpr auto mult_table = [] {
     Array<u16, MAX_RADIUS> lut {};
     for (size_t r = 2; r <= MAX_RADIUS + 1; r++) {
-        lut[r - 2] = static_cast<u16>(ceil(static_cast<double>(1 << shift_table[r - 2]) / (r * r)));
+        lut[r - 2] = static_cast<u16>(AK::ceil(static_cast<double>(1 << shift_table[r - 2]) / (r * r)));
     }
     return lut;
 }();
