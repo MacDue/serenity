@@ -154,9 +154,6 @@ void paint_box_shadow(PaintContext& context, Gfx::IntRect const& content_rect, B
             bottom_left_corner_size.height() + double_radius
         };
 
-        // auto horizontal_edge_width = blurred_edge_thickness > max_edge_height ? double_radius : blurred_edge_thickness;
-        // auto vertical_edge_width = blurred_edge_thickness > max_edge_width ? double_radius : blurred_edge_thickness;
-
         auto horizontal_edge_width = min(max_edge_height, double_radius) + double_radius;
         auto vertical_edge_width = min(max_edge_width, double_radius) + double_radius;
         auto horizontal_top_edge_width = min(max_edge_height + extra_edge_height, double_radius) + double_radius;
