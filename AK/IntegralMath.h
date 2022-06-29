@@ -43,4 +43,15 @@ constexpr I pow(I base, I exponent)
     return res;
 }
 
+template<Integral T>
+constexpr T ceil_log2(T x)
+{
+    if (!x)
+        return 0;
+
+    T log = AK::log2(x);
+    log += (x & ((1 << (log - 1)) - 1)) != 0;
+    return log;
+}
+
 }
