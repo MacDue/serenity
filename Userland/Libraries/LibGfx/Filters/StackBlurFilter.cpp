@@ -11,7 +11,6 @@
 
 #include <AK/Array.h>
 #include <AK/Math.h>
-#include <AK/StringBuilder.h>
 #include <AK/Vector.h>
 #include <LibGfx/Filters/StackBlurFilter.h>
 
@@ -27,17 +26,15 @@ constexpr size_t MAX_RADIUS = 256;
 
 constexpr auto shift_table = [] {
     Array<u8, MAX_RADIUS> lut {};
-    for (size_t r = 2; r <= MAX_RADIUS + 1; r++) {
+    for (size_t r = 2; r <= MAX_RADIUS + 1; r++)
         lut[r - 2] = static_cast<u8>(AK::ceil_log2(256 * (r * r + 1)));
-    }
     return lut;
 }();
 
 constexpr auto mult_table = [] {
     Array<u16, MAX_RADIUS> lut {};
-    for (size_t r = 2; r <= MAX_RADIUS + 1; r++) {
+    for (size_t r = 2; r <= MAX_RADIUS + 1; r++)
         lut[r - 2] = static_cast<u16>(AK::ceil(static_cast<double>(1 << shift_table[r - 2]) / (r * r)));
-    }
     return lut;
 }();
 
