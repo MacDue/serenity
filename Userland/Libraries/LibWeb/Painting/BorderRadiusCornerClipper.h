@@ -73,7 +73,8 @@ struct ScopedCornerRadiusClip {
         }
     }
 
-    ~ScopedCornerRadiusClip() {
+    ~ScopedCornerRadiusClip()
+    {
         if (m_corner_clipper.has_value()) {
             m_corner_clipper->blit_corner_clipping(m_painter);
         }
@@ -81,6 +82,7 @@ struct ScopedCornerRadiusClip {
 
     AK_MAKE_NONMOVABLE(ScopedCornerRadiusClip);
     AK_MAKE_NONCOPYABLE(ScopedCornerRadiusClip);
+
 private:
     Gfx::Painter& m_painter;
     Optional<BorderRadiusCornerClipper> m_corner_clipper;

@@ -8,8 +8,8 @@
 #include <LibWeb/HTML/BrowsingContextContainer.h>
 #include <LibWeb/Layout/FrameBox.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
-#include <LibWeb/Painting/NestedBrowsingContextPaintable.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
+#include <LibWeb/Painting/NestedBrowsingContextPaintable.h>
 
 namespace Web::Painting {
 

@@ -445,7 +445,7 @@ void PaintableWithLines::paint(PaintContext& context, PaintPhase phase) const
         auto border_radii = normalized_border_radii_data();
         if (border_radii.has_any_radius()) {
             auto clipper = BorderRadiusCornerClipper::create(clip_box, border_radii);
-            if (!clipper.is_error())  {
+            if (!clipper.is_error()) {
                 corner_clipper = clipper.release_value();
                 corner_clipper->sample_under_corners(context.painter());
             }
