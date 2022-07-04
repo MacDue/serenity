@@ -245,9 +245,24 @@ BorderRadiiData PaintableBox::normalized_border_radii_data() const
 void PaintableBox::before_children_paint(PaintContext& context, PaintPhase) const
 {
     // FIXME: Support more overflow variations.
+    auto clip_rect = absolute_padding_box_rect().to_rounded<int>();
     if (computed_values().overflow_x() == CSS::Overflow::Hidden && computed_values().overflow_y() == CSS::Overflow::Hidden) {
         context.painter().save();
-        context.painter().add_clip_rect(enclosing_int_rect(absolute_border_box_rect()));
+        context.painter().add_clip_rect(clip_rect);
+    }
+    if (computed_values().overflow_x() == CSS::Overflow::Hidden || computed_values().overflow_y() == CSS::Overflow::Hidden) {
+        auto border_radii_data = normalized_border_radii_data();
+        auto const& border = box_model().border;
+        border_radii_data.shrink(border.top, border.right, border.bottom, border.left);
+        if (border_radii_data.has_any_radius()) {
+            auto corner_clipper = BorderRadiusCornerClipper::create(clip_rect, border_radii_data, CornerClip::Outside, BorderRadiusCornerClipper::UseCachedBitmap::No);
+            if (corner_clipper.is_error()) {
+                dbgln("Failed to create overflow border-radius corner clipper: {}", corner_clipper.error());
+                return;
+            }
+            m_overflow_corner_radius_clipper = corner_clipper.release_value();
+            m_overflow_corner_radius_clipper->sample_under_corners(context.painter());
+        }
     }
 }
 
@@ -256,6 +271,8 @@ void PaintableBox::after_children_paint(PaintContext& context, PaintPhase) const
     // FIXME: Support more overflow variations.
     if (computed_values().overflow_x() == CSS::Overflow::Hidden && computed_values().overflow_y() == CSS::Overflow::Hidden)
         context.painter().restore();
+    if (m_overflow_corner_radius_clipper.has_value())
+        m_overflow_corner_radius_clipper->blit_corner_clipping(context.painter());
 }
 
 static void paint_cursor_if_needed(PaintContext& context, Layout::TextNode const& text_node, Layout::LineBoxFragment const& fragment)
