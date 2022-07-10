@@ -1442,10 +1442,10 @@ String LinearGradientStyleValue::to_string() const
     if (m_direction.has_value()) {
         m_direction->visit(
             [&](SideOrCorner side_or_corner) {
-                builder.append(side_or_corner_to_string(side_or_corner));
+                builder.appendff("{}, ", side_or_corner_to_string(side_or_corner));
             },
             [&](Angle const& angle) {
-                builder.append(angle.to_string());
+                builder.appendff("{}, ", angle.to_string());
             });
     }
 

@@ -403,6 +403,7 @@ static void set_property_expanding_shorthands(StyleProperties& style, CSS::Prope
     if (property_id == CSS::PropertyID::Background) {
         if (value.is_background()) {
             auto const& background = value.as_background();
+            dbgln("background-image: {}", background.image());
             set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundColor, background.color(), document);
             set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundImage, background.image(), document);
             set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundPosition, background.position(), document);
@@ -413,7 +414,7 @@ static void set_property_expanding_shorthands(StyleProperties& style, CSS::Prope
             set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundClip, background.clip(), document);
             return;
         }
-
+        dbgln("background-image: {}", value);
         set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundColor, value, document);
         set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundImage, value, document);
         set_property_expanding_shorthands(style, CSS::PropertyID::BackgroundPosition, value, document);

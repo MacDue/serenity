@@ -53,7 +53,8 @@
     "inherited": false,
     "initial": "none",
     "valid-types": [
-      "image"
+      "image",
+      "linear-gradient"
     ],
     "valid-identifiers": [
       "none"
