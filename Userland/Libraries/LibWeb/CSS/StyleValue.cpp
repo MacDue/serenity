@@ -221,6 +221,11 @@ StyleValueList const& StyleValue::as_value_list() const
     return static_cast<StyleValueList const&>(*this);
 }
 
+LinearGradientStyleValue const& StyleValue::as_linear_gradient() const {
+    VERIFY(is_linear_gradient());
+    return static_cast<LinearGradientStyleValue const&>(*this);
+}
+
 BackgroundStyleValue::BackgroundStyleValue(
     NonnullRefPtr<StyleValue> color,
     NonnullRefPtr<StyleValue> image,
@@ -1406,6 +1411,100 @@ bool ImageStyleValue::equals(StyleValue const& other) const
     if (type() != other.type())
         return false;
     return m_url == other.as_image().m_url;
+}
+
+String LinearGradientStyleValue::to_string() const
+{
+    StringBuilder builder;
+    auto side_or_corner_to_string = [](SideOrCorner value) {
+        switch (value) {
+        case SideOrCorner::Top:
+            return "top";
+        case SideOrCorner::Bottom:
+            return "bottom";
+        case SideOrCorner::Left:
+            return "left";
+        case SideOrCorner::Right:
+            return "right";
+        case SideOrCorner::TopLeft:
+            return "top left";
+        case SideOrCorner::TopRight:
+            return "top right";
+        case SideOrCorner::BottomLeft:
+            return "bottom left";
+        case SideOrCorner::BottomRight:
+            return "bottom right";
+        default:
+            VERIFY_NOT_REACHED();
+        }
+    };
+
+    if (m_direction.has_value()) {
+        m_direction->visit(
+            [&](SideOrCorner side_or_corner) {
+                builder.append(side_or_corner_to_string(side_or_corner));
+            },
+            [&](Angle const& angle) {
+                builder.append(angle.to_string());
+            });
+    }
+
+    bool first = true;
+    for (auto const& element : m_color_stop_list) {
+        if (!first)
+            builder.append(", ");
+
+        if (element.transition_hint.has_value()) {
+            builder.appendff("{}, ", element.transition_hint->value.to_string());
+        }
+
+        builder.append(element.color_stop.color.to_string());
+        if (element.color_stop.length.has_value()) {
+            builder.appendff(" {}", element.color_stop.length->to_string());
+        }
+        first = false;
+    }
+    return builder.to_string();
+}
+
+static bool operator==(GradientDirection a, GradientDirection b)
+{
+    if (a.has<SideOrCorner>() && b.has<SideOrCorner>())
+        return a.get<SideOrCorner>() == b.get<SideOrCorner>();
+    if (a.has<Angle>() && b.has<Angle>())
+        return a.get<Angle>() == b.get<Angle>();
+    return false;
+}
+
+static bool operator==(LinearGradientColorHint a, LinearGradientColorHint b)
+{
+    return a.value == b.value;
+}
+
+static bool operator==(LinearGradientColorStop a, LinearGradientColorStop b)
+{
+    return a.color == b.color && a.length == b.length;
+}
+
+static bool operator==(ColorStopListElement a, ColorStopListElement b)
+{
+    return a.transition_hint == b.transition_hint && a.color_stop == b.color_stop;
+}
+
+bool LinearGradientStyleValue::equals(StyleValue const& other_) const
+{
+    if (type() != other_.type())
+        return false;
+    auto& other = other_.as_linear_gradient();
+
+    if (m_direction != other.m_direction || m_color_stop_list.size() != other.m_color_stop_list.size())
+        return false;
+
+    for (size_t i = 0; i < m_color_stop_list.size(); i++) {
+        if (m_color_stop_list[i] != other.m_color_stop_list[i])
+            return false;
+    }
+    return true;
 }
 
 bool InheritStyleValue::equals(StyleValue const& other) const

@@ -60,7 +60,9 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
         color_box = get_box(background_layers->last().clip);
 
     auto layer_is_paintable = [&](auto& layer) {
-        return layer.image && layer.image->bitmap();
+        return (layer.background_image
+            && ((layer.background_image->is_image() && layer.background_image->as_image().bitmap())
+                || layer.background_image->is_linear_gradient()));
     };
 
     bool has_paintable_layers = false;
@@ -86,7 +88,13 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
         if (!layer_is_paintable(layer))
             continue;
         Gfx::PainterStateSaver state { painter };
-        auto& image = *layer.image->bitmap();
+
+        if (layer.background_image->is_linear_gradient()) {
+            dbgln("Paint linear gradient! {}", layer.background_image->to_string());
+            return;
+        }
+
+        auto& image = *layer.background_image->as_image().bitmap();
 
         // Clip
         auto clip_box = get_box(layer.clip);
