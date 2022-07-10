@@ -58,6 +58,33 @@ enum class FlexBasis {
     Auto,
 };
 
+enum class GradientSideOrCorner {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight
+};
+
+struct GradientLinearColorStop {
+    Color color;
+    Optional<LengthPercentage> length;
+};
+
+struct GradientLinearColorHint {
+    LengthPercentage hint;
+};
+
+struct GradientColorStop {
+    GradientLinearColorStop color_stop;
+    Optional<GradientLinearColorHint> transition_hint;
+};
+
+using GradientDirection = Variant<Angle, GradientSideOrCorner>;
+
 // FIXME: Find a better place for this helper.
 inline Gfx::Painter::ScalingMode to_gfx_scaling_mode(CSS::ImageRendering css_value)
 {
@@ -89,6 +116,7 @@ public:
         Calculated,
         Color,
         Content,
+        Gradient,
         Flex,
         FlexFlow,
         Font,
@@ -150,6 +178,7 @@ public:
     bool is_unresolved() const { return type() == Type::Unresolved; }
     bool is_unset() const { return type() == Type::Unset; }
     bool is_value_list() const { return type() == Type::ValueList; }
+    bool is_gradient() const { return type() == Type::Gradient; }
 
     bool is_builtin() const { return is_inherit() || is_initial() || is_unset(); }
 
@@ -186,6 +215,7 @@ public:
     UnresolvedStyleValue const& as_unresolved() const;
     UnsetStyleValue const& as_unset() const;
     StyleValueList const& as_value_list() const;
+    GradientStyleValue const& as_gradient() const;
 
     AngleStyleValue& as_angle() { return const_cast<AngleStyleValue&>(const_cast<StyleValue const&>(*this).as_angle()); }
     BackgroundStyleValue& as_background() { return const_cast<BackgroundStyleValue&>(const_cast<StyleValue const&>(*this).as_background()); }
@@ -220,6 +250,7 @@ public:
     UnresolvedStyleValue& as_unresolved() { return const_cast<UnresolvedStyleValue&>(const_cast<StyleValue const&>(*this).as_unresolved()); }
     UnsetStyleValue& as_unset() { return const_cast<UnsetStyleValue&>(const_cast<StyleValue const&>(*this).as_unset()); }
     StyleValueList& as_value_list() { return const_cast<StyleValueList&>(const_cast<StyleValue const&>(*this).as_value_list()); }
+    GradientStyleValue& as_gradient() { return const_cast<GradientStyleValue&>(const_cast<StyleValue const&>(*this).as_gradient()); }
 
     virtual bool has_auto() const { return false; }
     virtual bool has_color() const { return false; }
@@ -885,6 +916,29 @@ private:
     AK::URL m_url;
     WeakPtr<DOM::Document> m_document;
     RefPtr<Gfx::Bitmap> m_bitmap;
+};
+
+class GradientStyleValue final : public StyleValue {
+public:
+    static NonnullRefPtr<GradientStyleValue> create(Vector<GradientColorStop> color_stop_list) {
+        return adopt_ref(*new GradientStyleValue(move(color_stop_list)));
+    }
+    static NonnullRefPtr<GradientStyleValue> create(GradientDirection direction, Vector<GradientColorStop> color_stop_list) {
+        return adopt_ref(*new GradientStyleValue(direction, move(color_stop_list)));
+    }
+
+    virtual String to_string() const override;
+    virtual ~GradientStyleValue() override = default;
+    virtual bool equals(StyleValue const& other) const override;
+private:
+    GradientStyleValue(GradientDirection direction, Vector<GradientColorStop> color_stop_list)
+        : StyleValue(Type::Gradient), m_direction(direction), m_color_stop_list(move(color_stop_list)) {}
+
+    GradientStyleValue(Vector<GradientColorStop> color_stop_list)
+        : StyleValue(Type::Gradient), m_direction({}), m_color_stop_list(move(color_stop_list)) {}
+
+    Optional<GradientDirection> m_direction;
+    Vector<GradientColorStop> m_color_stop_list;
 };
 
 class InheritStyleValue final : public StyleValue {

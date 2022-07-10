@@ -55,6 +55,7 @@ class FontStyleValue;
 class Frequency;
 class FrequencyPercentage;
 class FrequencyStyleValue;
+class GradientStyleValue;
 class IdentifierStyleValue;
 class ImageStyleValue;
 class InheritStyleValue;

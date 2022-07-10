@@ -12,6 +12,7 @@
 #include <AK/GenericLexer.h>
 #include <AK/NonnullRefPtrVector.h>
 #include <AK/SourceLocation.h>
+#include <AK/GenericShorthands.h>
 #include <LibWeb/CSS/CSSFontFaceRule.h>
 #include <LibWeb/CSS/CSSImportRule.h>
 #include <LibWeb/CSS/CSSMediaRule.h>
@@ -2355,6 +2356,173 @@ Optional<AK::URL> Parser::parse_url_function(ComponentValue const& component_val
     return {};
 }
 
+RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& component_value) {
+    if (component_value.is_function() && component_value.function().name().equals_ignoring_case("linear-gradient")) {
+        TokenStream tokens { component_value.function().values() };
+        tokens.skip_whitespace();
+
+        if (!tokens.has_next_token())
+            return {};
+
+        auto& first_param = tokens.next_token();
+
+        Optional<GradientDirection> gradient_direction;
+        Vector<GradientColorStop> color_stops;
+
+        if (first_param.is(Token::Type::Dimension)) {
+            // Angle
+            float angle_value = first_param.token().dimension_value();
+            auto unit_string = first_param.token().dimension_unit();
+            auto angle_type = Angle::unit_from_name(unit_string);
+
+            if (!angle_type.has_value())
+                return {};
+
+            gradient_direction = Angle { angle_value, angle_type.release_value() };
+            dbgln("Parsed angle");
+        } else if (first_param.is(Token::Type::Ident) && first_param.token().ident().equals_ignoring_case("to")) {
+            // Side or corner
+
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return {};
+            auto& second_param = tokens.next_token();
+
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return {};
+            auto& third_param = tokens.next_token();
+
+            auto to_side = [](StringView value) -> Optional<GradientSideOrCorner> {
+                if (value.equals_ignoring_case("top"))
+                    return GradientSideOrCorner::Top;
+                if (value.equals_ignoring_case("bottom"))
+                    return GradientSideOrCorner::Bottom;
+                if (value.equals_ignoring_case("left"))
+                    return GradientSideOrCorner::Left;
+                if (value.equals_ignoring_case("right"))
+                    return GradientSideOrCorner::Right;
+                dbgln("Value {}", value);
+                return {};
+            };
+
+            if (!second_param.is(Token::Type::Ident)) {
+                dbgln("sad 1 {}", second_param.to_debug_string());
+                return {};
+            }
+
+            auto side_a = to_side(second_param.token().ident());
+            Optional<GradientSideOrCorner> side_b;
+            if (third_param.is(Token::Type::Ident))
+                side_b = to_side(third_param.token().ident());
+
+            if (side_a.has_value() && !side_b.has_value()) {
+                gradient_direction = *side_a;
+                dbgln("Parsed to side");
+            } else if (side_a.has_value() && side_b.has_value()) {
+                if (to_underlying(*side_b) < to_underlying(*side_a))
+                    swap(side_a, side_b);
+                if (side_a == GradientSideOrCorner::Top && side_b == GradientSideOrCorner::Left)
+                    gradient_direction = GradientSideOrCorner::TopLeft;
+                else if (side_a == GradientSideOrCorner::Top && side_b == GradientSideOrCorner::Right)
+                    gradient_direction = GradientSideOrCorner::TopRight;
+                else if (side_a == GradientSideOrCorner::Bottom && side_b == GradientSideOrCorner::Left)
+                    gradient_direction = GradientSideOrCorner::BottomLeft;
+                else if (side_a == GradientSideOrCorner::Bottom && side_b == GradientSideOrCorner::Right)
+                    gradient_direction = GradientSideOrCorner::BottomRight;
+                else
+                    return {};
+                dbgln("Parsed to corner");
+            } else {
+                return {};
+            }
+        }
+
+        tokens.skip_whitespace();
+        if (!tokens.has_next_token())
+            return {};
+
+        if (!tokens.next_token().is(Token::Type::Comma))
+            return {};
+
+        auto parse_color_stop = [&]() -> Optional<Variant<GradientLinearColorStop, GradientLinearColorHint>> {
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return {};
+            auto& token = tokens.next_token();
+
+            Gfx::Color color;
+            Optional<LengthPercentage> length;
+            if(token.is(Token::Type::Dimension)) {
+                auto dimension = parse_dimension(token);
+                if (!dimension.has_value() || !dimension->is_length_percentage())
+                    return {};
+                length = dimension->length_percentage();
+                tokens.skip_whitespace();
+                if (!tokens.has_next_token())
+                    return GradientLinearColorHint { *length };
+                auto maybe_color = parse_color(tokens.next_token());
+                if (!maybe_color.has_value())
+                    return {};
+                color = *maybe_color;
+            } else {
+                auto maybe_color = parse_color(token);
+                if (!maybe_color.has_value())
+                    return {};
+                color = *maybe_color;
+                tokens.skip_whitespace();
+                if (tokens.has_next_token() && !tokens.peek_token().is(Token::Type::Comma)) {
+                    auto token = tokens.next_token();
+                    auto dimension = parse_dimension(token);
+                    if (!dimension.has_value() || !dimension->is_length_percentage())
+                        return {};
+                    length = dimension->length_percentage();
+                }
+            }
+
+            return GradientLinearColorStop { .color = color, .length = length };
+        };
+
+        auto color_stop = parse_color_stop();
+        if (!color_stop.has_value() || !color_stop->has<GradientLinearColorStop>())
+            return {};
+
+        color_stops.append(GradientColorStop {
+            .color_stop = color_stop->get<GradientLinearColorStop>(),
+            .transition_hint = {}
+        });
+
+        while (tokens.has_next_token()) {
+            GradientColorStop next_stop{};
+            tokens.skip_whitespace();
+            if (!tokens.next_token().is(Token::Type::Comma))
+                return {};
+            auto stop = parse_color_stop();
+            if (!stop.has_value())
+                return {};
+            if (stop->has<GradientLinearColorHint>()) {
+                next_stop.transition_hint = stop->get<GradientLinearColorHint>();
+                tokens.skip_whitespace();
+                if (!tokens.next_token().is(Token::Type::Comma))
+                    return {};
+                auto color = parse_color_stop();
+                if (!color.has_value() || !color->has<GradientLinearColorStop>())
+                    return {};
+                next_stop.color_stop = color->get<GradientLinearColorStop>();
+            } else {
+                next_stop.color_stop = stop->get<GradientLinearColorStop>();
+            }
+            color_stops.append(next_stop);
+        }
+
+        if (color_stops.size() < 2)
+            return {};
+
+        dbgln("Got {} color stops", color_stops.size());
+    }
+    return {};
+}
+
 RefPtr<CSSRule> Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
 {
     if (rule->is_at_rule()) {
@@ -3253,9 +3421,7 @@ RefPtr<StyleValue> Parser::parse_image_value(ComponentValue const& component_val
     auto url = parse_url_function(component_value, AllowedDataUrlType::Image);
     if (url.has_value())
         return ImageStyleValue::create(url.value());
-    // FIXME: Handle gradients.
-
-    return {};
+    return parse_linear_gradient_function(component_value);
 }
 
 template<typename ParseFunction>
