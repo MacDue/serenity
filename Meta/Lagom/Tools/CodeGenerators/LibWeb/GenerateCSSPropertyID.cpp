@@ -493,6 +493,11 @@ bool property_accepts_value(PropertyID property_id, StyleValue& style_value)
         if (style_value.is_image())
             return true;
 )~~~");
+                        } else if(type_name == "linear-gradient") {
+                            property_generator.append(R"~~~(
+        if (style_value.is_linear_gradient())
+            return true;
+)~~~");
                         } else if (type_name == "integer") {
                             output_numeric_value_check(property_generator, "has_integer", "to_integer()", Array { "Integer"sv }, min_value, max_value);
                         } else if (type_name == "length") {
