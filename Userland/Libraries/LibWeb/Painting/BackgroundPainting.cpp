@@ -25,26 +25,44 @@ static Optional<GfxGradient> to_gfx_gradient(CSS::LinearGradientStyleValue const
     if (linear_gradient.color_stop_list().size() != 2)
         return {};
 
-    auto color_a = linear_gradient.color_stop_list()[0].color_stop.color;
-    auto color_b = linear_gradient.color_stop_list()[1].color_stop.color;
-    auto orientation = [&]() -> Optional<Gfx::Orientation> {
-         if (auto* side_or_corner = linear_gradient.direction().get_pointer<CSS::SideOrCorner>()) {
-            switch (*side_or_corner) {
-                case CSS::SideOrCorner::Top:
-                    swap(color_a, color_b);
-                    [[fallthrough]];
-                case CSS::SideOrCorner::Bottom:
-                    return Gfx::Orientation::Vertical;
-                case CSS::SideOrCorner::Left:
-                    swap(color_a, color_b);
-                    [[fallthrough]];
-                case CSS::SideOrCorner::Right:
-                    return Gfx::Orientation::Horizontal;
+    auto side = linear_gradient.direction().visit(
+        [](CSS::Angle const & angle) -> Optional<CSS::SideOrCorner> {
+            auto degrees = static_cast<int>(round(angle.to_degrees()));
+            switch (degrees) {
+                case 0: return CSS::SideOrCorner::Top;
+                case 180: return CSS::SideOrCorner::Bottom;
+                case 270: return CSS::SideOrCorner::Left;
+                case 90: return CSS::SideOrCorner::Right;
                 default: return {};
             }
-        }
+        },
+        [](CSS::SideOrCorner side) -> Optional<CSS::SideOrCorner> {
+            return side;
+        });
+
+    if (!side.has_value())
         return {};
-    }();
+
+    auto color_a = linear_gradient.color_stop_list()[0].color_stop.color;
+    auto color_b = linear_gradient.color_stop_list()[1].color_stop.color;
+
+    auto side_to_orientation = [&](CSS::SideOrCorner side) -> Optional<Gfx::Orientation> {
+        switch (side) {
+            case CSS::SideOrCorner::Top:
+                swap(color_a, color_b);
+                [[fallthrough]];
+            case CSS::SideOrCorner::Bottom:
+                return Gfx::Orientation::Vertical;
+            case CSS::SideOrCorner::Left:
+                swap(color_a, color_b);
+                [[fallthrough]];
+            case CSS::SideOrCorner::Right:
+                return Gfx::Orientation::Horizontal;
+            default: return {};
+        }
+    };
+
+    auto orientation = side_to_orientation(*side);
 
     if (!orientation.has_value())
         return {};
