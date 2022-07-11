@@ -920,7 +920,7 @@ private:
 
 class LinearGradientStyleValue final : public StyleValue {
 public:
-    static NonnullRefPtr<LinearGradientStyleValue> create(Optional<GradientDirection> direction, Vector<ColorStopListElement> color_stop_list)
+    static NonnullRefPtr<LinearGradientStyleValue> create(GradientDirection direction, Vector<ColorStopListElement> color_stop_list)
     {
         return adopt_ref(*new LinearGradientStyleValue(direction, move(color_stop_list)));
     }
@@ -929,15 +929,25 @@ public:
     virtual ~LinearGradientStyleValue() override = default;
     virtual bool equals(StyleValue const& other) const override;
 
+    GradientDirection const& direction() const
+    {
+        return m_direction;
+    }
+
+    Vector<ColorStopListElement> const& color_stop_list() const
+    {
+        return m_color_stop_list;
+    }
+
 private:
-    LinearGradientStyleValue(Optional<GradientDirection> direction, Vector<ColorStopListElement> color_stop_list)
+    LinearGradientStyleValue(GradientDirection direction, Vector<ColorStopListElement> color_stop_list)
         : StyleValue(Type::LinearGradient)
         , m_direction(direction)
         , m_color_stop_list(move(color_stop_list))
     {
     }
 
-    Optional<GradientDirection> m_direction;
+    GradientDirection m_direction;
     Vector<ColorStopListElement> m_color_stop_list;
 };
 

@@ -221,7 +221,8 @@ StyleValueList const& StyleValue::as_value_list() const
     return static_cast<StyleValueList const&>(*this);
 }
 
-LinearGradientStyleValue const& StyleValue::as_linear_gradient() const {
+LinearGradientStyleValue const& StyleValue::as_linear_gradient() const
+{
     VERIFY(is_linear_gradient());
     return static_cast<LinearGradientStyleValue const&>(*this);
 }
@@ -1439,15 +1440,13 @@ String LinearGradientStyleValue::to_string() const
         }
     };
 
-    if (m_direction.has_value()) {
-        m_direction->visit(
-            [&](SideOrCorner side_or_corner) {
-                builder.appendff("{}, ", side_or_corner_to_string(side_or_corner));
-            },
-            [&](Angle const& angle) {
-                builder.appendff("{}, ", angle.to_string());
-            });
-    }
+    m_direction.visit(
+        [&](SideOrCorner side_or_corner) {
+            builder.appendff("{}, ", side_or_corner_to_string(side_or_corner));
+        },
+        [&](Angle const& angle) {
+            builder.appendff("{}, ", angle.to_string());
+        });
 
     bool first = true;
     for (auto const& element : m_color_stop_list) {

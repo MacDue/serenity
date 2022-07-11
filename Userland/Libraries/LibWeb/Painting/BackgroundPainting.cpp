@@ -15,6 +15,43 @@
 
 namespace Web::Painting {
 
+struct GfxGradient {
+    Gfx::Orientation orientation;
+    Gfx::Color color_a;
+    Gfx::Color color_b;
+};
+
+static Optional<GfxGradient> to_gfx_gradient(CSS::LinearGradientStyleValue const & linear_gradient) {
+    if (linear_gradient.color_stop_list().size() != 2)
+        return {};
+
+    auto color_a = linear_gradient.color_stop_list()[0].color_stop.color;
+    auto color_b = linear_gradient.color_stop_list()[1].color_stop.color;
+    auto orientation = [&]() -> Optional<Gfx::Orientation> {
+         if (auto* side_or_corner = linear_gradient.direction().get_pointer<CSS::SideOrCorner>()) {
+            switch (*side_or_corner) {
+                case CSS::SideOrCorner::Bottom:
+                    swap(color_a, color_b);
+                    [[fallthrough]];
+                case CSS::SideOrCorner::Top:
+                    return Gfx::Orientation::Vertical;
+                case CSS::SideOrCorner::Left:
+                    swap(color_a, color_b);
+                    [[fallthrough]];
+                case CSS::SideOrCorner::Right:
+                    return Gfx::Orientation::Horizontal;
+                default: return {};
+            }
+        }
+        return {};
+    }();
+
+    if (!orientation.has_value())
+        return {};
+
+    return GfxGradient { *orientation, color_a, color_b };
+};
+
 // https://www.w3.org/TR/css-backgrounds-3/#backgrounds
 void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMetrics const& layout_node, Gfx::FloatRect const& border_rect, Color background_color, Vector<CSS::BackgroundLayerData> const* background_layers, BorderRadiiData const& border_radii)
 {
@@ -89,19 +126,22 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             continue;
         Gfx::PainterStateSaver state { painter };
 
-        if (layer.background_image->is_linear_gradient()) {
-            dbgln("Paint linear gradient! {}", layer.background_image->to_string());
-            return;
-        }
-
-        auto& image = *layer.background_image->as_image().bitmap();
-
         // Clip
         auto clip_box = get_box(layer.clip);
         auto clip_rect = clip_box.rect.to_rounded<int>();
         painter.add_clip_rect(clip_rect);
         ScopedCornerRadiusClip corner_clip { painter, clip_rect, clip_box.radii };
 
+        if (layer.background_image->is_linear_gradient()) {
+            auto& linear_gradient = layer.background_image->as_linear_gradient();
+            auto gfx_gradient = to_gfx_gradient(linear_gradient);
+            if (gfx_gradient.has_value()) {
+                painter.fill_rect_with_gradient(gfx_gradient->orientation, border_box.rect.to_rounded<int>(), gfx_gradient->color_a, gfx_gradient->color_b);
+            }
+            continue;
+        }
+
+        auto& image = *layer.background_image->as_image().bitmap();
         Gfx::FloatRect background_positioning_area;
 
         // Attachment and Origin

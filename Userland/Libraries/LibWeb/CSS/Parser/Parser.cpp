@@ -2371,7 +2371,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
 
     auto& first_param = tokens.next_token();
 
-    Optional<GradientDirection> gradient_direction;
+    GradientDirection gradient_direction = SideOrCorner::Top;
     Vector<ColorStopListElement> color_stops;
 
     if (first_param.is(Token::Type::Dimension)) {
@@ -2393,11 +2393,6 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
             return {};
         auto& second_param = tokens.next_token();
 
-        tokens.skip_whitespace();
-        if (!tokens.has_next_token())
-            return {};
-        auto& third_param = tokens.next_token();
-
         auto to_side = [](StringView value) -> Optional<SideOrCorner> {
             if (value.equals_ignoring_case("top"))
                 return SideOrCorner::Top;
@@ -2417,9 +2412,11 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
         }
 
         auto side_a = to_side(second_param.token().ident());
+
+        tokens.skip_whitespace();
         Optional<SideOrCorner> side_b;
-        if (third_param.is(Token::Type::Ident))
-            side_b = to_side(third_param.token().ident());
+        if (tokens.has_next_token() && tokens.peek_token().is(Token::Type::Ident))
+            side_b = to_side(tokens.next_token().token().ident());
 
         if (side_a.has_value() && !side_b.has_value()) {
             gradient_direction = *side_a;
