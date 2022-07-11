@@ -2356,14 +2356,12 @@ Optional<AK::URL> Parser::parse_url_function(ComponentValue const& component_val
     return {};
 }
 
-#define fail() { dbgln("Parse fail {}", __LINE__); return {}; }
-
 RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& component_value)
 {
     if (!component_value.is_function())
-        fail();
+        return {};
     if (!component_value.function().name().equals_ignoring_case("linear-gradient"))
-        fail();
+        return {};
 
     // linear-gradient() = linear-gradient([ <angle> | to <side-or-corner> ]?, <color-stop-list>)
 
@@ -2371,15 +2369,12 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     tokens.skip_whitespace();
 
     if (!tokens.has_next_token())
-        fail();
-
-    auto& first_param = tokens.peek_token();
-
-    GradientDirection gradient_direction = SideOrCorner::Bottom;
-    Vector<ColorStopListElement> color_stops;
+        return {};
 
     bool has_direction_param = true;
+    GradientDirection gradient_direction = SideOrCorner::Bottom;
 
+    auto& first_param = tokens.peek_token();
     if (first_param.is(Token::Type::Dimension)) {
         // <angle>
         tokens.next_token();
@@ -2388,7 +2383,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
         auto angle_type = Angle::unit_from_name(unit_string);
 
         if (!angle_type.has_value())
-            fail();
+            return {};
 
         gradient_direction = Angle { angle_value, angle_type.release_value() };
     } else if (first_param.is(Token::Type::Ident) && first_param.token().ident().equals_ignoring_case("to")) {
@@ -2405,19 +2400,17 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
                 return SideOrCorner::Left;
             if (value.equals_ignoring_case("right"))
                 return SideOrCorner::Right;
-            fail();
+            return {};
         };
 
         if (!tokens.has_next_token())
-            fail();
+            return {};
 
-        // [left | right]
+        // [left | right] || [top | bottom]
         auto& second_param = tokens.next_token();
         if (!second_param.is(Token::Type::Ident))
-            fail();
+            return {};
         auto side_a = to_side(second_param.token().ident());
-
-        // [top | bottom]
         tokens.skip_whitespace();
         Optional<SideOrCorner> side_b;
         if (tokens.has_next_token() && tokens.peek_token().is(Token::Type::Ident))
@@ -2438,9 +2431,9 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
             else if (side_a == SideOrCorner::Bottom && side_b == SideOrCorner::Right)
                 gradient_direction = SideOrCorner::BottomRight;
             else
-                fail();
+                return {};
         } else {
-            fail();
+            return {};
         }
     } else {
         has_direction_param = false;
@@ -2448,18 +2441,28 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
 
     tokens.skip_whitespace();
     if (!tokens.has_next_token())
-        fail();
+        return {};
 
     if (has_direction_param && !tokens.next_token().is(Token::Type::Comma))
-        fail();
+        return {};
 
     // <color-stop-list> =
     //      <linear-color-stop> , [ <linear-color-hint>? , <linear-color-stop> ]#
 
-    auto parse_color_stop_list_element = [&]() -> Optional<Variant<LinearGradientColorStop, LinearGradientColorHint>> {
+    // FIXME: Support multi-position color stops
+    // https://developer.mozilla.org/en-US/docs/Web/CSS/gradient/linear-gradient#gradient_with_multi-position_color_stops
+    // These are shown on MDN... Though do not appear in the W3 spec(?)
+
+    enum class ElementType {
+        Garbage,
+        ColorStop,
+        ColorHint
+    };
+
+    auto parse_color_stop_list_element = [&](ColorStopListElement& element) -> ElementType {
         tokens.skip_whitespace();
         if (!tokens.has_next_token())
-            fail();
+            return ElementType::Garbage;
         auto& token = tokens.next_token();
 
         Gfx::Color color;
@@ -2470,66 +2473,63 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
             length = dimension->length_percentage();
             tokens.skip_whitespace();
             // <length-percentage>
-            if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma))
-                return LinearGradientColorHint { *length };
+            if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma)) {
+                element.transition_hint = LinearGradientColorHint { *length };
+                return ElementType::ColorHint;
+            }
             // <length-percentage> <color>
             auto maybe_color = parse_color(tokens.next_token());
             if (!maybe_color.has_value())
-                fail();
+                return ElementType::Garbage;
             color = *maybe_color;
         } else {
             // [<color> <length-percentage>?]
             auto maybe_color = parse_color(token);
             if (!maybe_color.has_value())
-                fail();
+                return ElementType::Garbage;
             color = *maybe_color;
             tokens.skip_whitespace();
             if (tokens.has_next_token() && !tokens.peek_token().is(Token::Type::Comma)) {
                 auto token = tokens.next_token();
                 auto dimension = parse_dimension(token);
                 if (!dimension.has_value() || !dimension->is_length_percentage())
-                    fail();
+                    return ElementType::Garbage;
                 length = dimension->length_percentage();
             }
         }
 
-        return LinearGradientColorStop { color, length };
+        element.color_stop = LinearGradientColorStop { color, length };
+        return ElementType::ColorStop;
     };
 
-    auto color_stop = parse_color_stop_list_element();
-    if (!color_stop.has_value() || !color_stop->has<LinearGradientColorStop>())
-        fail();
+    ColorStopListElement first_element {};
+    if (parse_color_stop_list_element(first_element) != ElementType::ColorStop)
+        return {};
 
-    color_stops.append(ColorStopListElement {
-        .transition_hint = {},
-        .color_stop = color_stop->get<LinearGradientColorStop>() });
+    if (!tokens.has_next_token())
+        return {};
 
+    Vector<ColorStopListElement> color_stops { first_element };
     while (tokens.has_next_token()) {
         ColorStopListElement list_element {};
         tokens.skip_whitespace();
         if (!tokens.next_token().is(Token::Type::Comma))
-            fail();
-        auto element = parse_color_stop_list_element();
-        if (!element.has_value())
-            fail();
-        if (element->has<LinearGradientColorHint>()) {
-            dbgln("Here");
-            list_element.transition_hint = element->get<LinearGradientColorHint>();
+            return {};
+        auto element_type = parse_color_stop_list_element(list_element);
+        if (element_type == ElementType::ColorHint) {
+            // <linear-color-hint>, <linear-color-stop>
             tokens.skip_whitespace();
             if (!tokens.next_token().is(Token::Type::Comma))
-                fail();
-            element = parse_color_stop_list_element();
-            if (!element.has_value() || !element->has<LinearGradientColorStop>())
-                fail();
-            list_element.color_stop = element->get<LinearGradientColorStop>();
+                return {};
+            if (parse_color_stop_list_element(list_element) != ElementType::ColorStop)
+                return {};
+        } else if (element_type == ElementType::ColorStop) {
+            // <linear-color-stop>
         } else {
-            list_element.color_stop = element->get<LinearGradientColorStop>();
+            return {};
         }
         color_stops.append(list_element);
     }
-
-    if (color_stops.size() < 2)
-        fail();
 
     return LinearGradientStyleValue::create(gradient_direction, move(color_stops));
 }

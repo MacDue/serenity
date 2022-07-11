@@ -922,6 +922,7 @@ class LinearGradientStyleValue final : public StyleValue {
 public:
     static NonnullRefPtr<LinearGradientStyleValue> create(GradientDirection direction, Vector<ColorStopListElement> color_stop_list)
     {
+        VERIFY(color_stop_list.size() >= 2);
         return adopt_ref(*new LinearGradientStyleValue(direction, move(color_stop_list)));
     }
 
