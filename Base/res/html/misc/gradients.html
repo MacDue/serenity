@@ -35,4 +35,18 @@
     <div class="box grad-2"></div>
     <div class="box grad-3"></div>
   </body>
+  <script>
+    const boxes = document.querySelectorAll(".box");
+    const backgroundMap = {};
+    for (const rule of document.styleSheets[0].cssRules) {
+      backgroundMap[rule.selectorText] = rule.style.backgroundImage;
+    }
+    boxes.forEach(box => {
+      const grad = box.classList[1];
+      console.log(grad)
+      const el = document.createElement('code');
+      el.innerText = backgroundMap['.'+grad];
+      box.parentNode.insertBefore(el, box)
+    })
+  </script>
 </html>

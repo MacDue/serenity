@@ -2369,13 +2369,16 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     if (!tokens.has_next_token())
         return {};
 
-    auto& first_param = tokens.next_token();
+    auto& first_param = tokens.peek_token();
 
-    GradientDirection gradient_direction = SideOrCorner::Top;
+    GradientDirection gradient_direction = SideOrCorner::Bottom;
     Vector<ColorStopListElement> color_stops;
+
+    bool has_direction_param = true;
 
     if (first_param.is(Token::Type::Dimension)) {
         // Angle
+        tokens.next_token();
         float angle_value = first_param.token().dimension_value();
         auto unit_string = first_param.token().dimension_unit();
         auto angle_type = Angle::unit_from_name(unit_string);
@@ -2387,7 +2390,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
         dbgln("Parsed angle");
     } else if (first_param.is(Token::Type::Ident) && first_param.token().ident().equals_ignoring_case("to")) {
         // Side or corner
-
+        tokens.next_token();
         tokens.skip_whitespace();
         if (!tokens.has_next_token())
             return {};
@@ -2438,13 +2441,15 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
         } else {
             return {};
         }
+    } else {
+        has_direction_param = false;
     }
 
     tokens.skip_whitespace();
     if (!tokens.has_next_token())
         return {};
 
-    if (!tokens.next_token().is(Token::Type::Comma))
+    if (has_direction_param && !tokens.next_token().is(Token::Type::Comma))
         return {};
 
     auto parse_color_stop = [&]() -> Optional<Variant<LinearGradientColorStop, LinearGradientColorHint>> {

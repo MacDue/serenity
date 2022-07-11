@@ -1078,14 +1078,18 @@ CalculatedStyleValue::CalculationResult CalculatedStyleValue::CalcNumberSumPartW
 }
 
 // https://www.w3.org/TR/css-color-4/#serializing-sRGB-values
-String ColorStyleValue::to_string() const
-{
+static String serailize_srgb_value(Color color) {
     // The serialized form is derived from the computed value and thus, uses either the rgb() or rgba() form
     // (depending on whether the alpha is exactly 1, or not), with lowercase letters for the function name.
     // NOTE: Since we use Gfx::Color, having an "alpha of 1" means its value is 255.
-    if (m_color.alpha() == 255)
-        return String::formatted("rgb({}, {}, {})", m_color.red(), m_color.green(), m_color.blue());
-    return String::formatted("rgba({}, {}, {}, {})", m_color.red(), m_color.green(), m_color.blue(), (float)(m_color.alpha()) / 255.0f);
+    if (color.alpha() == 255)
+        return String::formatted("rgb({}, {}, {})", color.red(), color.green(), color.blue());
+    return String::formatted("rgba({}, {}, {}, {})", color.red(), color.green(), color.blue(), (float)(color.alpha()) / 255.0f);
+}
+
+String ColorStyleValue::to_string() const
+{
+    return serailize_srgb_value(m_color);
 }
 
 bool ColorStyleValue::equals(StyleValue const& other) const
@@ -1440,9 +1444,10 @@ String LinearGradientStyleValue::to_string() const
         }
     };
 
+    builder.append("linear-gradient(");
     m_direction.visit(
         [&](SideOrCorner side_or_corner) {
-            builder.appendff("{}, ", side_or_corner_to_string(side_or_corner));
+            builder.appendff("to {}, ", side_or_corner_to_string(side_or_corner));
         },
         [&](Angle const& angle) {
             builder.appendff("{}, ", angle.to_string());
@@ -1457,12 +1462,13 @@ String LinearGradientStyleValue::to_string() const
             builder.appendff("{}, ", element.transition_hint->value.to_string());
         }
 
-        builder.append(element.color_stop.color.to_string());
+        builder.append(serailize_srgb_value(element.color_stop.color));
         if (element.color_stop.length.has_value()) {
             builder.appendff(" {}", element.color_stop.length->to_string());
         }
         first = false;
     }
+    builder.append(")");
     return builder.to_string();
 }
 
