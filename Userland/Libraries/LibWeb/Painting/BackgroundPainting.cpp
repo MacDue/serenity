@@ -21,48 +21,30 @@ struct GfxGradient {
     Gfx::Color color_b;
 };
 
-static Optional<GfxGradient> to_gfx_gradient(CSS::LinearGradientStyleValue const & linear_gradient) {
+static Optional<GfxGradient> linear_gradient_to_gfx_gradient(CSS::LinearGradientStyleValue const& linear_gradient, Gfx::FloatRect const& background_rect)
+{
     if (linear_gradient.color_stop_list().size() != 2)
         return {};
 
-    auto side = linear_gradient.direction().visit(
-        [](CSS::Angle const & angle) -> Optional<CSS::SideOrCorner> {
-            auto degrees = static_cast<int>(round(angle.to_degrees()));
-            switch (degrees) {
-                case 0: return CSS::SideOrCorner::Top;
-                case 180: return CSS::SideOrCorner::Bottom;
-                case 270: return CSS::SideOrCorner::Left;
-                case 90: return CSS::SideOrCorner::Right;
-                default: return {};
-            }
-        },
-        [](CSS::SideOrCorner side) -> Optional<CSS::SideOrCorner> {
-            return side;
-        });
-
-    if (!side.has_value())
-        return {};
-
+    auto angle = round_to<int>(linear_gradient.angle(background_rect));
     auto color_a = linear_gradient.color_stop_list()[0].color_stop.color;
     auto color_b = linear_gradient.color_stop_list()[1].color_stop.color;
-
-    auto side_to_orientation = [&](CSS::SideOrCorner side) -> Optional<Gfx::Orientation> {
-        switch (side) {
-            case CSS::SideOrCorner::Top:
-                swap(color_a, color_b);
-                [[fallthrough]];
-            case CSS::SideOrCorner::Bottom:
-                return Gfx::Orientation::Vertical;
-            case CSS::SideOrCorner::Left:
-                swap(color_a, color_b);
-                [[fallthrough]];
-            case CSS::SideOrCorner::Right:
-                return Gfx::Orientation::Horizontal;
-            default: return {};
+    auto orientation = [&]() -> Optional<Gfx::Orientation> {
+        switch (angle) {
+        case 0:
+            swap(color_a, color_b);
+            [[fallthrough]];
+        case 180:
+            return Gfx::Orientation::Vertical;
+        case 270:
+            swap(color_a, color_b);
+            [[fallthrough]];
+        case 90:
+            return Gfx::Orientation::Horizontal;
+        default:
+            return {};
         }
-    };
-
-    auto orientation = side_to_orientation(*side);
+    }();
 
     if (!orientation.has_value())
         return {};
@@ -151,8 +133,9 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
         ScopedCornerRadiusClip corner_clip { painter, clip_rect, clip_box.radii };
 
         if (layer.background_image->is_linear_gradient()) {
+            // FIXME: Paint non-orthogonal gradients, gradients with > 2 color stops, gradients with custom stop positions ...
             auto& linear_gradient = layer.background_image->as_linear_gradient();
-            auto gfx_gradient = to_gfx_gradient(linear_gradient);
+            auto gfx_gradient = linear_gradient_to_gfx_gradient(linear_gradient, border_box.rect);
             if (gfx_gradient.has_value()) {
                 painter.fill_rect_with_gradient(gfx_gradient->orientation, border_box.rect.to_rounded<int>(), gfx_gradient->color_a, gfx_gradient->color_b);
             }

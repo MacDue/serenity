@@ -69,21 +69,19 @@ enum class SideOrCorner {
     BottomRight
 };
 
-struct LinearGradientColorStop {
+struct GradientColorStop {
     Color color;
     Optional<LengthPercentage> length;
 };
 
-struct LinearGradientColorHint {
+struct GradientColorHint {
     LengthPercentage value;
 };
 
 struct ColorStopListElement {
-    Optional<LinearGradientColorHint> transition_hint;
-    LinearGradientColorStop color_stop;
+    Optional<GradientColorHint> transition_hint;
+    GradientColorStop color_stop;
 };
-
-using GradientDirection = Variant<Angle, SideOrCorner>;
 
 // FIXME: Find a better place for this helper.
 inline Gfx::Painter::ScalingMode to_gfx_scaling_mode(CSS::ImageRendering css_value)
@@ -920,6 +918,8 @@ private:
 
 class LinearGradientStyleValue final : public StyleValue {
 public:
+    using GradientDirection = Variant<Angle, SideOrCorner>;
+
     static NonnullRefPtr<LinearGradientStyleValue> create(GradientDirection direction, Vector<ColorStopListElement> color_stop_list)
     {
         VERIFY(color_stop_list.size() >= 2);
@@ -930,15 +930,12 @@ public:
     virtual ~LinearGradientStyleValue() override = default;
     virtual bool equals(StyleValue const& other) const override;
 
-    GradientDirection const& direction() const
-    {
-        return m_direction;
-    }
-
     Vector<ColorStopListElement> const& color_stop_list() const
     {
         return m_color_stop_list;
     }
+
+    float angle(Gfx::FloatRect const& background_box) const;
 
 private:
     LinearGradientStyleValue(GradientDirection direction, Vector<ColorStopListElement> color_stop_list)

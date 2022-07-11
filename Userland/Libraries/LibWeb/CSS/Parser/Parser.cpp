@@ -2372,7 +2372,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
         return {};
 
     bool has_direction_param = true;
-    GradientDirection gradient_direction = SideOrCorner::Bottom;
+    LinearGradientStyleValue::GradientDirection gradient_direction = SideOrCorner::Bottom;
 
     auto& first_param = tokens.peek_token();
     if (first_param.is(Token::Type::Dimension)) {
@@ -2474,7 +2474,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
             tokens.skip_whitespace();
             // <length-percentage>
             if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma)) {
-                element.transition_hint = LinearGradientColorHint { *length };
+                element.transition_hint = GradientColorHint { *length };
                 return ElementType::ColorHint;
             }
             // <length-percentage> <color>
@@ -2498,7 +2498,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
             }
         }
 
-        element.color_stop = LinearGradientColorStop { color, length };
+        element.color_stop = GradientColorStop { color, length };
         return ElementType::ColorStop;
     };
 

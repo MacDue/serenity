@@ -1078,7 +1078,8 @@ CalculatedStyleValue::CalculationResult CalculatedStyleValue::CalcNumberSumPartW
 }
 
 // https://www.w3.org/TR/css-color-4/#serializing-sRGB-values
-static String serailize_srgb_value(Color color) {
+static String serailize_srgb_value(Color color)
+{
     // The serialized form is derived from the computed value and thus, uses either the rgb() or rgba() form
     // (depending on whether the alpha is exactly 1, or not), with lowercase letters for the function name.
     // NOTE: Since we use Gfx::Color, having an "alpha of 1" means its value is 255.
@@ -1472,7 +1473,7 @@ String LinearGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
-static bool operator==(GradientDirection a, GradientDirection b)
+static bool operator==(LinearGradientStyleValue::GradientDirection a, LinearGradientStyleValue::GradientDirection b)
 {
     if (a.has<SideOrCorner>() && b.has<SideOrCorner>())
         return a.get<SideOrCorner>() == b.get<SideOrCorner>();
@@ -1481,12 +1482,12 @@ static bool operator==(GradientDirection a, GradientDirection b)
     return false;
 }
 
-static bool operator==(LinearGradientColorHint a, LinearGradientColorHint b)
+static bool operator==(GradientColorHint a, GradientColorHint b)
 {
     return a.value == b.value;
 }
 
-static bool operator==(LinearGradientColorStop a, LinearGradientColorStop b)
+static bool operator==(GradientColorStop a, GradientColorStop b)
 {
     return a.color == b.color && a.length == b.length;
 }
@@ -1510,6 +1511,30 @@ bool LinearGradientStyleValue::equals(StyleValue const& other_) const
             return false;
     }
     return true;
+}
+
+float LinearGradientStyleValue::angle(Gfx::FloatRect const& background_box) const
+{
+    (void)background_box;
+    return m_direction.visit(
+        [&](SideOrCorner side_or_corner) {
+            switch (side_or_corner) {
+            case CSS::SideOrCorner::Top:
+                return 0.0f;
+            case CSS::SideOrCorner::Bottom:
+                return 180.0f;
+            case CSS::SideOrCorner::Left:
+                return 270.0f;
+            case CSS::SideOrCorner::Right:
+                return 90.0f;
+            default:
+                // FIXME: Angle gradients towards corners
+                return 0.0f;
+            }
+        },
+        [&](Angle const& angle) {
+            return angle.to_degrees();
+        });
 }
 
 bool InheritStyleValue::equals(StyleValue const& other) const
