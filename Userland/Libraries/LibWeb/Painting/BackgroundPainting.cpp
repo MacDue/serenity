@@ -30,10 +30,10 @@ static Optional<GfxGradient> to_gfx_gradient(CSS::LinearGradientStyleValue const
     auto orientation = [&]() -> Optional<Gfx::Orientation> {
          if (auto* side_or_corner = linear_gradient.direction().get_pointer<CSS::SideOrCorner>()) {
             switch (*side_or_corner) {
-                case CSS::SideOrCorner::Bottom:
+                case CSS::SideOrCorner::Top:
                     swap(color_a, color_b);
                     [[fallthrough]];
-                case CSS::SideOrCorner::Top:
+                case CSS::SideOrCorner::Bottom:
                     return Gfx::Orientation::Vertical;
                 case CSS::SideOrCorner::Left:
                     swap(color_a, color_b);
