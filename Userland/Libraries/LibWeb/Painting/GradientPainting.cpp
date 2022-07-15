@@ -104,11 +104,12 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
     auto length = calulate_gradient_length(gradient_rect, data.gradient_angle);
 
     float angle = gradient_angle_radians(data.gradient_angle);
+
     float sin_angle = sin(angle);
     float cos_angle = cos(angle);
     Gfx::FloatPoint offset { cos_angle * (length / 2), sin_angle * (length / 2)};
 
-    auto center = gradient_rect.center();
+    auto center = gradient_rect.translated(-gradient_rect.location()).center();
     auto start_point = center.to_type<float>() - offset;
 
     // Rotate gradient line to be horizontal
@@ -122,26 +123,34 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
         return (value - min) / (max - min);
     };
 
+    Vector<Gfx::Color, 1024> gradient_line_colors;
+    auto int_length = round_to<int>(length);
+    gradient_line_colors.resize(int_length);
     auto& color_stops = data.color_stops;
+    for (int loc = 0; loc < int_length; loc++) {
+        Gfx::Color gradient_color = color_mix(
+            color_stops[0].color,
+            color_stops[1].color,
+            linear_step(
+                color_stops[0].position,
+                color_stops[1].position,
+                loc));
+        for (size_t i = 1; i < color_stops.size() - 1; i++) {
+            gradient_color = color_mix(
+                gradient_color,
+                color_stops[i + 1].color,
+                linear_step(
+                    color_stops[i].position,
+                    color_stops[i+1].position,
+                    loc));
+        }
+        gradient_line_colors[loc] = gradient_color;
+    }
+
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
-            auto x_loc = x * cos_angle - y * -sin_angle;
-            Gfx::Color gradient_color = color_mix(
-                color_stops[0].color,
-                color_stops[1].color,
-                linear_step(
-                    rotated_start_point_x + color_stops[0].position,
-                    rotated_start_point_x + color_stops[1].position,
-                    x_loc));
-            for (size_t i = 1; i < color_stops.size() - 1; i++) {
-                gradient_color = color_mix(
-                    gradient_color,
-                    color_stops[i + 1].color,
-                    linear_step(
-                        rotated_start_point_x + color_stops[i].position,
-                        rotated_start_point_x + color_stops[i+1].position,
-                        x_loc));
-            }
+            auto loc = x * cos_angle - y * -sin_angle;
+            auto gradient_color = gradient_line_colors[clamp(round_to<int>(loc - rotated_start_point_x), 0, int_length - 1)];
             context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color);
         }
     }
