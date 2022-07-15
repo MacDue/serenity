@@ -14,7 +14,6 @@
 #include <LibWeb/Painting/PaintContext.h>
 
 namespace Web::Painting {
-
     struct ColorStop {
         Gfx::Color color;
         float position = 0;
@@ -22,7 +21,12 @@ namespace Web::Painting {
 
     using ColorStopList = Vector<ColorStop, 4>;
 
-    ColorStopList resolve_color_stop_positions(Layout::Node const&, Gfx::FloatRect const &, CSS::LinearGradientStyleValue&);
+    struct LinearGradientData {
+        float gradient_angle;
+        ColorStopList color_stops;
+    };
 
-    void paint_linear_gradient(PaintContext&, Gfx::IntRect const &, float gradient_angle, Span<ColorStop const> color_stop_list);
+    LinearGradientData resolve_linear_gradient_data(Layout::Node const&, Gfx::FloatRect const &, CSS::LinearGradientStyleValue const &);
+
+    void paint_linear_gradient(PaintContext&, Gfx::IntRect const&, LinearGradientData const &);
 }

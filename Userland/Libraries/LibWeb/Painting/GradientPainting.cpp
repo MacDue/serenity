@@ -22,7 +22,7 @@ static float calulate_gradient_length(Gfx::IntRect const & gradient_rect, float 
     return abs(gradient_rect.height() * sin(angle)) + abs(gradient_rect.width() * cos(angle));
 }
 
-ColorStopList resolve_color_stop_positions(Layout::Node const& node, Gfx::FloatRect const & gradient_rect, CSS::LinearGradientStyleValue& linear_gradient) {
+LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::FloatRect const & gradient_rect, CSS::LinearGradientStyleValue const & linear_gradient) {
     auto& color_stop_list = linear_gradient.color_stop_list();
 
     VERIFY(color_stop_list.size() >= 2);
@@ -31,7 +31,8 @@ ColorStopList resolve_color_stop_positions(Layout::Node const& node, Gfx::FloatR
     for (auto& stop: color_stop_list)
         resolved_color_stops.append(ColorStop { .color = stop.color_stop.color });
 
-    auto gradient_length_px = calulate_gradient_length(gradient_rect.to_rounded<int>(), linear_gradient.angle(gradient_rect));
+    auto gradient_angle = linear_gradient.angle(gradient_rect);
+    auto gradient_length_px = calulate_gradient_length(gradient_rect.to_rounded<int>(), gradient_angle);
     auto gradient_length = CSS::Length::make_px(gradient_length_px);
 
     // 1. If the first color stop does not have a position, set its position to 0%.
@@ -80,15 +81,29 @@ ColorStopList resolve_color_stop_positions(Layout::Node const& node, Gfx::FloatR
                 resolved_color_stops[j].position = start_position + (j - run_start) * spacing;
             }
         }
+        i++;
     }
 
-    return resolved_color_stops;
+    return { gradient_angle, resolved_color_stops };
 }
 
-void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_rect, float gradient_angle, Span<ColorStop const> color_stop_list) {
-    auto length = calulate_gradient_length(gradient_rect, gradient_angle);
+// Note: Gfx::gamma_accurate_blend() is NOT correct for linear gradients!
+static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a) {
+    auto mix = [&](float x, float y, float a) {
+        return x * (1 - a) + y * a;
+    };
+    return Gfx::Color {
+        round_to<u8>(mix(x.red(), y.red(), a)),
+        round_to<u8>(mix(x.green(), y.green(), a)),
+        round_to<u8>(mix(x.blue(), y.blue(), a)),
+        round_to<u8>(mix(x.alpha(), y.alpha(), a)),
+    };
+}
 
-    float angle = gradient_angle_radians(gradient_angle);
+void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_rect, LinearGradientData const & data) {
+    auto length = calulate_gradient_length(gradient_rect, data.gradient_angle);
+
+    float angle = gradient_angle_radians(data.gradient_angle);
     float sin_angle = sin(angle);
     float cos_angle = cos(angle);
     Gfx::FloatPoint offset { cos_angle * (length / 2), sin_angle * (length / 2)};
@@ -107,101 +122,29 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
         return (value - min) / (max - min);
     };
 
+    auto& color_stops = data.color_stops;
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
             auto x_loc = x * cos_angle - y * -sin_angle;
-            Gfx::Color gradient_color = Gfx::gamma_accurate_blend(
-                color_stop_list[0].color,
-                color_stop_list[1].color,
+            Gfx::Color gradient_color = color_mix(
+                color_stops[0].color,
+                color_stops[1].color,
                 linear_step(
-                    rotated_start_point_x + color_stop_list[0].position,
-                    rotated_start_point_x + color_stop_list[1].position,
+                    rotated_start_point_x + color_stops[0].position,
+                    rotated_start_point_x + color_stops[1].position,
                     x_loc));
-            for (size_t i = 1; i < color_stop_list.size() - 1; i++) {
-                gradient_color = Gfx::gamma_accurate_blend(
+            for (size_t i = 1; i < color_stops.size() - 1; i++) {
+                gradient_color = color_mix(
                     gradient_color,
-                    color_stop_list[1].color,
+                    color_stops[i + 1].color,
                     linear_step(
-                        rotated_start_point_x + color_stop_list[i].position,
-                        rotated_start_point_x + color_stop_list[i+1].position,
+                        rotated_start_point_x + color_stops[i].position,
+                        rotated_start_point_x + color_stops[i+1].position,
                         x_loc));
             }
             context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color);
         }
     }
 }
-
-/*
-float gradientLineLen(float angle, vec2 size) {
-    return abs(size.x * sin(angle)) + abs(size.y * cos(angle));
-}
-
-float linearStep(float min, float max, float val) {
-   if (val < min) return 0.;
-   if (val > max) return 1.;
-   float c = (val - min)/(max - min);
-   return c;
-}
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    float cssAngle = 90.;
-    float angle = 90. - cssAngle;
-    float angle_rads = angle*(3.14/180.);
-
-    vec2 center = iResolution.xy/2.;
-    float grad_len = gradientLineLen(angle_rads, iResolution.yx);
-    float l = grad_len / 2.;
-    vec2 offset = vec2(cos(angle_rads) * l, sin(angle_rads) * l);
-
-    // these should be uniforms
-    vec2 gradient_start_pos = center - offset; // top-left
-    vec2 gradient_end_pos = center + offset; // bottom-right
-
-    // define colors and stops
-    const int num_stops = 4;
-    float stops[32];
-    vec4 colors[32];
-    stops[0] = 0.0;
-    stops[1] = 1./3.;
-    stops[2] = 2./3.;
-    stops[3] = 1.0;
-    colors[0] = vec4(1.0, 0.0, 0.0, 1.0);
-    colors[1] = vec4(0.0, 0.0, 0.0, 1.0);
-    colors[2] = vec4(1.0, 1.0, 0.0, 1.0);
-    colors[3] = vec4(0.0, 1.0, 1.0, 1.0);
-
-
-	vec2 uv = fragCoord.xy;
-
-    float alpha = angle_rads;
-
-    float gradient_startpos_rotated_x = gradient_start_pos.x * cos(-alpha) - gradient_start_pos.y * sin(-alpha);
-    float gradient_endpos_rotated_x = gradient_end_pos.x * cos(-alpha) - gradient_end_pos.y * sin(-alpha);
-    float len = gradient_endpos_rotated_x - gradient_startpos_rotated_x;
-    float x_loc_rotated = uv.x * cos(-alpha) - uv.y * sin(-alpha);
-
-
-    if (num_stops == 1) {
-        fragColor = colors[0];
-    } else if (num_stops > 1) {
-        fragColor = mix(colors[0], colors[1], linearStep(
-            gradient_startpos_rotated_x + stops[0] * len,
-            gradient_startpos_rotated_x + stops[1] * len,
-            x_loc_rotated
-        ));
-        for (int i = 1; i < 32 - 1; i++) {
-            if (i < num_stops - 1) {
-                fragColor = mix(fragColor, colors[i + 1], linearStep(
-                    gradient_startpos_rotated_x + stops[i] * len,
-                    gradient_startpos_rotated_x + stops[i + 1] * len,
-                    x_loc_rotated
-                ));
-            } else { break; }
-        }
-    }
-}
-
-*/
 
 }
