@@ -11,7 +11,7 @@
             border: 1px solid black;
         }
 
-        .grad-0 {
+        /* .grad-0 {
             background-image: linear-gradient(to top, red, yellow);
         }
 
@@ -25,9 +25,9 @@
 
         .grad-3 {
             background-image: linear-gradient(to right, red, yellow);
-        }
+        } */
 
-        .grad-4 {
+        /* .grad-4 {
             background-image: linear-gradient(to top, rgba(255,0,0,.8), rgba(255,0,0,0) 70.71%),
             linear-gradient(to bottom, rgba(0,255,0,.8), rgba(0,255,0,0) 70.71%),
             linear-gradient(to left, rgba(0,0,255,.8), rgba(0,0,255,0) 70.71%);
@@ -39,18 +39,27 @@
 
         .grad-6 {
             background-image: linear-gradient(to top, blue 30%, 30%, orange 20%, 10%, red);
+        } */
+
+        .grad-7 {
+            width: 800px;
+            height: 450px;
+            background-image: linear-gradient(to right, red 0%, black 20%, yellow 60%, cyan 100%);
         }
     </style>
   </head>
   <body>
     <h1>Gradients!</h1>
-    <div class="box grad-0"></div>
+    <!-- <div class="box grad-0"></div>
     <div class="box grad-1"></div>
     <div class="box grad-2"></div>
     <div class="box grad-3"></div>
     <div class="box grad-4"></div>
     <div class="box grad-5"></div>
-    <div class="box grad-6"></div>
+    <div class="box grad-6"></div> -->
+    <div id="fun" class="box grad-7">
+        <!-- <h1 style="position: absolute; top: 230px; left: 300px; font-size: 92px;"> BRRR </h1> -->
+    </div>
   </body>
   <script>
     const boxes = document.querySelectorAll(".box");
@@ -65,5 +74,11 @@
         el.innerText = backgroundMap['.'+grad];
         box.parentNode.insertBefore(el, box)
     })
+    // let angle = 0;
+    // setInterval(() => {
+    //     const el = document.getElementById("fun");
+    //     el.style.backgroundImage = `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`;
+    //     angle += 1;
+    // }, 10)
   </script>
 </html>
