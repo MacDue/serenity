@@ -44,6 +44,7 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
     resolved_color_stops.last().position = last_stop.length.has_value()
         ? last_stop.length->resolved(node, gradient_length).to_px(node) : gradient_length_px;
 
+    // FIXME: Handle transition hints
     // 2. If a color stop or transition hint has a position that is less than the
     //    specified position of any color stop or transition hint before it in the list,
     //    set its position to be equal to the largest specified position of any color stop
@@ -115,6 +116,7 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
     // Rotate gradient line to be horizontal
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
 
+    // FIXME: Handle transition hint interpolation
     auto linear_step = [](float min, float max, float value) -> float {
         if (value < min)
             return 0.;
@@ -149,9 +151,9 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
 
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
-            auto loc = x * cos_angle - y * -sin_angle;
+            auto loc = x * cos_angle - (gradient_rect.height() - y) * -sin_angle;
             auto gradient_color = gradient_line_colors[clamp(round_to<int>(loc - rotated_start_point_x), 0, int_length - 1)];
-            context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color);
+            context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color, gradient_color.alpha() < 255);
         }
     }
 }
