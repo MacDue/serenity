@@ -317,6 +317,7 @@ set(SOURCES
     Painting/TextPaintable.cpp
     Painting/ShadowPainting.cpp
     Painting/StackingContext.cpp
+    Painting/GradientPainting.cpp
     RequestIdleCallback/IdleDeadline.cpp
     ResizeObserver/ResizeObserver.cpp
     SVG/AttributeNames.cpp

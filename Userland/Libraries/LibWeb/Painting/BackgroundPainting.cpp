@@ -13,6 +13,7 @@
 #include <LibWeb/Painting/BackgroundPainting.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
 #include <LibWeb/Painting/PaintContext.h>
+#include <LibWeb/Painting/GradientPainting.h>
 
 namespace Web::Painting {
 
@@ -142,6 +143,7 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
                 painter.fill_rect_with_gradient(gfx_gradient->orientation, border_box.rect.to_rounded<int>(), gfx_gradient->color_a, gfx_gradient->color_b);
             }
             continue;
+            // paint_linear_gradient(context, border_box.rect.to_rounded<int>(), linear_gradient.angle(border_box), linear_gradient.color_stop_list());
         }
 
         auto& image = *layer.background_image->as_image().bitmap();

@@ -147,10 +147,10 @@ Action* Application::action_for_shortcut(Shortcut const& shortcut) const
 void Application::show_tooltip(String tooltip, Widget const* tooltip_source_widget)
 {
     m_tooltip_source_widget = tooltip_source_widget;
-    if (!m_tooltip_window) {
+    // if (!m_tooltip_window) {
         m_tooltip_window = TooltipWindow::construct();
         m_tooltip_window->set_double_buffering_enabled(false);
-    }
+    // }
     m_tooltip_window->set_tooltip(move(tooltip));
 
     if (m_tooltip_window->is_visible()) {
