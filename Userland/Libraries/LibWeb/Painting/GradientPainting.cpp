@@ -12,7 +12,7 @@
 
 namespace Web::Painting {
 
-static float gradient_angle_radians(float gradient_angle)
+static float normalized_gradient_angle_radians(float gradient_angle)
 {
     // Adjust angle so 0 degrees is bottom
     float real_angle = 90 - gradient_angle;
@@ -21,7 +21,7 @@ static float gradient_angle_radians(float gradient_angle)
 
 static float calulate_gradient_length(Gfx::IntRect const& gradient_rect, float gradient_angle)
 {
-    float angle = gradient_angle_radians(gradient_angle);
+    float angle = normalized_gradient_angle_radians(gradient_angle);
     return abs(gradient_rect.height() * sin(angle)) + abs(gradient_rect.width() * cos(angle));
 }
 
@@ -113,8 +113,7 @@ static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a)
 void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
 {
     auto length = calulate_gradient_length(gradient_rect, data.gradient_angle);
-
-    float angle = gradient_angle_radians(data.gradient_angle);
+    float angle = normalized_gradient_angle_radians(data.gradient_angle);
 
     float sin_angle = sin(angle);
     float cos_angle = cos(angle);
