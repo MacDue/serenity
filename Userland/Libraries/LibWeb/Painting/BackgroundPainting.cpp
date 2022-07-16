@@ -12,8 +12,8 @@
 #include <LibWeb/Layout/Node.h>
 #include <LibWeb/Painting/BackgroundPainting.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
-#include <LibWeb/Painting/PaintContext.h>
 #include <LibWeb/Painting/GradientPainting.h>
+#include <LibWeb/Painting/PaintContext.h>
 
 namespace Web::Painting {
 

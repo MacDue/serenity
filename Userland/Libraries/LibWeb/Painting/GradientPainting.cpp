@@ -4,46 +4,51 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <AK/Math.h>
-#include <LibGfx/Line.h>
-#include <LibGfx/Gamma.h>
-#include <LibWeb/Painting/GradientPainting.h>
 #include <AK/Checked.h>
+#include <AK/Math.h>
+#include <LibGfx/Gamma.h>
+#include <LibGfx/Line.h>
+#include <LibWeb/Painting/GradientPainting.h>
 
 namespace Web::Painting {
 
-static float gradient_angle_radians(float gradient_angle) {
+static float gradient_angle_radians(float gradient_angle)
+{
     // Adjust angle so 0 degrees is bottom
     float real_angle = 90 - gradient_angle;
     return real_angle * (AK::Pi<float> / 180);
 }
 
-static float calulate_gradient_length(Gfx::IntRect const & gradient_rect, float gradient_angle) {
+static float calulate_gradient_length(Gfx::IntRect const& gradient_rect, float gradient_angle)
+{
     float angle = gradient_angle_radians(gradient_angle);
     return abs(gradient_rect.height() * sin(angle)) + abs(gradient_rect.width() * cos(angle));
 }
 
-LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::FloatRect const & gradient_rect, CSS::LinearGradientStyleValue const & linear_gradient) {
+LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::FloatRect const& gradient_rect, CSS::LinearGradientStyleValue const& linear_gradient)
+{
     auto& color_stop_list = linear_gradient.color_stop_list();
 
     VERIFY(color_stop_list.size() >= 2);
     ColorStopList resolved_color_stops;
     resolved_color_stops.ensure_capacity(color_stop_list.size());
-    for (auto& stop: color_stop_list)
+    for (auto& stop : color_stop_list)
         resolved_color_stops.append(ColorStop { .color = stop.color_stop.color });
 
-    auto gradient_angle = linear_gradient.angle(gradient_rect);
+    auto gradient_angle = linear_gradient.angle_degrees(gradient_rect);
     auto gradient_length_px = calulate_gradient_length(gradient_rect.to_rounded<int>(), gradient_angle);
     auto gradient_length = CSS::Length::make_px(gradient_length_px);
 
     // 1. If the first color stop does not have a position, set its position to 0%.
     auto& first_stop = color_stop_list.first().color_stop;
     resolved_color_stops.first().position = first_stop.length.has_value()
-        ? first_stop.length->resolved(node, gradient_length).to_px(node) : 0;
+        ? first_stop.length->resolved(node, gradient_length).to_px(node)
+        : 0;
     //    If the last color stop does not have a position, set its position to 100%
     auto& last_stop = color_stop_list.last().color_stop;
     resolved_color_stops.last().position = last_stop.length.has_value()
-        ? last_stop.length->resolved(node, gradient_length).to_px(node) : gradient_length_px;
+        ? last_stop.length->resolved(node, gradient_length).to_px(node)
+        : gradient_length_px;
 
     // FIXME: Handle transition hints
     // 2. If a color stop or transition hint has a position that is less than the
@@ -65,7 +70,7 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
     //    without positions, set their positions so that they are evenly spaced between the preceding
     //    and following color stops with positions.
     size_t i = 1;
-    auto find_run_end = [&]{
+    auto find_run_end = [&] {
         while (i < color_stop_list.size() - 1 && !color_stop_list[i].color_stop.length.has_value()) {
             i++;
         }
@@ -78,7 +83,7 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
             auto run_end = find_run_end();
             auto start_position = resolved_color_stops[run_start].position;
             auto end_position = resolved_color_stops[run_end].position;
-            auto spacing = (end_position - start_position)/(run_end - run_start);
+            auto spacing = (end_position - start_position) / (run_end - run_start);
             for (auto j = run_start + 1; j < run_end; j++) {
                 resolved_color_stops[j].position = start_position + (j - run_start) * spacing;
             }
@@ -89,12 +94,14 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
     return { gradient_angle, resolved_color_stops };
 }
 
-static float mix(float x, float y, float a) {
+static float mix(float x, float y, float a)
+{
     return x * (1 - a) + y * a;
 }
 
 // Note: Gfx::gamma_accurate_blend() is NOT correct for linear gradients!
-static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a) {
+static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a)
+{
     return Gfx::Color {
         round_to<u8>(mix(x.red(), y.red(), a)),
         round_to<u8>(mix(x.green(), y.green(), a)),
@@ -103,14 +110,15 @@ static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a) {
     };
 }
 
-void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_rect, LinearGradientData const & data) {
+void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
+{
     auto length = calulate_gradient_length(gradient_rect, data.gradient_angle);
 
     float angle = gradient_angle_radians(data.gradient_angle);
 
     float sin_angle = sin(angle);
     float cos_angle = cos(angle);
-    Gfx::FloatPoint offset { cos_angle * (length / 2), sin_angle * (length / 2)};
+    Gfx::FloatPoint offset { cos_angle * (length / 2), sin_angle * (length / 2) };
 
     auto center = gradient_rect.translated(-gradient_rect.location()).center();
     auto start_point = center.to_type<float>() - offset;
@@ -145,7 +153,7 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
                 color_stops[i + 1].color,
                 linear_step(
                     color_stops[i].position,
-                    color_stops[i+1].position,
+                    color_stops[i + 1].position,
                     loc));
         }
         gradient_line_colors[loc] = gradient_color;

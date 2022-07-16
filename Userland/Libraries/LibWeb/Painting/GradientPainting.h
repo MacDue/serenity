@@ -9,24 +9,24 @@
 #include <AK/Span.h>
 #include <AK/Vector.h>
 #include <LibGfx/Color.h>
-#include <LibWeb/Forward.h>
 #include <LibWeb/CSS/StyleValue.h>
+#include <LibWeb/Forward.h>
 #include <LibWeb/Painting/PaintContext.h>
 
 namespace Web::Painting {
-    struct ColorStop {
-        Gfx::Color color;
-        float position = 0;
-    };
+struct ColorStop {
+    Gfx::Color color;
+    float position = 0;
+};
 
-    using ColorStopList = Vector<ColorStop, 4>;
+using ColorStopList = Vector<ColorStop, 4>;
 
-    struct LinearGradientData {
-        float gradient_angle;
-        ColorStopList color_stops;
-    };
+struct LinearGradientData {
+    float gradient_angle;
+    ColorStopList color_stops;
+};
 
-    LinearGradientData resolve_linear_gradient_data(Layout::Node const&, Gfx::FloatRect const &, CSS::LinearGradientStyleValue const &);
+LinearGradientData resolve_linear_gradient_data(Layout::Node const&, Gfx::FloatRect const&, CSS::LinearGradientStyleValue const&);
 
-    void paint_linear_gradient(PaintContext&, Gfx::IntRect const&, LinearGradientData const &);
+void paint_linear_gradient(PaintContext&, Gfx::IntRect const&, LinearGradientData const&);
 }
