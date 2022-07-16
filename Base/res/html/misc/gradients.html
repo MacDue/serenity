@@ -86,18 +86,26 @@
     for (const rule of document.styleSheets[0].cssRules) {
         backgroundMap[rule.selectorText] = rule.style.backgroundImage;
     }
-    boxes.forEach(box => {
-        const grad = box.classList[1];
-        console.log(grad)
-        const el = document.createElement('code');
-        el.innerText = backgroundMap['.'+grad];
-        box.parentNode.insertBefore(el, box)
-    })
+    updateLabels = () => {
+        boxes.forEach(box => {
+            const grad = box.classList[1];
+            const cssText = backgroundMap['.'+grad];
+            let el = document.getElementById(grad);
+            if (!el) {
+                el = document.createElement('code');
+                el.id = grad;
+                box.parentNode.insertBefore(el, box)
+            }
+            el.innerHTML = box.style.backgroundImage || cssText;
+        })
+    }
     let angle = 0;
-    setInterval(() => {
-        const el = document.getElementById("fun");
-        el.style.backgroundImage = `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`;
-        angle += 1;
-    }, 10)
+    // setInterval(() => {
+    //     const el = document.getElementById("fun");
+    //     el.style.backgroundImage = `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`;
+    //     angle += 1;
+    //     updateLabels();
+    // }, 100)
+    updateLabels();
   </script>
 </html>

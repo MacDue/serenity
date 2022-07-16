@@ -8,6 +8,7 @@
 #include <LibGfx/Line.h>
 #include <LibGfx/Gamma.h>
 #include <LibWeb/Painting/GradientPainting.h>
+#include <AK/Checked.h>
 
 namespace Web::Painting {
 
@@ -77,7 +78,7 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
             auto run_end = find_run_end();
             auto start_position = resolved_color_stops[run_start].position;
             auto end_position = resolved_color_stops[run_end].position;
-            auto spacing = (end_position - start_position)/(run_end - run_start + 1);
+            auto spacing = (end_position - start_position)/(run_end - run_start);
             for (auto j = run_start + 1; j < run_end; j++) {
                 resolved_color_stops[j].position = start_position + (j - run_start) * spacing;
             }
@@ -88,11 +89,12 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
     return { gradient_angle, resolved_color_stops };
 }
 
+static float mix(float x, float y, float a) {
+    return x * (1 - a) + y * a;
+}
+
 // Note: Gfx::gamma_accurate_blend() is NOT correct for linear gradients!
 static Gfx::Color color_mix(Gfx::Color x, Gfx::Color y, float a) {
-    auto mix = [&](float x, float y, float a) {
-        return x * (1 - a) + y * a;
-    };
     return Gfx::Color {
         round_to<u8>(mix(x.red(), y.red(), a)),
         round_to<u8>(mix(x.green(), y.green(), a)),
@@ -149,10 +151,16 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const & gradient_
         gradient_line_colors[loc] = gradient_color;
     }
 
+    auto lookup_color = [&](int loc) {
+        return gradient_line_colors[clamp(loc, 0, int_length - 1)];
+    };
+
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
-            auto loc = x * cos_angle - (gradient_rect.height() - y) * -sin_angle;
-            auto gradient_color = gradient_line_colors[clamp(round_to<int>(loc - rotated_start_point_x), 0, int_length - 1)];
+            auto loc = (x * cos_angle - (gradient_rect.height() - y) * -sin_angle) - rotated_start_point_x;
+            // Blend between the two neighbouring colors (this fixes some nasty aliasing issues at small angles)
+            auto blend = loc - static_cast<int>(loc);
+            auto gradient_color = color_mix(lookup_color(loc - 1), lookup_color(loc), blend);
             context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color, gradient_color.alpha() < 255);
         }
     }
