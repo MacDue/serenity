@@ -4,11 +4,19 @@
     <meta charset="UTF-8">
     <title>Gradients</title>
     <style>
+        div {
+            border: 1px solid black;
+            margin: 20px;
+        }
+
         .box {
             width: 200px;
             height: 200px;
-            margin: 20px;
-            border: 1px solid black;
+        }
+
+        .rect {
+            width: 400px;
+            height: 225px;
         }
 
         .grad-0 {
@@ -42,8 +50,8 @@
         }
 
         .grad-7 {
-            width: 800px;
-            height: 450px;
+            width: 400px;
+            height: 225px;
             background-image: linear-gradient(to right, red 0%, black 20%, yellow 60%, cyan 100%);
         }
 
@@ -63,25 +71,54 @@
                         linear-gradient(315deg, #333 25%, transparent 25%),
                         linear-gradient(45deg, #333 25%, transparent 25%);
         }
+
+        .grad-10 {
+            background-image: linear-gradient(90deg, red, transparent, blue);
+        }
+
+        .grad-11 {
+            background-image: linear-gradient(to top right, indigo, white, deeppink);
+        }
+
+        .grad-12 {
+            background-image: linear-gradient(to top left, indigo, white, deeppink);
+        }
+
+        .grad-13 {
+            background-image: linear-gradient(to bottom left, indigo, white, deeppink);
+        }
+
+        .grad-14 {
+            background-image: linear-gradient(to bottom right,  indigo, white, deeppink);
+        }
     </style>
   </head>
   <body>
     <h1>Gradients!</h1>
+    <b>Simple gradients:</b><br/>
     <div class="box grad-0"></div>
     <div class="box grad-1"></div>
     <div class="box grad-2"></div>
     <div class="box grad-3"></div>
     <div class="box grad-4"></div>
+    <b>Funky color hints:</b><br>
     <div class="box grad-5"></div>
     <div class="box grad-6"></div>
-    <div id="fun" class="box grad-7"></div>
+    <b>Multiple color tops + arbitrary angles:</b><br>
+    <div id="fun" class="rect grad-7"></div>
+    <b>Default color stops:</b><br>
     <div class="box grad-8"></div>
     <div class="box grad-9"></div>
-
-        <!-- <h1 style="position: absolute; top: 230px; left: 300px; font-size: 92px;"> BRRR </h1> -->
+    <b>Pre-multiplied alpha mixing test:</b><br>
+    <div class="box grad-10"></div>
+    <b>To corner:</b><br>
+    <div class="rect grad-11"></div>
+    <div class="rect grad-12"></div>
+    <div class="rect grad-13"></div>
+    <div class="rect grad-14"></div>
   </body>
   <script>
-    const boxes = document.querySelectorAll(".box");
+    const boxes = document.querySelectorAll(".box, .rect");
     const backgroundMap = {};
     for (const rule of document.styleSheets[0].cssRules) {
         backgroundMap[rule.selectorText] = rule.style.backgroundImage;
@@ -100,12 +137,12 @@
         })
     }
     let angle = 0;
-    // setInterval(() => {
-    //     const el = document.getElementById("fun");
-    //     el.style.backgroundImage = `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`;
-    //     angle += 1;
-    //     updateLabels();
-    // }, 100)
+    setInterval(() => {
+        const el = document.getElementById("fun");
+        el.style.backgroundImage = `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`;
+        angle += 1;
+        updateLabels();
+    }, 100)
     updateLabels();
   </script>
 </html>
