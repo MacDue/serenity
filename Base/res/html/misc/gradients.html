@@ -128,12 +128,14 @@
             const grad = box.classList[1];
             const cssText = backgroundMap['.'+grad];
             let el = document.getElementById(grad);
-            if (!el) {
-                el = document.createElement('code');
-                el.id = grad;
-                box.parentNode.insertBefore(el, box)
-            }
-            el.innerHTML = box.style.backgroundImage || cssText;
+            let newEl = document.createElement('code');
+            let text = document.createTextNode(box.style.backgroundImage || cssText);
+            newEl.appendChild(text);
+            newEl.id = grad;
+            if (!el)
+                box.parentNode.insertBefore(newEl, box)
+            else
+                box.parentNode.replaceChild(newEl, el);
         })
     }
     let angle = 0;
