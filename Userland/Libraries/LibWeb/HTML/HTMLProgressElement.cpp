@@ -5,7 +5,6 @@
  */
 
 #include <LibWeb/HTML/HTMLProgressElement.h>
-#include <LibWeb/Layout/Progress.h>
 #include <LibWeb/DOM/ShadowRoot.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/Layout/BlockContainer.h>
@@ -98,8 +97,20 @@ void HTMLProgressElement::create_shadow_tree_if_needed() {
     auto shadow_root = adopt_ref(*new DOM::ShadowRoot(document(), *this));
     auto element = document().create_element(HTML::TagNames::div).release_value();
     m_progress_value = document().create_element(HTML::TagNames::div).release_value();
-    element->set_attribute(HTML::AttributeNames::style, "margin: 1px; height: 15px; width: 200px; border: 1px solid black; background-color: white;");
-    m_progress_value->set_attribute(HTML::AttributeNames::style, "height: 100%; background-color: green;");
+    element->set_attribute(HTML::AttributeNames::style, " box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); height: 30px; width: 300px; background-color: #eee; border-radius: 4px; overflow: hidden");
+    m_progress_value->set_attribute(HTML::AttributeNames::style, R"(
+          background-image:
+            -webkit-linear-gradient(-45deg,
+                                    transparent 33%, rgba(0, 0, 0, .1) 33%,
+                                    rgba(0,0, 0, .1) 66%, transparent 66%),
+            -webkit-linear-gradient(to top,
+                                    rgba(255, 255, 255, .25),
+                                    rgba(0, 0, 0, .25)),
+            -webkit-linear-gradient(to left, #09c, #f44);
+
+        border-radius: 4px;
+        height: 100%;
+    )");
     update_value();
     element->append_child(*m_progress_value);
     shadow_root->append_child(move(element));

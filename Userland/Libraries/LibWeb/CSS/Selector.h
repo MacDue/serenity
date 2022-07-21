@@ -26,6 +26,8 @@ public:
         FirstLine,
         FirstLetter,
         Marker,
+        ProgressValue,
+        ProgressBar
     };
     static auto constexpr PseudoElementCount = to_underlying(PseudoElement::Marker) + 1;
 
