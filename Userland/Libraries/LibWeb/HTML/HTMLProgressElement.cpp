@@ -88,21 +88,18 @@ double HTMLProgressElement::position() const
 }
 
 void HTMLProgressElement::inserted() {
-    create_shadow_tree_if_needed();
+    // create_shadow_tree_if_needed();
 }
 
 void HTMLProgressElement::create_shadow_tree_if_needed() {
     if (shadow_root())
         return;
     auto shadow_root = adopt_ref(*new DOM::ShadowRoot(document(), *this));
-    // shadow_root->set_attribute(HTML::AttributeNames::style, "height: 100%");
-    auto element = document().create_element(HTML::TagNames::div).release_value();
+    m_progress_bar = document().create_element(HTML::TagNames::div).release_value();
     m_progress_value = document().create_element(HTML::TagNames::div).release_value();
-    element->set_pseudo_element_for({ *this, CSS::Selector::PseudoElement::ProgressBar });
-    m_progress_value->set_pseudo_element_for({ *this, CSS::Selector::PseudoElement::ProgressValue });
     update_value();
-    element->append_child(*m_progress_value);
-    shadow_root->append_child(move(element));
+    m_progress_bar->append_child(*m_progress_value);
+    shadow_root->append_child(*m_progress_bar);
     set_shadow_root(move(shadow_root));
 }
 
