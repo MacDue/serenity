@@ -12,6 +12,7 @@
 #include <LibWeb/DOM/ParentNode.h>
 #include <LibWeb/DOM/ShadowRoot.h>
 #include <LibWeb/Dump.h>
+#include <LibWeb/HTML/HTMLProgressElement.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Layout/ListItemBox.h>
 #include <LibWeb/Layout/ListItemMarkerBox.h>
@@ -21,7 +22,6 @@
 #include <LibWeb/Layout/TableRowBox.h>
 #include <LibWeb/Layout/TextNode.h>
 #include <LibWeb/Layout/TreeBuilder.h>
-#include <LibWeb/HTML/HTMLProgressElement.h>
 
 namespace Web::Layout {
 
@@ -257,8 +257,6 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
 
     if (is<HTML::HTMLProgressElement>(dom_node)) {
         auto& progress = static_cast<HTML::HTMLProgressElement&>(dom_node);
-        // auto& progress_bar = progress.progress_bar();
-        // auto& progress_value = progress.progress_value();
         auto bar_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressBar);
         auto value_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressValue);
         auto position = progress.position();

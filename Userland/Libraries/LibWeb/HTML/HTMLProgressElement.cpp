@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <LibWeb/HTML/HTMLProgressElement.h>
-#include <LibWeb/DOM/ShadowRoot.h>
 #include <LibWeb/DOM/Document.h>
+#include <LibWeb/DOM/ShadowRoot.h>
+#include <LibWeb/HTML/HTMLProgressElement.h>
 #include <LibWeb/Layout/BlockContainer.h>
+#include <LibWeb/Layout/Node.h>
 #include <stdlib.h>
 
 namespace Web::HTML {
@@ -45,16 +46,7 @@ void HTMLProgressElement::set_value(double value)
         return;
 
     set_attribute(HTML::AttributeNames::value, String::number(value));
-    update_value();
-}
-
-void HTMLProgressElement::update_value() {
-    if (m_progress_value) {
-        auto style = m_progress_value->style_for_bindings();
-        auto current_position = position();
-        style->set_property(CSS::PropertyID::Width, current_position >= 0
-            ? String::formatted("{}%", current_position * 100) : "0px");
-    }
+    document().invalidate_layout();
 }
 
 double HTMLProgressElement::max() const
@@ -76,7 +68,7 @@ void HTMLProgressElement::set_max(double value)
         return;
 
     set_attribute(HTML::AttributeNames::max, String::number(value));
-    update_value();
+    document().invalidate_layout();
 }
 
 double HTMLProgressElement::position() const
@@ -85,22 +77,6 @@ double HTMLProgressElement::position() const
         return -1;
 
     return value() / max();
-}
-
-void HTMLProgressElement::inserted() {
-    // create_shadow_tree_if_needed();
-}
-
-void HTMLProgressElement::create_shadow_tree_if_needed() {
-    if (shadow_root())
-        return;
-    auto shadow_root = adopt_ref(*new DOM::ShadowRoot(document(), *this));
-    m_progress_bar = document().create_element(HTML::TagNames::div).release_value();
-    m_progress_value = document().create_element(HTML::TagNames::div).release_value();
-    update_value();
-    m_progress_bar->append_child(*m_progress_value);
-    shadow_root->append_child(*m_progress_bar);
-    set_shadow_root(move(shadow_root));
 }
 
 }

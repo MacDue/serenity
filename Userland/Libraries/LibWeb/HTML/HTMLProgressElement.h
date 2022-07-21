@@ -31,26 +31,10 @@ public:
     // https://html.spec.whatwg.org/multipage/forms.html#category-label
     virtual bool is_labelable() const override { return true; }
 
-    virtual void inserted() override;
-
-    Element& progress_bar() {
-        VERIFY(m_progress_bar);
-        return *m_progress_bar;
-    }
-
-    Element& progress_value() {
-        VERIFY(m_progress_value);
-        return *m_progress_value;
-    }
-
 private:
-    void create_shadow_tree_if_needed();
     void update_value();
 
     bool is_determinate() const { return has_attribute(HTML::AttributeNames::value); }
-
-    RefPtr<Element> m_progress_bar;
-    RefPtr<Element> m_progress_value;
 };
 
 }
