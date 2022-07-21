@@ -142,6 +142,19 @@ public:
     void clear_pseudo_element_nodes(Badge<Layout::TreeBuilder>);
     void serialize_pseudo_elements_as_json(JsonArraySerializer<StringBuilder>& children_array) const;
 
+    struct PseudoElement {
+        Element& element;
+        CSS::Selector::PseudoElement pseudo_element;
+    };
+
+    void set_pseudo_element_for(PseudoElement element) {
+        m_pseudo_element_for = element;
+    }
+
+    Optional<PseudoElement> pseudo_element_for() {
+        return m_pseudo_element_for;
+    }
+
 protected:
     virtual void children_changed() override;
 
@@ -163,6 +176,8 @@ private:
     RefPtr<ShadowRoot> m_shadow_root;
 
     Array<RefPtr<Layout::Node>, CSS::Selector::PseudoElementCount> m_pseudo_element_nodes;
+
+    Optional<PseudoElement> m_pseudo_element_for;
 };
 
 template<>

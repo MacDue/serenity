@@ -1165,20 +1165,29 @@ NonnullRefPtr<StyleProperties> StyleComputer::compute_style(DOM::Element& elemen
     build_rule_cache_if_needed();
 
     auto style = StyleProperties::create();
-    // 1. Perform the cascade. This produces the "specified style"
-    compute_cascaded_values(style, element, pseudo_element);
 
-    // 2. Compute the font, since that may be needed for font-relative CSS units
-    compute_font(style, &element, pseudo_element);
+    auto do_compute = [&](DOM::Element& element, Optional<CSS::Selector::PseudoElement> pseudo_element) {
+        // 1. Perform the cascade. This produces the "specified style"
+        compute_cascaded_values(style, element, pseudo_element);
 
-    // 3. Absolutize values, turning font/viewport relative lengths into absolute lengths
-    absolutize_values(style, &element, pseudo_element);
+        // 2. Compute the font, since that may be needed for font-relative CSS units
+        compute_font(style, &element, pseudo_element);
 
-    // 4. Default the values, applying inheritance and 'initial' as needed
-    compute_defaulted_values(style, &element, pseudo_element);
+        // 3. Absolutize values, turning font/viewport relative lengths into absolute lengths
+        absolutize_values(style, &element, pseudo_element);
 
-    // 5. Run automatic box type transformations
-    transform_box_type_if_needed(style, element, pseudo_element);
+        // 4. Default the values, applying inheritance and 'initial' as needed
+        compute_defaulted_values(style, &element, pseudo_element);
+
+        // 5. Run automatic box type transformations
+        transform_box_type_if_needed(style, element, pseudo_element);
+    };
+
+    auto pseudo_for = element.pseudo_element_for();
+    if (pseudo_for.has_value())
+        do_compute(pseudo_for->element, pseudo_for->pseudo_element);
+
+    do_compute(element, pseudo_element);
 
     return style;
 }

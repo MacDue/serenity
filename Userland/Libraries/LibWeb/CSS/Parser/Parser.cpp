@@ -458,8 +458,8 @@ Parser::ParseErrorOr<Selector::SimpleSelector> Parser::parse_pseudo_simple_selec
         }
 
         auto pseudo_name = name_token.token().ident();
-        if (has_ignored_vendor_prefix(pseudo_name))
-            return ParseError::IncludesIgnoredVendorPrefix;
+        // if (has_ignored_vendor_prefix(pseudo_name))
+        //     return ParseError::IncludesIgnoredVendorPrefix;
 
         auto pseudo_element = pseudo_element_from_string(pseudo_name);
         if (!pseudo_element.has_value()) {

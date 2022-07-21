@@ -95,22 +95,11 @@ void HTMLProgressElement::create_shadow_tree_if_needed() {
     if (shadow_root())
         return;
     auto shadow_root = adopt_ref(*new DOM::ShadowRoot(document(), *this));
+    // shadow_root->set_attribute(HTML::AttributeNames::style, "height: 100%");
     auto element = document().create_element(HTML::TagNames::div).release_value();
     m_progress_value = document().create_element(HTML::TagNames::div).release_value();
-    element->set_attribute(HTML::AttributeNames::style, " box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25); height: 30px; width: 300px; background-color: #eee; border-radius: 4px; overflow: hidden");
-    m_progress_value->set_attribute(HTML::AttributeNames::style, R"(
-          background-image:
-            -webkit-linear-gradient(-45deg,
-                                    transparent 33%, rgba(0, 0, 0, .1) 33%,
-                                    rgba(0,0, 0, .1) 66%, transparent 66%),
-            -webkit-linear-gradient(to top,
-                                    rgba(255, 255, 255, .25),
-                                    rgba(0, 0, 0, .25)),
-            -webkit-linear-gradient(to left, #09c, #f44);
-
-        border-radius: 4px;
-        height: 100%;
-    )");
+    element->set_pseudo_element_for({ *this, CSS::Selector::PseudoElement::ProgressBar });
+    m_progress_value->set_pseudo_element_for({ *this, CSS::Selector::PseudoElement::ProgressValue });
     update_value();
     element->append_child(*m_progress_value);
     shadow_root->append_child(move(element));
