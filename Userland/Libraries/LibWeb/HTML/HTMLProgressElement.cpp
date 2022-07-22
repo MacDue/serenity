@@ -42,11 +42,10 @@ bool HTMLProgressElement::using_system_appearance() const
 
 void HTMLProgressElement::progress_position_updated()
 {
-    if (using_system_appearance()) {
+    if (using_system_appearance())
         layout_node()->set_needs_display();
-    } else {
+    else
         document().invalidate_layout();
-    }
 }
 
 double HTMLProgressElement::value() const
