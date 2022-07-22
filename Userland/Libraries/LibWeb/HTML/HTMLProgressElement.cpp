@@ -4,8 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibWeb/DOM/Document.h>
+#include <LibWeb/DOM/ShadowRoot.h>
 #include <LibWeb/HTML/HTMLProgressElement.h>
-#include <LibWeb/Layout/Progress.h>
+#include <LibWeb/Layout/BlockContainer.h>
+#include <LibWeb/Layout/Node.h>
 #include <stdlib.h>
 
 namespace Web::HTML {
@@ -19,7 +22,9 @@ HTMLProgressElement::~HTMLProgressElement() = default;
 
 RefPtr<Layout::Node> HTMLProgressElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties> style)
 {
-    return adopt_ref(*new Layout::Progress(document(), *this, move(style)));
+    auto layout_node = adopt_ref(*new Layout::BlockContainer(document(), this, move(style)));
+    layout_node->set_inline(true);
+    return layout_node;
 }
 
 double HTMLProgressElement::value() const
@@ -41,9 +46,7 @@ void HTMLProgressElement::set_value(double value)
         return;
 
     set_attribute(HTML::AttributeNames::value, String::number(value));
-
-    if (layout_node())
-        layout_node()->set_needs_display();
+    document().invalidate_layout();
 }
 
 double HTMLProgressElement::max() const
@@ -65,9 +68,7 @@ void HTMLProgressElement::set_max(double value)
         return;
 
     set_attribute(HTML::AttributeNames::max, String::number(value));
-
-    if (layout_node())
-        layout_node()->set_needs_display();
+    document().invalidate_layout();
 }
 
 double HTMLProgressElement::position() const

@@ -1165,6 +1165,7 @@ NonnullRefPtr<StyleProperties> StyleComputer::compute_style(DOM::Element& elemen
     build_rule_cache_if_needed();
 
     auto style = StyleProperties::create();
+
     // 1. Perform the cascade. This produces the "specified style"
     compute_cascaded_values(style, element, pseudo_element);
 

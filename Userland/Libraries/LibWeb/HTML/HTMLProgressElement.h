@@ -32,6 +32,8 @@ public:
     virtual bool is_labelable() const override { return true; }
 
 private:
+    void update_value();
+
     bool is_determinate() const { return has_attribute(HTML::AttributeNames::value); }
 };
 

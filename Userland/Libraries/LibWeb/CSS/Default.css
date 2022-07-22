@@ -315,3 +315,19 @@ iframe { border: 2px inset; }
         filter: invert(100%);
     }
 }
+
+progress {
+    width: 200px;
+    height: 20px;
+}
+
+progress::-webkit-progress-bar {
+    width: inherit;
+    height: inherit;
+    background-color: #808080;
+}
+
+progress::-webkit-progress-value {
+    height: inherit;
+    background: #008000;
+}
