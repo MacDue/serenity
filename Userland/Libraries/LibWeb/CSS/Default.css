@@ -316,11 +316,15 @@ iframe { border: 2px inset; }
     }
 }
 
-/* This is the default intrinsic size of a <progress> element */
+/* This is the same as default intrinsic size of a <progress> element */
 progress {
     width: 300px;
     height: 12px;
 }
+
+/* This default value/bar CSS below is the same as Blink/WebKit.
+ * Setting any more than the backgrond-color may have unintended consequences, as sites don't expect to unset more than that.
+ */
 
 progress::-webkit-progress-bar {
     width: inherit;

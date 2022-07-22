@@ -319,7 +319,31 @@ Optional<CSS::AlignSelf> StyleProperties::align_self() const
 Optional<CSS::Appearance> StyleProperties::appearance() const
 {
     auto value = property(CSS::PropertyID::Appearance);
-    return value_id_to_appearance(value->to_identifier());
+    auto appearance = value_id_to_appearance(value->to_identifier());
+    if (appearance.has_value()) {
+        switch (*appearance) {
+        // Note: All these compatibility values can be treated as 'auto'
+        case CSS::Appearance::Textfield:
+        case CSS::Appearance::MenulistButton:
+        case CSS::Appearance::Searchfield:
+        case CSS::Appearance::Textarea:
+        case CSS::Appearance::PushButton:
+        case CSS::Appearance::SliderHorizontal:
+        case CSS::Appearance::Checkbox:
+        case CSS::Appearance::Radio:
+        case CSS::Appearance::SquareButton:
+        case CSS::Appearance::Menulist:
+        case CSS::Appearance::Listbox:
+        case CSS::Appearance::Meter:
+        case CSS::Appearance::ProgressBar:
+        case CSS::Appearance::Button:
+            appearance = CSS::Appearance::Auto;
+            break;
+        default:
+            break;
+        }
+    }
+    return appearance;
 }
 
 Optional<CSS::Position> StyleProperties::position() const

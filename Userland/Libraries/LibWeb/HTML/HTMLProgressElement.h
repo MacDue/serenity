@@ -34,7 +34,6 @@ public:
     bool using_system_appearance() const;
 
 private:
-
     void progress_position_updated();
 
     bool is_determinate() const { return has_attribute(HTML::AttributeNames::value); }

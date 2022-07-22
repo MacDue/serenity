@@ -24,7 +24,7 @@ HTMLProgressElement::~HTMLProgressElement() = default;
 RefPtr<Layout::Node> HTMLProgressElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties> style)
 {
     RefPtr<Layout::Node> layout_node;
-    if (style->appearance().value_or(CSS::Appearance::Auto) != CSS::Appearance::Auto) {
+    if (style->appearance().value_or(CSS::Appearance::Auto) == CSS::Appearance::None) {
         layout_node = adopt_ref(*new Layout::BlockContainer(document(), this, move(style)));
         layout_node->set_inline(true);
     } else {
@@ -33,13 +33,15 @@ RefPtr<Layout::Node> HTMLProgressElement::create_layout_node(NonnullRefPtr<CSS::
     return layout_node;
 }
 
-bool HTMLProgressElement::using_system_appearance() const {
+bool HTMLProgressElement::using_system_appearance() const
+{
     if (layout_node())
         return is<Layout::Progress>(*layout_node());
     return false;
 }
 
-void HTMLProgressElement::progress_position_updated() {
+void HTMLProgressElement::progress_position_updated()
+{
     if (using_system_appearance()) {
         layout_node()->set_needs_display();
     } else {
