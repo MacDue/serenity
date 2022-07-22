@@ -24,6 +24,10 @@
         "stretch",
         "unsafe"
     ],
+    "appearance": [
+        "auto",
+        "none"
+    ],
     "background-attachment": [
         "fixed",
         "local",

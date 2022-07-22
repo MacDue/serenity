@@ -275,6 +275,7 @@ set(SOURCES
     Layout/ListItemBox.cpp
     Layout/ListItemMarkerBox.cpp
     Layout/Node.cpp
+    Layout/Progress.cpp
     Layout/RadioButton.cpp
     Layout/ReplacedBox.cpp
     Layout/SVGBox.cpp
@@ -319,6 +320,7 @@ set(SOURCES
     Painting/PaintContext.cpp
     Painting/Paintable.cpp
     Painting/PaintableBox.cpp
+    Painting/ProgressPaintable.cpp
     Painting/RadioButtonPaintable.cpp
     Painting/SVGGeometryPaintable.cpp
     Painting/SVGGraphicsPaintable.cpp

@@ -316,9 +316,10 @@ iframe { border: 2px inset; }
     }
 }
 
+/* This is the default intrinsic size of a <progress> element */
 progress {
-    width: 200px;
-    height: 20px;
+    width: 300px;
+    height: 12px;
 }
 
 progress::-webkit-progress-bar {

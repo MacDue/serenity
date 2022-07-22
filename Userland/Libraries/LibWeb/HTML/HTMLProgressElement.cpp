@@ -9,6 +9,7 @@
 #include <LibWeb/HTML/HTMLProgressElement.h>
 #include <LibWeb/Layout/BlockContainer.h>
 #include <LibWeb/Layout/Node.h>
+#include <LibWeb/Layout/Progress.h>
 #include <stdlib.h>
 
 namespace Web::HTML {
@@ -22,9 +23,28 @@ HTMLProgressElement::~HTMLProgressElement() = default;
 
 RefPtr<Layout::Node> HTMLProgressElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties> style)
 {
-    auto layout_node = adopt_ref(*new Layout::BlockContainer(document(), this, move(style)));
-    layout_node->set_inline(true);
+    RefPtr<Layout::Node> layout_node;
+    if (style->appearance().value_or(CSS::Appearance::Auto) != CSS::Appearance::Auto) {
+        layout_node = adopt_ref(*new Layout::BlockContainer(document(), this, move(style)));
+        layout_node->set_inline(true);
+    } else {
+        layout_node = adopt_ref(*new Layout::Progress(document(), *this, move(style)));
+    }
     return layout_node;
+}
+
+bool HTMLProgressElement::using_system_appearance() const {
+    if (layout_node())
+        return is<Layout::Progress>(*layout_node());
+    return false;
+}
+
+void HTMLProgressElement::progress_position_updated() {
+    if (using_system_appearance()) {
+        layout_node()->set_needs_display();
+    } else {
+        document().invalidate_layout();
+    }
 }
 
 double HTMLProgressElement::value() const
@@ -46,7 +66,7 @@ void HTMLProgressElement::set_value(double value)
         return;
 
     set_attribute(HTML::AttributeNames::value, String::number(value));
-    document().invalidate_layout();
+    progress_position_updated();
 }
 
 double HTMLProgressElement::max() const
@@ -68,7 +88,7 @@ void HTMLProgressElement::set_max(double value)
         return;
 
     set_attribute(HTML::AttributeNames::max, String::number(value));
-    document().invalidate_layout();
+    progress_position_updated();
 }
 
 double HTMLProgressElement::position() const

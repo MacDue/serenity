@@ -316,6 +316,12 @@ Optional<CSS::AlignSelf> StyleProperties::align_self() const
     return value_id_to_align_self(value->to_identifier());
 }
 
+Optional<CSS::Appearance> StyleProperties::appearance() const
+{
+    auto value = property(CSS::PropertyID::Appearance);
+    return value_id_to_appearance(value->to_identifier());
+}
+
 Optional<CSS::Position> StyleProperties::position() const
 {
     auto value = property(CSS::PropertyID::Position);

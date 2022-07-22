@@ -22,6 +22,7 @@
 #include <LibWeb/Layout/TableRowBox.h>
 #include <LibWeb/Layout/TextNode.h>
 #include <LibWeb/Layout/TreeBuilder.h>
+#include <LibWeb/Layout/Progress.h>
 
 namespace Web::Layout {
 
@@ -257,16 +258,18 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
 
     if (is<HTML::HTMLProgressElement>(dom_node)) {
         auto& progress = static_cast<HTML::HTMLProgressElement&>(dom_node);
-        auto bar_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressBar);
-        auto value_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressValue);
-        auto position = progress.position();
-        value_style->set_property(CSS::PropertyID::Width, CSS::PercentageStyleValue::create(CSS::Percentage(position >= 0 ? (int)(100 * position) : 0)));
-        auto progress_bar = adopt_ref(*new Layout::BlockContainer(document, nullptr, bar_style));
-        auto progress_value = adopt_ref(*new Layout::BlockContainer(document, nullptr, value_style));
-        progress_bar->append_child(*progress_value);
-        layout_node->append_child(*progress_bar);
-        progress.set_pseudo_element_node({}, CSS::Selector::PseudoElement::ProgressBar, progress_bar);
-        progress.set_pseudo_element_node({}, CSS::Selector::PseudoElement::ProgressValue, progress_value);
+        if (!progress.using_system_appearance()) {
+            auto bar_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressBar);
+            auto value_style = style_computer.compute_style(progress, CSS::Selector::PseudoElement::ProgressValue);
+            auto position = progress.position();
+            value_style->set_property(CSS::PropertyID::Width, CSS::PercentageStyleValue::create(CSS::Percentage(position >= 0 ? (int)(100 * position) : 0)));
+            auto progress_bar = adopt_ref(*new Layout::BlockContainer(document, nullptr, bar_style));
+            auto progress_value = adopt_ref(*new Layout::BlockContainer(document, nullptr, value_style));
+            progress_bar->append_child(*progress_value);
+            layout_node->append_child(*progress_bar);
+            progress.set_pseudo_element_node({}, CSS::Selector::PseudoElement::ProgressBar, progress_bar);
+            progress.set_pseudo_element_node({}, CSS::Selector::PseudoElement::ProgressValue, progress_value);
+        }
     }
 }
 
