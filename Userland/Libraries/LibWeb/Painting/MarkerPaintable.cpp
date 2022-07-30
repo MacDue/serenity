@@ -34,21 +34,21 @@ void MarkerPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto enclosing = enclosing_int_rect(absolute_rect());
 
     int marker_width = (int)enclosing.height() / 2;
-    Gfx::IntRect marker_rect { 0, 0, marker_width, marker_width };
-    marker_rect.center_within(enclosing);
 
     if (auto const* list_style_image = layout_box().list_style_image()) {
-        list_style_image->resolve_for_size(layout_box(), marker_rect.size().to_type<float>());
         Gfx::IntRect image_rect {
-            enclosing.location(),
-            {
-                list_style_image->natural_width().value_or(marker_rect.width()),
-                list_style_image->natural_height().value_or(marker_rect.height()),
-            }
+            0, 0,
+            list_style_image->natural_width().value_or(marker_width),
+            list_style_image->natural_height().value_or(marker_width)
         };
+        image_rect.center_within(enclosing);
+        list_style_image->resolve_for_size(layout_box(), image_rect.size().to_type<float>());
         list_style_image->paint(context, image_rect);
         return;
     }
+
+    Gfx::IntRect marker_rect { 0, 0, marker_width, marker_width };
+    marker_rect.center_within(enclosing);
 
     auto color = computed_values().color();
 
