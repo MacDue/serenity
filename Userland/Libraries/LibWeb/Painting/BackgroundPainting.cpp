@@ -82,6 +82,26 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
     if (!has_paintable_layers)
         return;
 
+    struct {
+        int top { 0 };
+        int bottom { 0 };
+        int left { 0 };
+        int right { 0 };
+    } clip_shrink;
+
+    auto border_top = layout_node.computed_values().border_top();
+    auto border_bottom = layout_node.computed_values().border_bottom();
+    auto border_left = layout_node.computed_values().border_left();
+    auto border_right = layout_node.computed_values().border_right();
+
+    if (border_top.color.alpha() == 255 && border_bottom.color.alpha() == 255
+        && border_left.color.alpha() == 255 && border_right.color.alpha() == 255) {
+        clip_shrink.top = border_top.width;
+        clip_shrink.bottom = border_bottom.width;
+        clip_shrink.left = border_left.width;
+        clip_shrink.right = border_right.width;
+    }
+
     // Note: Background layers are ordered front-to-back, so we paint them in reverse
     for (auto& layer : background_layers->in_reverse()) {
         // TODO: Gradients!
@@ -92,10 +112,13 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
         // Clip
         auto clip_box = get_box(layer.clip);
 
-        // FIXME: Reduce CSS::BackgroundBox::BorderBox clip rect if borders will paint over anyway
         auto clip_rect = clip_box.rect.to_rounded<int>();
-        painter.add_clip_rect(clip_rect);
         ScopedCornerRadiusClip corner_clip { painter, clip_rect, clip_box.radii };
+        painter.add_clip_rect(clip_rect);
+
+        // Shrink the effective clip rect if to account for the bits the borders will definitely paint over
+        // (if they all have alpha == 255).
+        clip_rect.shrink(clip_shrink.top, clip_shrink.right, clip_shrink.bottom, clip_shrink.left);
 
         auto& image = *layer.background_image;
         Gfx::FloatRect background_positioning_area;
@@ -276,7 +299,6 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
 
         image.resolve_for_size(layout_node, image_rect.size());
 
-        int paint_count = 0;
         while (image_y < clip_rect.bottom()) {
             image_rect.set_y(image_y);
 
@@ -284,10 +306,8 @@ void paint_background(PaintContext& context, Layout::NodeWithStyleAndBoxModelMet
             while (image_x < clip_rect.right()) {
                 image_rect.set_x(image_x);
                 auto int_image_rect = image_rect.to_rounded<int>();
-                if (int_image_rect != last_int_image_rect && int_image_rect.intersects(context.viewport_rect())) {
+                if (int_image_rect != last_int_image_rect && int_image_rect.intersects(context.viewport_rect()))
                     image.paint(context, int_image_rect);
-                    paint_count++;
-                }
                 last_int_image_rect = int_image_rect;
                 if (!repeat_x)
                     break;
