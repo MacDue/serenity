@@ -164,6 +164,12 @@ public:
 
     [[nodiscard]] String to_string() const;
 
+    template<typename U>
+    [[nodiscard]] Size<U> to_rounded() const
+    {
+        return Size<U>(roundf(width()), roundf(height()));
+    }
+
 private:
     T m_width { 0 };
     T m_height { 0 };

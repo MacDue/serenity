@@ -23,6 +23,7 @@ class SubtleCrypto;
 }
 
 namespace Web::CSS {
+class AbstractImageStyleValue;
 class Angle;
 class AnglePercentage;
 class AngleStyleValue;
@@ -333,6 +334,7 @@ class StackingContext;
 class TextPaintable;
 struct BorderRadiusData;
 struct BorderRadiiData;
+struct LinearGradientData;
 }
 
 namespace Web::RequestIdleCallback {
