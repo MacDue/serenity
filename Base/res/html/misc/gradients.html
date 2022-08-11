@@ -106,6 +106,18 @@
         .grad-hints {
             background-image: linear-gradient(to right, hotpink, 50%, rebeccapurple);
         }
+
+        .grad-rainbow {
+            background: linear-gradient(
+                to right,
+                tomato,
+                25%,
+                orange 0,
+                50%,
+                yellowgreen 0,
+                75%,
+                dodgerblue 0)
+        }
     </style>
   </head>
   <body>
@@ -119,6 +131,7 @@
     <b>Funky transition hints:</b><br>
     <div class="box grad-5"></div>
     <div class="box grad-6"></div>
+    <div class="box grad-rainbow"></div>
     <b>Transition hint test (click to animate):</b><br>
     <div id="gradient-hints" class="box grad-hints"></div>
     <b>Multiple color stops + arbitrary angles (click to spin!):</b><br>
@@ -185,7 +198,7 @@
     backgroundAnimateDemo("gradient-spin", angle => `linear-gradient(${angle}deg, red 0%, black 20%, yellow 60%, cyan 100%)`)
 
     // Transistion hints demo
-    backgroundAnimateDemo("gradient-hints", t => `linear-gradient(to right, hotpink, ${((Math.sin(t/3)+1)*50)|0}%, rebeccapurple)`)
+    backgroundAnimateDemo("gradient-hints", t => `linear-gradient(to right, hotpink, ${((Math.sin(t/4)+1)*50)|0}%, rebeccapurple)`)
 
     updateLabels();
   </script>
