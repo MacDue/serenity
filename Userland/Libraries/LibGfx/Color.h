@@ -313,6 +313,20 @@ public:
     Vector<Color> shades(u32 steps, float max = 1.f) const;
     Vector<Color> tints(u32 steps, float max = 1.f) const;
 
+    constexpr void saturate_to(double saturation)
+    {
+        auto hsv = to_hsv();
+        auto alpha = this->alpha();
+        *this = Color::from_hsv(hsv.hue, saturation, hsv.value);
+        this->set_alpha(alpha);
+    }
+    constexpr Color saturated_to(double saturation) const
+    {
+        auto color = *this;
+        color.saturate_to(saturation);
+        return color;
+    }
+
     constexpr Color inverted() const
     {
         return Color(~red(), ~green(), ~blue(), alpha());
