@@ -25,6 +25,12 @@ struct HSV {
     double value { 0 };
 };
 
+struct YUV {
+    double y { 0 };
+    double u { 0 };
+    double v { 0 };
+};
+
 class Color {
 public:
     enum NamedColor {
@@ -73,6 +79,37 @@ public:
         auto b = static_cast<u8>(255.0f * (1.0f - y) * (1.0f - k));
 
         return Color(r, g, b);
+    }
+
+    static constexpr Color from_yuv(YUV yuv) { return from_yuv(yuv.y, yuv.u, yuv.v); }
+    static constexpr Color from_yuv(double y, double u, double v)
+    {
+        // https://www.itu.int/rec/R-REC-BT.1700-0-200502-I/en Table 4, Items 8 and 9 arithmetically inverted
+        double r = y + v / 0.877;
+        double b = y + u / 0.493;
+        double g = (y - 0.299 * r - 0.114 * b) / 0.587;
+        r = clamp(r, 0.0, 1.0);
+        g = clamp(g, 0.0, 1.0);
+        b = clamp(b, 0.0, 1.0);
+
+        return { static_cast<u8>(floor(r * 255)), static_cast<u8>(floor(g * 255)), static_cast<u8>(floor(b * 255)) };
+    }
+
+    // https://www.itu.int/rec/R-REC-BT.1700-0-200502-I/en Table 4
+    constexpr YUV to_yuv() const
+    {
+        double r = red() / 255.0;
+        double g = green() / 255.0;
+        double b = blue() / 255.0;
+        // Item 8
+        double y = 0.299 * r + 0.587 * g + 0.114 * b;
+        // Item 9
+        double u = 0.493 * (b - y);
+        double v = 0.877 * (r - y);
+        y = clamp(y, 0.0, 1.0);
+        u = clamp(u, -1.0, 1.0);
+        v = clamp(v, -1.0, 1.0);
+        return { y, u, v };
     }
 
     static constexpr Color from_hsl(float h_degrees, float s, float l) { return from_hsla(h_degrees, s, l, 1.0); }
