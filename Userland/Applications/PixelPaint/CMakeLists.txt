@@ -71,6 +71,7 @@ set(SOURCES
     Tools/SprayTool.cpp
     Tools/Tool.cpp
     Tools/ZoomTool.cpp
+    VectorscopeWidget.cpp
     main.cpp
     )
 
