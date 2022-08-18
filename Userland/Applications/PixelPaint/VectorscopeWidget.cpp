@@ -66,9 +66,10 @@ void VectorscopeWidget::rebuild_vectorscope_image()
     Gfx::Painter base_painter(*m_vectorscope_image);
     Gfx::AntiAliasingPainter painter(base_painter);
 
+    constexpr float min_scope_size = 80.0f;
     auto const scope_size = min(height(), width());
-    auto const color_vector_size = max(1.0, static_cast<double>(scope_size) / static_cast<double>(u_v_steps));
-    auto const size_1x1 = Gfx::FloatSize { 2.5f, 2.5f } * static_cast<float>(color_vector_size);
+    auto const color_vector_scale = scope_size / min_scope_size;
+    auto const size_1x1 = Gfx::FloatSize { 2.5f, 2.5f } * static_cast<float>(color_vector_scale);
 
     base_painter.translate(width() / 2, height() / 2);
     painter.translate(static_cast<float>(width()) / 2.0f, static_cast<float>(height()) / 2.0f);
@@ -79,10 +80,11 @@ void VectorscopeWidget::rebuild_vectorscope_image()
             if (brightness < 0.0001)
                 continue;
             auto const pseudo_rect = Gfx::FloatRect::centered_at(color_vector.to_vector(scope_size) * 2.0, size_1x1);
+            // dbgln("{} {}", pseudo_rect, size_1x1);
             auto color = Color::from_yuv(0.6, color_vector.u, color_vector.v);
             color.saturate_to(1.0 - min(brightness, 1.0));
             color.set_alpha(static_cast<u8>(min(sqrt(brightness), 1.0) * NumericLimits<u8>::max()));
-            base_painter.fill_rect(pseudo_rect.to_rounded<int>(), color);
+            painter.fill_rect(pseudo_rect, color);
         }
     }
 }
@@ -102,7 +104,7 @@ void VectorscopeWidget::paint_event(GUI::PaintEvent& event)
     auto const graticule_thickness = graticule_size / 12;
     auto const entire_scope_rect = Gfx::FloatRect::centered_at({ 0, 0 }, { scope_size, scope_size });
 
-    painter.fill_ellipse(entire_scope_rect.to_rounded<int>(), Color::Black);
+    painter.fill_ellipse(entire_scope_rect.to_rounded<int>().shrunken(graticule_thickness * 2, graticule_thickness * 2), Color::Black);
 
     // Main scope data
     if (m_image) {
