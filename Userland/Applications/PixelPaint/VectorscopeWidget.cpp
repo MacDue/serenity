@@ -66,9 +66,9 @@ void VectorscopeWidget::rebuild_vectorscope_image()
     Gfx::Painter base_painter(*m_vectorscope_image);
     Gfx::AntiAliasingPainter painter(base_painter);
 
-    constexpr float min_scope_size = 80.0f;
     auto const scope_size = min(height(), width());
-    auto const color_vector_scale = scope_size / min_scope_size;
+    auto const min_scope_size = parent_widget()->min_height().as_int();
+    auto const color_vector_scale = scope_size / static_cast<float>(min_scope_size);
     auto const size_1x1 = Gfx::FloatSize { 2.5f, 2.5f } * static_cast<float>(color_vector_scale);
 
     base_painter.translate(width() / 2, height() / 2);
