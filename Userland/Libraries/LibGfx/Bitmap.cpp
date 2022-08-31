@@ -437,7 +437,7 @@ ErrorOr<NonnullRefPtr<Gfx::Bitmap>> Bitmap::scaled(float sx, float sy) const
     return new_bitmap;
 }
 
-ErrorOr<NonnullRefPtr<Gfx::Bitmap>> Bitmap::cropped(Gfx::IntRect crop, Optional<StorageFormat> new_bitmap_format) const
+ErrorOr<NonnullRefPtr<Gfx::Bitmap>> Bitmap::cropped(Gfx::IntRect crop, Optional<BitmapFormat> new_bitmap_format) const
 {
     auto new_bitmap = TRY(Gfx::Bitmap::try_create(new_bitmap_format.value_or(format()), { crop.width(), crop.height() }, 1));
 

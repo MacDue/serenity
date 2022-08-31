@@ -1795,7 +1795,7 @@ Optional<Color> Painter::get_pixel(IntPoint const& p)
     return Color::from_argb(m_target->scanline(point.y())[point.x()]);
 }
 
-ErrorOr<NonnullRefPtr<Bitmap>> Painter::get_region_bitmap(IntRect const& region, StorageFormat format)
+ErrorOr<NonnullRefPtr<Bitmap>> Painter::get_region_bitmap(IntRect const& region, BitmapFormat format)
 {
     VERIFY(scale() == 1);
     auto bitmap_region = region.translated(state().translation).intersected(m_target->rect());

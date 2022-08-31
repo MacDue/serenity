@@ -15,7 +15,7 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
 {
     auto int_rect = backdrop_rect.to_rounded<int>();
     ScopedCornerRadiusClip corner_clipper { context.painter(), int_rect, border_radii_data };
-    auto maybe_backdrop_bitmap = context.painter().get_region_bitmap(int_rect, Gfx::StorageFormat::BGRA8888);
+    auto maybe_backdrop_bitmap = context.painter().get_region_bitmap(int_rect, Gfx::BitmapFormat::BGRA8888);
     if (maybe_backdrop_bitmap.is_error())
         return;
     auto backdrop_bitmap = maybe_backdrop_bitmap.release_value();
