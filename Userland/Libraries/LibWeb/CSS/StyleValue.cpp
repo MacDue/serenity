@@ -96,6 +96,12 @@ ContentStyleValue const& StyleValue::as_content() const
     return static_cast<ContentStyleValue const&>(*this);
 }
 
+FilterValueListStyleValue const& StyleValue::as_filter_value_list() const
+{
+    VERIFY(is_filter_value_list());
+    return static_cast<FilterValueListStyleValue const&>(*this);
+}
+
 FlexStyleValue const& StyleValue::as_flex() const
 {
     VERIFY(is_flex());
@@ -1160,6 +1166,72 @@ bool ContentStyleValue::equals(StyleValue const& other) const
         return false;
     if (!m_alt_text.is_null())
         return m_alt_text->equals(*typed_other.m_alt_text);
+    return true;
+}
+
+String FilterValueListStyleValue::to_string() const
+{
+    StringBuilder builder {};
+    bool first = true;
+    for (auto& filter : filter_value_list()) {
+        if (!first)
+            builder.append(' ');
+        filter.function.visit(
+            [&](FilterFunction::Blur const& blur) {
+                builder.append("blur("sv);
+                if (blur.radius.has_value())
+                    builder.append(blur.radius->to_string());
+            },
+            [&](FilterFunction::Brightness const&) {
+                TODO();
+            },
+            [&](FilterFunction::Contrast const&) {
+                TODO();
+            },
+            [&](FilterFunction::Grayscale const&) {
+                TODO();
+            },
+            [&](FilterFunction::DropShadow const&) {
+                TODO();
+            },
+            [&](FilterFunction::HueRotate const&) {
+                TODO();
+            },
+            [&](FilterFunction::Invert const&) {
+                TODO();
+            },
+            [&](FilterFunction::Opacity const&) {
+                TODO();
+            },
+            [&](FilterFunction::Sepia const&) {
+                TODO();
+            },
+            [&](FilterFunction::Saturate const&) {
+                TODO();
+            });
+        builder.append(')');
+        first = false;
+    }
+    return builder.to_string();
+}
+
+static bool operator==(FilterFunction const&, FilterFunction const&)
+{
+    // FIXME: Impl
+    return true;
+}
+
+bool FilterValueListStyleValue::equals(StyleValue const& other) const
+{
+    if (type() != other.type())
+        return false;
+    auto const& typed_other = other.as_filter_value_list();
+    if (m_filter_value_list.size() != typed_other.m_filter_value_list.size())
+        return false;
+    for (size_t i = 0; i < m_filter_value_list.size(); i++) {
+        if (m_filter_value_list[i] != typed_other.m_filter_value_list[i])
+            return false;
+    }
     return true;
 }
 

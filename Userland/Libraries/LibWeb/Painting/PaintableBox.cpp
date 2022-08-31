@@ -10,6 +10,7 @@
 #include <LibWeb/HTML/HTMLHtmlElement.h>
 #include <LibWeb/Layout/BlockContainer.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
+#include <LibWeb/Painting/BackdropFilterPainting.h>
 #include <LibWeb/Painting/BackgroundPainting.h>
 #include <LibWeb/Painting/PaintableBox.h>
 #include <LibWeb/Painting/ShadowPainting.h>
@@ -122,6 +123,9 @@ void PaintableBox::paint(PaintContext& context, PaintPhase phase) const
             auto border_box = absolute_border_box_rect();
             context.painter().add_clip_rect(clip_rect.to_rect().resolved(Paintable::layout_node(), border_box).to_rounded<int>());
         }
+        auto& backdrop_filter = computed_values().backdrop_filter();
+        if (!backdrop_filter.is_none())
+            Painting::apply_backdrop_filter(context, layout_node(), absolute_border_box_rect(), normalized_border_radii_data(), backdrop_filter);
         paint_background(context);
         paint_box_shadow(context);
     }

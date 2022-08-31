@@ -314,6 +314,7 @@ set(SOURCES
     Page/EditEventHandler.cpp
     Page/EventHandler.cpp
     Page/Page.cpp
+    Painting/BackdropFilterPainting.cpp
     Painting/BackgroundPainting.cpp
     Painting/BorderPainting.cpp
     Painting/BorderRadiusCornerClipper.cpp

@@ -4391,6 +4391,110 @@ RefPtr<StyleValue> Parser::parse_content_value(Vector<ComponentValue> const& com
     return ContentStyleValue::create(StyleValueList::create(move(content_values), StyleValueList::Separator::Space), move(alt_text));
 }
 
+RefPtr<StyleValue> Parser::parse_backdrop_filter_value(Vector<ComponentValue> const& component_values)
+{
+    if (component_values.size() == 1 && component_values[0].is(Token::Type::Ident)) {
+        // FIXME: Make something sane
+        if (component_values[0].token().ident().equals_ignoring_case("none"sv))
+            return FilterValueListStyleValue::create({});
+    }
+
+    TokenStream tokens { component_values };
+
+    // FIXME: <url>s are ignored for now
+    // <filter-value-list> = [ <filter-function> | <url> ]+
+
+    enum class Filter {
+        Blur,
+        DropShadow,
+        HueRotate,
+        Brightness,
+        Contrast,
+        Grayscale,
+        Invert,
+        Opacity,
+        Sepia,
+        Saturate
+    };
+
+    auto parse_filter_function_name = [&](auto name) -> Optional<Filter> {
+        if (name.equals_ignoring_case("blur"sv))
+            return Filter::Blur;
+        if (name.equals_ignoring_case("brightness"sv))
+            return Filter::Brightness;
+        if (name.equals_ignoring_case("contrast"sv))
+            return Filter::Contrast;
+        if (name.equals_ignoring_case("drop-shadow"sv))
+            return Filter::DropShadow;
+        if (name.equals_ignoring_case("hue-rotate"sv))
+            return Filter::HueRotate;
+        if (name.equals_ignoring_case("invert"sv))
+            return Filter::Invert;
+        if (name.equals_ignoring_case("opacity"sv))
+            return Filter::Opacity;
+        if (name.equals_ignoring_case("sepia"sv))
+            return Filter::Sepia;
+        if (name.equals_ignoring_case("saturate"sv))
+            return Filter::Saturate;
+        return {};
+    };
+
+    auto parse_filter_function = [&](auto filter, auto function_values) -> Optional<FilterFunction> {
+        TokenStream tokens { function_values };
+        tokens.skip_whitespace();
+
+        if (filter == Filter::Blur) {
+            dbgln("1");
+            if (!tokens.has_next_token())
+                return FilterFunction::Blur {};
+            dbgln("2");
+            auto blur_radius = parse_length(tokens.next_token());
+            if (!blur_radius.has_value())
+                return {};
+            dbgln("3");
+            tokens.skip_whitespace();
+            if (tokens.has_next_token())
+                return {};
+            dbgln("4");
+            return FilterFunction::Blur { *blur_radius };
+        } else if (filter == Filter::DropShadow) {
+            TODO();
+        } else if (filter == Filter::HueRotate) {
+            TODO();
+        } else {
+            TODO();
+        }
+    };
+
+    Vector<FilterFunction> filter_value_list {};
+
+    while (tokens.has_next_token()) {
+        dbgln("A");
+        tokens.skip_whitespace();
+        if (!tokens.has_next_token())
+            break;
+        dbgln("B");
+        auto& token = tokens.next_token();
+        if (!token.is_function())
+            return {};
+        dbgln("C");
+        auto filter = parse_filter_function_name(token.function().name());
+        if (!filter.has_value())
+            return {};
+        dbgln("D");
+        auto filter_function = parse_filter_function(filter, token.function().values());
+        if (!filter_function.has_value())
+            return {};
+        dbgln("E");
+        filter_value_list.append(*filter_function);
+    }
+
+    if (filter_value_list.is_empty())
+        return {};
+
+    return FilterValueListStyleValue::create(move(filter_value_list));
+}
+
 RefPtr<StyleValue> Parser::parse_flex_value(Vector<ComponentValue> const& component_values)
 {
     if (component_values.size() == 1) {
@@ -5504,6 +5608,10 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
         return ParseError::SyntaxError;
     case PropertyID::Content:
         if (auto parsed_value = parse_content_value(component_values))
+            return parsed_value.release_nonnull();
+        return ParseError::SyntaxError;
+    case PropertyID::BackdropFilter:
+        if (auto parsed_value = parse_backdrop_filter_value(component_values))
             return parsed_value.release_nonnull();
         return ParseError::SyntaxError;
     case PropertyID::Flex:
