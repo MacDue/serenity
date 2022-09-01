@@ -848,6 +848,7 @@ public:
     static NonnullRefPtr<FilterValueListStyleValue> create(
         Vector<FilterFunction> filter_value_list)
     {
+        VERIFY(filter_value_list.size() >= 1);
         return adopt_ref(*new FilterValueListStyleValue(move(filter_value_list)));
     }
 

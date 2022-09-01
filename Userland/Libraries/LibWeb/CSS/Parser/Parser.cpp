@@ -4391,12 +4391,13 @@ RefPtr<StyleValue> Parser::parse_content_value(Vector<ComponentValue> const& com
     return ContentStyleValue::create(StyleValueList::create(move(content_values), StyleValueList::Separator::Space), move(alt_text));
 }
 
-RefPtr<StyleValue> Parser::parse_backdrop_filter_value(Vector<ComponentValue> const& component_values)
+RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> const& component_values)
 {
-    if (component_values.size() == 1 && component_values[0].is(Token::Type::Ident)) {
-        // FIXME: Make something sane
-        if (component_values[0].token().ident().equals_ignoring_case("none"sv))
-            return FilterValueListStyleValue::create({});
+
+    if (component_values.size() == 1 && component_values.first().is(Token::Type::Ident)) {
+        auto ident = parse_identifier_value(component_values.first());
+        if (ident && ident->to_identifier() == ValueID::None)
+            return ident;
     }
 
     TokenStream tokens { component_values };
@@ -5611,7 +5612,7 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
             return parsed_value.release_nonnull();
         return ParseError::SyntaxError;
     case PropertyID::BackdropFilter:
-        if (auto parsed_value = parse_backdrop_filter_value(component_values))
+        if (auto parsed_value = parse_filter_value_list_value(component_values))
             return parsed_value.release_nonnull();
         return ParseError::SyntaxError;
     case PropertyID::Flex:
