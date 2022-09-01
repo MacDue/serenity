@@ -4470,9 +4470,11 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
                 return {};
             return FilterFunction::Blur { *blur_radius };
         } else if (filter == Filter::DropShadow) {
-            TODO();
+            // TODO: Implement drop-shadow()
+            return {};
         } else if (filter == Filter::HueRotate) {
-            TODO();
+            // TODO: Implement hue-rotate()
+            return {};
         } else {
             if (!tokens.has_next_token())
                 return FilterFunction::Color { filter_to_operation(filter) };

@@ -8,6 +8,7 @@
 #include <LibGfx/Filters/ContrastFilter.h>
 #include <LibGfx/Filters/GrayscaleFilter.h>
 #include <LibGfx/Filters/InvertFilter.h>
+#include <LibGfx/Filters/OpacityFilter.h>
 #include <LibGfx/Filters/SepiaFilter.h>
 #include <LibGfx/Filters/StackBlurFilter.h>
 #include <LibWeb/Layout/Node.h>
@@ -24,6 +25,7 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
     if (maybe_backdrop_bitmap.is_error())
         return;
     auto backdrop_bitmap = maybe_backdrop_bitmap.release_value();
+
     for (auto& filter : backdrop_filter.filters()) {
         filter.function.visit(
             [&](CSS::FilterFunction::Blur const& blur) {
@@ -42,44 +44,49 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
                         amount = color.amount->number().value();
                 }
                 auto amount_clammped = clamp(amount, 0.0f, 1.0f);
+
+                auto apply_color_filter = [&](Gfx::ColorFilter const& filter) {
+                    const_cast<Gfx::ColorFilter&>(filter).apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                };
+
                 switch (color.operation) {
                 case CSS::FilterFunction::Color::Operation::Grayscale: {
-                    Gfx::GrayscaleFilter filter { amount_clammped };
-                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    apply_color_filter(Gfx::GrayscaleFilter { amount_clammped });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Brightness: {
-                    Gfx::BrightnessFilter filter { amount };
-                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    apply_color_filter(Gfx::BrightnessFilter { amount });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Contrast: {
-                    Gfx::ContrastFilter filter { amount_clammped };
-                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    apply_color_filter(Gfx::ContrastFilter { amount_clammped });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Invert: {
-                    Gfx::InvertFilter filter { amount_clammped };
-                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    apply_color_filter(Gfx::InvertFilter { amount_clammped });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Opacity: {
+                    apply_color_filter(Gfx::OpacityFilter { amount_clammped });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Sepia: {
-                    Gfx::SepiaFilter filter { amount_clammped };
-                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    apply_color_filter(Gfx::SepiaFilter { amount_clammped });
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Saturate: {
+                    dbgln("TODO: Implement saturate() filter function!");
                     break;
                 }
                 default:
                     break;
                 }
             },
-            [&](auto&) {
-                TODO();
+            [&](CSS::FilterFunction::HueRotate const&) {
+                dbgln("TODO: Implement hue-rotate() filter function!");
+            },
+            [&](CSS::FilterFunction::DropShadow const&) {
+                dbgln("TODO: Implement drop-shadow() filter function!");
             });
     }
     context.painter().blit(int_rect.location(), *backdrop_bitmap, backdrop_bitmap->rect());
