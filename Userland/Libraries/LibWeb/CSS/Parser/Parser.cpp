@@ -4450,6 +4450,8 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             return Filter::Sepia;
         if (name.equals_ignoring_case("saturate"sv))
             return Filter::Saturate;
+        if (name.equals_ignoring_case("grayscale"sv))
+            return Filter::Grayscale;
         return {};
     };
 

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibGfx/Filters/BrightnessFilter.h>
+#include <LibGfx/Filters/ContrastFilter.h>
 #include <LibGfx/Filters/GrayscaleFilter.h>
 #include <LibGfx/Filters/InvertFilter.h>
 #include <LibGfx/Filters/SepiaFilter.h>
@@ -47,9 +49,13 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Brightness: {
+                    Gfx::BrightnessFilter filter { amount };
+                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Contrast: {
+                    Gfx::ContrastFilter filter { amount_clammped };
+                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Invert: {
