@@ -4445,18 +4445,14 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         tokens.skip_whitespace();
 
         if (filter == Filter::Blur) {
-            dbgln("1");
             if (!tokens.has_next_token())
                 return FilterFunction::Blur {};
-            dbgln("2");
             auto blur_radius = parse_length(tokens.next_token());
             if (!blur_radius.has_value())
                 return {};
-            dbgln("3");
             tokens.skip_whitespace();
             if (tokens.has_next_token())
                 return {};
-            dbgln("4");
             return FilterFunction::Blur { *blur_radius };
         } else if (filter == Filter::DropShadow) {
             TODO();
@@ -4470,23 +4466,18 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
     Vector<FilterFunction> filter_value_list {};
 
     while (tokens.has_next_token()) {
-        dbgln("A");
         tokens.skip_whitespace();
         if (!tokens.has_next_token())
             break;
-        dbgln("B");
         auto& token = tokens.next_token();
         if (!token.is_function())
             return {};
-        dbgln("C");
         auto filter = parse_filter_function_name(token.function().name());
         if (!filter.has_value())
             return {};
-        dbgln("D");
         auto filter_function = parse_filter_function(filter, token.function().values());
         if (!filter_function.has_value())
             return {};
-        dbgln("E");
         filter_value_list.append(*filter_function);
     }
 
