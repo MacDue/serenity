@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibGfx/Filters/GrayscaleFilter.h>
+#include <LibGfx/Filters/InvertFilter.h>
+#include <LibGfx/Filters/SepiaFilter.h>
 #include <LibGfx/Filters/StackBlurFilter.h>
 #include <LibWeb/Layout/Node.h>
 #include <LibWeb/Painting/BackdropFilterPainting.h>
@@ -27,6 +30,46 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
                     sigma = blur.radius->resolved(node).to_px(node);
                 Gfx::StackBlurFilter filter { backdrop_bitmap };
                 filter.process_rgba(sigma * 2, Color::Transparent);
+            },
+            [&](CSS::FilterFunction::Color const& color) {
+                [[maybe_unused]] auto amount = 1;
+                if (color.amount.has_value())
+                    amount = color.amount->resolved(node, CSS::Number(CSS::Number::Type::Number, 1.0f)).value();
+                switch (color.operation) {
+                case CSS::FilterFunction::Color::Operation::Grayscale: {
+                    Gfx::GrayscaleFilter filter { clamp(amount, 0, 1) };
+                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Brightness: {
+
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Contrast: {
+
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Invert: {
+                    Gfx::InvertFilter filter { clamp(amount, 0, 1) };
+                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Opacity: {
+
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Sepia: {
+                    Gfx::SepiaFilter filter { clamp(amount, 0, 1) };
+                    filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
+                    break;
+                }
+                case CSS::FilterFunction::Color::Operation::Saturate: {
+
+                    break;
+                }
+                default:
+                    break;
+                }
             },
             [&](auto&) {
                 TODO();
