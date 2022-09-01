@@ -21,11 +21,11 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
     auto backdrop_bitmap = maybe_backdrop_bitmap.release_value();
     for (auto& filter : backdrop_filter.filters()) {
         filter.function.visit([&](CSS::FilterFunction::Blur const& blur) {
-      auto radius = 0;
+      auto sigma = 0;
       if (blur.radius.has_value())
-        radius = blur.radius->resolved(node).to_px(node);
+        sigma = blur.radius->resolved(node).to_px(node);
       Gfx::StackBlurFilter filter { backdrop_bitmap };
-      filter.process_rgba(radius, Color::Transparent); },
+      filter.process_rgba(sigma * 2, Color::Transparent); },
             [&](auto&) {
                 TODO();
             });
