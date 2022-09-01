@@ -101,45 +101,34 @@ struct FilterFunction {
     struct Blur {
         Optional<Length> radius {};
     };
-    struct Brightness {
-        Optional<NumberPercentage> amount {};
-    };
-    struct Contrast {
-        Optional<NumberPercentage> amount {};
-    };
     struct DropShadow {
         Length offset_x;
         Length offset_y;
         Optional<Length> radius {};
         Optional<Color> color {};
     };
-    struct Grayscale {
-        Optional<NumberPercentage> amount {};
-    };
     struct HueRotate {
         Optional<Angle> angle {};
     };
-    struct Invert {
+    struct Color {
+        enum class Operation {
+            Grayscale,
+            Brightness,
+            Contrast,
+            Invert,
+            Opacity,
+            Sepia,
+            Saturate,
+        } operation;
         Optional<NumberPercentage> amount {};
     };
-    struct Opacity {
-        Optional<NumberPercentage> amount {};
-    };
-    struct Sepia {
-        Optional<NumberPercentage> amount {};
-    };
-    struct Saturate {
-        Optional<NumberPercentage> amount {};
-    };
-    using Function = Variant<
-        Blur, Brightness, Contrast, DropShadow, Grayscale, HueRotate, Invert, Opacity, Sepia, Saturate>;
-    Function function;
-
+    using Function = Variant<Blur, DropShadow, HueRotate, Color>;
     template<typename T>
     FilterFunction(T function)
         : function(function)
     {
     }
+    Function function;
 };
 
 // FIXME: Find a better place for this helper.

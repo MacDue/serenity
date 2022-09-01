@@ -4406,16 +4406,29 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
     // <filter-value-list> = [ <filter-function> | <url> ]+
 
     enum class Filter {
-        Blur,
-        DropShadow,
-        HueRotate,
+        Grayscale,
         Brightness,
         Contrast,
-        Grayscale,
         Invert,
         Opacity,
         Sepia,
-        Saturate
+        Saturate,
+        Blur,
+        DropShadow,
+        HueRotate
+    };
+
+    auto filter_to_operation = [&](auto filter) {
+        VERIFY(to_underlying(filter) < to_underlying(Filter::Blur));
+        return static_cast<FilterFunction::Color::Operation>(filter);
+    };
+
+    auto parse_number_percentage = [&](auto& token) -> Optional<NumberPercentage> {
+        if (token.is(Token::Type::Percentage))
+            return NumberPercentage(Percentage(token.token().percentage()));
+        if (token.is(Token::Type::Number))
+            return NumberPercentage(Number(Number::Type::Number, token.token().number_value()));
+        return {};
     };
 
     auto parse_filter_function_name = [&](auto name) -> Optional<Filter> {
@@ -4459,7 +4472,15 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         } else if (filter == Filter::HueRotate) {
             TODO();
         } else {
-            TODO();
+            if (!tokens.has_next_token())
+                return FilterFunction::Color { filter_to_operation(filter) };
+            auto amount = parse_number_percentage(tokens.next_token());
+            if (!amount.has_value())
+                return {};
+            tokens.skip_whitespace();
+            if (tokens.has_next_token())
+                return {};
+            return FilterFunction::Color { filter_to_operation(filter), *amount };
         }
     };
 
@@ -4475,7 +4496,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         auto filter = parse_filter_function_name(token.function().name());
         if (!filter.has_value())
             return {};
-        auto filter_function = parse_filter_function(filter, token.function().values());
+        auto filter_function = parse_filter_function(*filter, token.function().values());
         if (!filter_function.has_value())
             return {};
         filter_value_list.append(*filter_function);

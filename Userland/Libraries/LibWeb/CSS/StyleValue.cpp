@@ -1182,31 +1182,13 @@ String FilterValueListStyleValue::to_string() const
                 if (blur.radius.has_value())
                     builder.append(blur.radius->to_string());
             },
-            [&](FilterFunction::Brightness const&) {
-                TODO();
-            },
-            [&](FilterFunction::Contrast const&) {
-                TODO();
-            },
-            [&](FilterFunction::Grayscale const&) {
-                TODO();
-            },
             [&](FilterFunction::DropShadow const&) {
                 TODO();
             },
             [&](FilterFunction::HueRotate const&) {
                 TODO();
             },
-            [&](FilterFunction::Invert const&) {
-                TODO();
-            },
-            [&](FilterFunction::Opacity const&) {
-                TODO();
-            },
-            [&](FilterFunction::Sepia const&) {
-                TODO();
-            },
-            [&](FilterFunction::Saturate const&) {
+            [&](FilterFunction::Color const&) {
                 TODO();
             });
         builder.append(')');
