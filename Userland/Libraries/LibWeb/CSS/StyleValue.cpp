@@ -1182,14 +1182,45 @@ String FilterValueListStyleValue::to_string() const
                 if (blur.radius.has_value())
                     builder.append(blur.radius->to_string());
             },
-            [&](FilterFunction::DropShadow const&) {
-                TODO();
+            [&](FilterFunction::DropShadow const& drop_shadow) {
+                builder.appendff("drop-shadow({} {}"sv,
+                    drop_shadow.offset_x, drop_shadow.offset_y);
+                if (drop_shadow.radius.has_value())
+                    builder.appendff("{} ", drop_shadow.radius->to_string());
+                if (drop_shadow.color.has_value()) {
+                    builder.append(' ');
+                    serialize_a_srgb_value(builder, *drop_shadow.color);
+                }
             },
-            [&](FilterFunction::HueRotate const&) {
-                TODO();
+            [&](FilterFunction::HueRotate const& hue_rotate) {
+                builder.append("hue-rotate("sv);
+                if (hue_rotate.angle.has_value())
+                    builder.append(hue_rotate.angle->to_string());
             },
-            [&](FilterFunction::Color const&) {
-                TODO();
+            [&](FilterFunction::Color const& color) {
+                builder.appendff("{}(",
+                    [&] {
+                        switch (color.operation) {
+                        case FilterFunction::Color::Operation::Grayscale:
+                            return "grayscale"sv;
+                        case FilterFunction::Color::Operation::Brightness:
+                            return "brightness"sv;
+                        case FilterFunction::Color::Operation::Contrast:
+                            return "contrast"sv;
+                        case FilterFunction::Color::Operation::Invert:
+                            return "invert"sv;
+                        case FilterFunction::Color::Operation::Opacity:
+                            return "opacity"sv;
+                        case FilterFunction::Color::Operation::Sepia:
+                            return "sepia"sv;
+                        case FilterFunction::Color::Operation::Saturate:
+                            return "saturate"sv;
+                        default:
+                            VERIFY_NOT_REACHED();
+                        }
+                    }());
+                if (color.amount.has_value())
+                    builder.append(color.amount->to_string());
             });
         builder.append(')');
         first = false;
