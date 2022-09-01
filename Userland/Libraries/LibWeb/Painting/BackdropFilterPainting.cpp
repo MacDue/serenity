@@ -32,39 +32,40 @@ void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx:
                 filter.process_rgba(sigma * 2, Color::Transparent);
             },
             [&](CSS::FilterFunction::Color const& color) {
-                [[maybe_unused]] auto amount = 1;
-                if (color.amount.has_value())
-                    amount = color.amount->resolved(node, CSS::Number(CSS::Number::Type::Number, 1.0f)).value();
+                auto amount = 1.0f;
+                if (color.amount.has_value()) {
+                    if (color.amount->is_percentage())
+                        amount = color.amount->percentage().as_fraction();
+                    else
+                        amount = color.amount->number().value();
+                }
+                auto amount_clammped = clamp(amount, 0.0f, 1.0f);
                 switch (color.operation) {
                 case CSS::FilterFunction::Color::Operation::Grayscale: {
-                    Gfx::GrayscaleFilter filter { clamp(amount, 0, 1) };
+                    Gfx::GrayscaleFilter filter { amount_clammped };
                     filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Brightness: {
-
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Contrast: {
-
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Invert: {
-                    Gfx::InvertFilter filter { clamp(amount, 0, 1) };
+                    Gfx::InvertFilter filter { amount_clammped };
                     filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Opacity: {
-
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Sepia: {
-                    Gfx::SepiaFilter filter { clamp(amount, 0, 1) };
+                    Gfx::SepiaFilter filter { amount_clammped };
                     filter.apply(*backdrop_bitmap, backdrop_bitmap->rect(), *backdrop_bitmap, backdrop_bitmap->rect());
                     break;
                 }
                 case CSS::FilterFunction::Color::Operation::Saturate: {
-
                     break;
                 }
                 default:
