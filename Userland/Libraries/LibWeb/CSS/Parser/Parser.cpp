@@ -4459,32 +4459,79 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         TokenStream tokens { function_values };
         tokens.skip_whitespace();
 
+        auto if_no_more_tokens_return = [&](auto filter) -> Optional<FilterFunction> {
+            tokens.skip_whitespace();
+            if (tokens.has_next_token())
+                return {};
+            return filter;
+        };
+
         if (filter == Filter::Blur) {
             if (!tokens.has_next_token())
                 return FilterFunction::Blur {};
             auto blur_radius = parse_length(tokens.next_token());
             if (!blur_radius.has_value())
                 return {};
-            tokens.skip_whitespace();
-            if (tokens.has_next_token())
-                return {};
-            return FilterFunction::Blur { *blur_radius };
+            return if_no_more_tokens_return(FilterFunction::Blur { *blur_radius });
         } else if (filter == Filter::DropShadow) {
-            // TODO: Implement drop-shadow()
-            return {};
+            if (!tokens.has_next_token())
+                return {};
+            auto next_token = [&] {
+                auto& token = tokens.next_token();
+                tokens.skip_whitespace();
+                return token;
+            };
+            // drop-shadow( [ <color>? && <length>{2,3} ] )
+            auto& first_param = next_token();
+            Optional<Length> maybe_radius = {};
+            auto maybe_color = parse_color(first_param);
+            auto x_offset = parse_length(maybe_color.has_value() ? next_token() : first_param);
+            if (!x_offset.has_value() || tokens.has_next_token())
+                return {};
+            auto y_offset = parse_length(next_token());
+            if (!y_offset.has_value())
+                return {};
+            if (tokens.has_next_token()) {
+                auto& token = next_token();
+                maybe_radius = parse_length(token);
+                if (!maybe_radius.has_value()) {
+                    if (!maybe_color.has_value()) {
+                        maybe_color = parse_color(token);
+                        if (!maybe_color.has_value())
+                            return {};
+                    } else {
+                        return {};
+                    }
+                }
+            }
+            return if_no_more_tokens_return(FilterFunction::DropShadow { *x_offset, *y_offset, maybe_radius, maybe_color });
         } else if (filter == Filter::HueRotate) {
-            // TODO: Implement hue-rotate()
-            return {};
+            if (!tokens.has_next_token())
+                return FilterFunction::HueRotate {};
+            auto& token = tokens.next_token();
+            if (token.is(Token::Type::Number)) {
+                // hue-rotate(0)
+                auto number = token.number();
+                if (number.is_integer() && number.integer_value() == 0)
+                    return if_no_more_tokens_return(FilterFunction::HueRotate(FilterFunction::HueRotate::Zero));
+                return {};
+            }
+            if (!token.is(Token::Type::Dimension))
+                return {};
+            float angle_value = token.token().dimension_value();
+            auto angle_unit_name = token.token().dimension_unit();
+            auto angle_unit = Angle::unit_from_name(angle_unit_name);
+            if (!angle_unit.has_value())
+                return {};
+            Angle angle { angle_value, angle_unit.release_value() };
+            return if_no_more_tokens_return(FilterFunction::HueRotate { angle });
         } else {
             if (!tokens.has_next_token())
                 return FilterFunction::Color { filter_to_operation(filter) };
             auto amount = parse_number_percentage(tokens.next_token());
             if (!amount.has_value())
                 return {};
-            tokens.skip_whitespace();
-            if (tokens.has_next_token())
-                return {};
-            return FilterFunction::Color { filter_to_operation(filter), *amount };
+            return if_no_more_tokens_return(FilterFunction::Color { filter_to_operation(filter), *amount });
         }
     };
 

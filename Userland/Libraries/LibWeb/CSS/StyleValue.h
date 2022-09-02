@@ -108,7 +108,9 @@ struct FilterFunction {
         Optional<Color> color {};
     };
     struct HueRotate {
-        Optional<Angle> angle {};
+        struct Zero { };
+        using AngleOrZero = Variant<Angle, Zero>;
+        Optional<AngleOrZero> angle {};
     };
     struct Color {
         enum class Operation {

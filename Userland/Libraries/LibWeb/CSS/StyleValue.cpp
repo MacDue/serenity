@@ -1194,8 +1194,15 @@ String FilterValueListStyleValue::to_string() const
             },
             [&](FilterFunction::HueRotate const& hue_rotate) {
                 builder.append("hue-rotate("sv);
-                if (hue_rotate.angle.has_value())
-                    builder.append(hue_rotate.angle->to_string());
+                if (hue_rotate.angle.has_value()) {
+                    hue_rotate.angle->visit(
+                        [&](Angle const& angle) {
+                            builder.append(angle.to_string());
+                        },
+                        [&](auto&) {
+                            builder.append('0');
+                        });
+                }
             },
             [&](FilterFunction::Color const& color) {
                 builder.appendff("{}(",
