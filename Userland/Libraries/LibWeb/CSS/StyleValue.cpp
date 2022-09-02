@@ -1169,6 +1169,42 @@ bool ContentStyleValue::equals(StyleValue const& other) const
     return true;
 }
 
+float FilterFunction::Blur::resolved_radius(Layout::Node const& node) const
+{
+    // Note: The radius/sigma of the blur needs to be doubled for Serenitys blur functions.
+    auto sigma = 0;
+    if (radius.has_value())
+        sigma = radius->resolved(node).to_px(node);
+    return sigma * 2;
+}
+
+FilterFunction::DropShadow::ResolvedLengths FilterFunction::DropShadow::resolved_lengths(Layout::Node const& node) const
+{
+    return ResolvedLengths {
+        offset_x.resolved(node).to_px(node),
+        offset_y.resolved(node).to_px(node),
+        radius.has_value() ? Optional<float> { radius->resolved(node).to_px(node) } : Optional<float> {}
+    };
+}
+
+float FilterFunction::HueRotate::angle_degrees() const
+{
+    if (!angle.has_value())
+        return 0.0f;
+    return angle->visit([&](Angle const& angle) { return angle.to_degrees(); }, [&](auto) { return 0.0f; });
+}
+
+float FilterFunction::Color::resolved_amount(float default_value) const
+{
+    if (amount.has_value()) {
+        if (amount->is_percentage())
+            return amount->percentage().as_fraction();
+        else
+            return amount->number().value();
+    }
+    return default_value;
+}
+
 String FilterValueListStyleValue::to_string() const
 {
     StringBuilder builder {};

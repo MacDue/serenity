@@ -100,17 +100,25 @@ struct EdgeRect {
 struct FilterFunction {
     struct Blur {
         Optional<Length> radius {};
+        float resolved_radius(Layout::Node const&) const;
     };
     struct DropShadow {
         Length offset_x;
         Length offset_y;
         Optional<Length> radius {};
         Optional<Color> color {};
+        struct ResolvedLengths {
+            float offset_x;
+            float offset_y;
+            Optional<float> radius {};
+        };
+        ResolvedLengths resolved_lengths(Layout::Node const&) const;
     };
     struct HueRotate {
         struct Zero { };
         using AngleOrZero = Variant<Angle, Zero>;
         Optional<AngleOrZero> angle {};
+        float angle_degrees() const;
     };
     struct Color {
         enum class Operation {
@@ -123,6 +131,7 @@ struct FilterFunction {
             Saturate,
         } operation;
         Optional<NumberPercentage> amount {};
+        float resolved_amount(float default_value = 1.0f) const;
     };
     using Function = Variant<Blur, DropShadow, HueRotate, Color>;
     template<typename T>

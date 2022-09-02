@@ -4393,7 +4393,6 @@ RefPtr<StyleValue> Parser::parse_content_value(Vector<ComponentValue> const& com
 
 RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> const& component_values)
 {
-
     if (component_values.size() == 1 && component_values.first().is(Token::Type::Ident)) {
         auto ident = parse_identifier_value(component_values.first());
         if (ident && ident->to_identifier() == ValueID::None)
@@ -4482,6 +4481,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
                 return token;
             };
             // drop-shadow( [ <color>? && <length>{2,3} ] )
+            // Note: The following code is a little awkward to allow the color to be before or after the lengths.
             auto& first_param = next_token();
             Optional<Length> maybe_radius = {};
             auto maybe_color = parse_color(first_param);

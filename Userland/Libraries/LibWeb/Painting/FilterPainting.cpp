@@ -22,26 +22,15 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
     for (auto& filter : filter_list) {
         filter.function.visit(
             [&](CSS::FilterFunction::Blur const& blur) {
-                auto sigma = 0;
-                if (blur.radius.has_value())
-                    sigma = blur.radius->resolved(node).to_px(node);
                 Gfx::StackBlurFilter filter { target_bitmap };
-                filter.process_rgba(sigma * 2, Color::Transparent);
+                filter.process_rgba(blur.resolved_radius(node), Color::Transparent);
             },
             [&](CSS::FilterFunction::Color const& color) {
-                auto amount = 1.0f;
-                if (color.amount.has_value()) {
-                    if (color.amount->is_percentage())
-                        amount = color.amount->percentage().as_fraction();
-                    else
-                        amount = color.amount->number().value();
-                }
+                auto amount = color.resolved_amount();
                 auto amount_clammped = clamp(amount, 0.0f, 1.0f);
-
                 auto apply_color_filter = [&](Gfx::ColorFilter const& filter) {
                     const_cast<Gfx::ColorFilter&>(filter).apply(target_bitmap, target_bitmap.rect(), target_bitmap, target_bitmap.rect());
                 };
-
                 switch (color.operation) {
                 case CSS::FilterFunction::Color::Operation::Grayscale: {
                     apply_color_filter(Gfx::GrayscaleFilter { amount_clammped });
@@ -75,7 +64,7 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
                     break;
                 }
             },
-            [&](CSS::FilterFunction::HueRotate const&) {
+            [&](CSS::FilterFunction::HueRotate const& hue_rotate) {
                 dbgln("TODO: Implement hue-rotate() filter function!");
             },
             [&](CSS::FilterFunction::DropShadow const&) {
