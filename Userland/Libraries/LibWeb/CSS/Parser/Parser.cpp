@@ -4404,7 +4404,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
     // FIXME: <url>s are ignored for now
     // <filter-value-list> = [ <filter-function> | <url> ]+
 
-    enum class Filter {
+    enum class FilterToken {
         Grayscale,
         Brightness,
         Contrast,
@@ -4417,9 +4417,9 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         HueRotate
     };
 
-    auto filter_to_operation = [&](auto filter) {
-        VERIFY(to_underlying(filter) < to_underlying(Filter::Blur));
-        return static_cast<FilterFunction::Color::Operation>(filter);
+    auto filter_token_to_operation = [&](auto filter) {
+        VERIFY(to_underlying(filter) < to_underlying(FilterToken::Blur));
+        return static_cast<Filter::Color::Operation>(filter);
     };
 
     auto parse_number_percentage = [&](auto& token) -> Optional<NumberPercentage> {
@@ -4430,31 +4430,31 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         return {};
     };
 
-    auto parse_filter_function_name = [&](auto name) -> Optional<Filter> {
+    auto parse_filter_function_name = [&](auto name) -> Optional<FilterToken> {
         if (name.equals_ignoring_case("blur"sv))
-            return Filter::Blur;
+            return FilterToken::Blur;
         if (name.equals_ignoring_case("brightness"sv))
-            return Filter::Brightness;
+            return FilterToken::Brightness;
         if (name.equals_ignoring_case("contrast"sv))
-            return Filter::Contrast;
+            return FilterToken::Contrast;
         if (name.equals_ignoring_case("drop-shadow"sv))
-            return Filter::DropShadow;
+            return FilterToken::DropShadow;
         if (name.equals_ignoring_case("hue-rotate"sv))
-            return Filter::HueRotate;
+            return FilterToken::HueRotate;
         if (name.equals_ignoring_case("invert"sv))
-            return Filter::Invert;
+            return FilterToken::Invert;
         if (name.equals_ignoring_case("opacity"sv))
-            return Filter::Opacity;
+            return FilterToken::Opacity;
         if (name.equals_ignoring_case("sepia"sv))
-            return Filter::Sepia;
+            return FilterToken::Sepia;
         if (name.equals_ignoring_case("saturate"sv))
-            return Filter::Saturate;
+            return FilterToken::Saturate;
         if (name.equals_ignoring_case("grayscale"sv))
-            return Filter::Grayscale;
+            return FilterToken::Grayscale;
         return {};
     };
 
-    auto parse_filter_function = [&](auto filter, auto function_values) -> Optional<FilterFunction> {
+    auto parse_filter_function = [&](auto filter_token, auto function_values) -> Optional<FilterFunction> {
         TokenStream tokens { function_values };
         tokens.skip_whitespace();
 
@@ -4465,17 +4465,18 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             return filter;
         };
 
-        if (filter == Filter::Blur) {
+        if (filter_token == Filter::Blur) {
             if (!tokens.has_next_token())
-                return FilterFunction::Blur {};
+                return Filter::Blur {};
             auto blur_radius = parse_length(tokens.next_token());
             if (!blur_radius.has_value())
                 return {};
-            return if_no_more_tokens_return(FilterFunction::Blur { *blur_radius });
-        } else if (filter == Filter::DropShadow) {
+            return if_no_more_tokens_return(Filter::Blur { *blur_radius });
+        } else if (filter_token == Filter::DropShadow) {
             if (!tokens.has_next_token())
                 return {};
-            auto next_token = [&] {
+            auto next_token = [&]() -> auto&
+            {
                 auto& token = tokens.next_token();
                 tokens.skip_whitespace();
                 return token;
@@ -4504,16 +4505,16 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
                     }
                 }
             }
-            return if_no_more_tokens_return(FilterFunction::DropShadow { *x_offset, *y_offset, maybe_radius, maybe_color });
-        } else if (filter == Filter::HueRotate) {
+            return if_no_more_tokens_return(Filter::DropShadow { *x_offset, *y_offset, maybe_radius, maybe_color });
+        } else if (filter_token == Filter::HueRotate) {
             if (!tokens.has_next_token())
-                return FilterFunction::HueRotate {};
+                return Filter::HueRotate {};
             auto& token = tokens.next_token();
             if (token.is(Token::Type::Number)) {
                 // hue-rotate(0)
-                auto number = token.number();
+                auto number = token.token().number();
                 if (number.is_integer() && number.integer_value() == 0)
-                    return if_no_more_tokens_return(FilterFunction::HueRotate(FilterFunction::HueRotate::Zero));
+                    return if_no_more_tokens_return(Filter::HueRotate { Filter::HueRotate::Zero });
                 return {};
             }
             if (!token.is(Token::Type::Dimension))
@@ -4524,14 +4525,14 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             if (!angle_unit.has_value())
                 return {};
             Angle angle { angle_value, angle_unit.release_value() };
-            return if_no_more_tokens_return(FilterFunction::HueRotate { angle });
+            return if_no_more_tokens_return(Filter::HueRotate { angle });
         } else {
             if (!tokens.has_next_token())
-                return FilterFunction::Color { filter_to_operation(filter) };
+                return Filter::Color { filter_token_to_operation(filter_token) };
             auto amount = parse_number_percentage(tokens.next_token());
             if (!amount.has_value())
                 return {};
-            return if_no_more_tokens_return(FilterFunction::Color { filter_to_operation(filter), *amount });
+            return if_no_more_tokens_return(Filter::Color { filter_token_to_operation(filter_token), *amount });
         }
     };
 
@@ -4544,10 +4545,10 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         auto& token = tokens.next_token();
         if (!token.is_function())
             return {};
-        auto filter = parse_filter_function_name(token.function().name());
-        if (!filter.has_value())
+        auto filter_token = parse_filter_function_name(token.function().name());
+        if (!filter_token.has_value())
             return {};
-        auto filter_function = parse_filter_function(*filter, token.function().values());
+        auto filter_function = parse_filter_function(*filter_token, token.function().values());
         if (!filter_function.has_value())
             return {};
         filter_value_list.append(*filter_function);

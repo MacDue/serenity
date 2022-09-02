@@ -1169,16 +1169,16 @@ bool ContentStyleValue::equals(StyleValue const& other) const
     return true;
 }
 
-float FilterFunction::Blur::resolved_radius(Layout::Node const& node) const
+float Filter::Blur::resolved_radius(Layout::Node const& node) const
 {
-    // Note: The radius/sigma of the blur needs to be doubled for Serenitys blur functions.
+    // Note: The radius/sigma of the blur needs to be doubled for LibGfx's blur functions.
     auto sigma = 0;
     if (radius.has_value())
         sigma = radius->resolved(node).to_px(node);
     return sigma * 2;
 }
 
-FilterFunction::DropShadow::ResolvedLengths FilterFunction::DropShadow::resolved_lengths(Layout::Node const& node) const
+Filter::DropShadow::ResolvedLengths Filter::DropShadow::resolved_lengths(Layout::Node const& node) const
 {
     return ResolvedLengths {
         offset_x.resolved(node).to_px(node),
@@ -1187,14 +1187,14 @@ FilterFunction::DropShadow::ResolvedLengths FilterFunction::DropShadow::resolved
     };
 }
 
-float FilterFunction::HueRotate::angle_degrees() const
+float Filter::HueRotate::angle_degrees() const
 {
     if (!angle.has_value())
         return 0.0f;
     return angle->visit([&](Angle const& angle) { return angle.to_degrees(); }, [&](auto) { return 0.0f; });
 }
 
-float FilterFunction::Color::resolved_amount(float default_value) const
+float Filter::Color::resolved_amount(float default_value) const
 {
     if (amount.has_value()) {
         if (amount->is_percentage())
@@ -1209,16 +1209,16 @@ String FilterValueListStyleValue::to_string() const
 {
     StringBuilder builder {};
     bool first = true;
-    for (auto& filter : filter_value_list()) {
+    for (auto& filter_function : filter_value_list()) {
         if (!first)
             builder.append(' ');
-        filter.function.visit(
-            [&](FilterFunction::Blur const& blur) {
+        filter_function.visit(
+            [&](Filter::Blur const& blur) {
                 builder.append("blur("sv);
                 if (blur.radius.has_value())
                     builder.append(blur.radius->to_string());
             },
-            [&](FilterFunction::DropShadow const& drop_shadow) {
+            [&](Filter::DropShadow const& drop_shadow) {
                 builder.appendff("drop-shadow({} {}"sv,
                     drop_shadow.offset_x, drop_shadow.offset_y);
                 if (drop_shadow.radius.has_value())
@@ -1228,7 +1228,7 @@ String FilterValueListStyleValue::to_string() const
                     serialize_a_srgb_value(builder, *drop_shadow.color);
                 }
             },
-            [&](FilterFunction::HueRotate const& hue_rotate) {
+            [&](Filter::HueRotate const& hue_rotate) {
                 builder.append("hue-rotate("sv);
                 if (hue_rotate.angle.has_value()) {
                     hue_rotate.angle->visit(
@@ -1240,23 +1240,23 @@ String FilterValueListStyleValue::to_string() const
                         });
                 }
             },
-            [&](FilterFunction::Color const& color) {
+            [&](Filter::Color const& color) {
                 builder.appendff("{}(",
                     [&] {
                         switch (color.operation) {
-                        case FilterFunction::Color::Operation::Grayscale:
+                        case Filter::Color::Operation::Grayscale:
                             return "grayscale"sv;
-                        case FilterFunction::Color::Operation::Brightness:
+                        case Filter::Color::Operation::Brightness:
                             return "brightness"sv;
-                        case FilterFunction::Color::Operation::Contrast:
+                        case Filter::Color::Operation::Contrast:
                             return "contrast"sv;
-                        case FilterFunction::Color::Operation::Invert:
+                        case Filter::Color::Operation::Invert:
                             return "invert"sv;
-                        case FilterFunction::Color::Operation::Opacity:
+                        case Filter::Color::Operation::Opacity:
                             return "opacity"sv;
-                        case FilterFunction::Color::Operation::Sepia:
+                        case Filter::Color::Operation::Sepia:
                             return "sepia"sv;
-                        case FilterFunction::Color::Operation::Saturate:
+                        case Filter::Color::Operation::Saturate:
                             return "saturate"sv;
                         default:
                             VERIFY_NOT_REACHED();
@@ -1273,8 +1273,7 @@ String FilterValueListStyleValue::to_string() const
 
 static bool operator==(FilterFunction const&, FilterFunction const&)
 {
-    // FIXME: Impl
-    return true;
+    return false;
 }
 
 bool FilterValueListStyleValue::equals(StyleValue const& other) const

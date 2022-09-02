@@ -19,44 +19,44 @@ namespace Web::Painting {
 
 void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Span<CSS::FilterFunction const> filter_list)
 {
-    for (auto& filter : filter_list) {
-        filter.function.visit(
-            [&](CSS::FilterFunction::Blur const& blur) {
+    for (auto& filter_function : filter_list) {
+        filter_function.visit(
+            [&](CSS::Filter::Blur const& blur) {
                 Gfx::StackBlurFilter filter { target_bitmap };
                 filter.process_rgba(blur.resolved_radius(node), Color::Transparent);
             },
-            [&](CSS::FilterFunction::Color const& color) {
+            [&](CSS::Filter::Color const& color) {
                 auto amount = color.resolved_amount();
                 auto amount_clammped = clamp(amount, 0.0f, 1.0f);
                 auto apply_color_filter = [&](Gfx::ColorFilter const& filter) {
                     const_cast<Gfx::ColorFilter&>(filter).apply(target_bitmap, target_bitmap.rect(), target_bitmap, target_bitmap.rect());
                 };
                 switch (color.operation) {
-                case CSS::FilterFunction::Color::Operation::Grayscale: {
+                case CSS::Filter::Color::Operation::Grayscale: {
                     apply_color_filter(Gfx::GrayscaleFilter { amount_clammped });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Brightness: {
+                case CSS::Filter::Color::Operation::Brightness: {
                     apply_color_filter(Gfx::BrightnessFilter { amount });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Contrast: {
+                case CSS::Filter::Color::Operation::Contrast: {
                     apply_color_filter(Gfx::ContrastFilter { amount_clammped });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Invert: {
+                case CSS::Filter::Color::Operation::Invert: {
                     apply_color_filter(Gfx::InvertFilter { amount_clammped });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Opacity: {
+                case CSS::Filter::Color::Operation::Opacity: {
                     apply_color_filter(Gfx::OpacityFilter { amount_clammped });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Sepia: {
+                case CSS::Filter::Color::Operation::Sepia: {
                     apply_color_filter(Gfx::SepiaFilter { amount_clammped });
                     break;
                 }
-                case CSS::FilterFunction::Color::Operation::Saturate: {
+                case CSS::Filter::Color::Operation::Saturate: {
                     dbgln("TODO: Implement saturate() filter function!");
                     break;
                 }
@@ -64,10 +64,10 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
                     break;
                 }
             },
-            [&](CSS::FilterFunction::HueRotate const& hue_rotate) {
+            [&](CSS::Filter::HueRotate const&) {
                 dbgln("TODO: Implement hue-rotate() filter function!");
             },
-            [&](CSS::FilterFunction::DropShadow const&) {
+            [&](CSS::Filter::DropShadow const&) {
                 dbgln("TODO: Implement drop-shadow() filter function!");
             });
     }
