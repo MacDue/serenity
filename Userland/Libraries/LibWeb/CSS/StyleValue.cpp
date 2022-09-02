@@ -1271,9 +1271,50 @@ String FilterValueListStyleValue::to_string() const
     return builder.to_string();
 }
 
-static bool operator==(FilterFunction const&, FilterFunction const&)
+static bool operator==(Filter::Blur const& a, Filter::Blur const& b)
 {
-    return false;
+    return a.radius == b.radius;
+}
+
+static bool operator==(Filter::DropShadow const& a, Filter::DropShadow const& b)
+{
+    return a.offset_x == b.offset_x && a.offset_y == b.offset_y && a.radius == b.radius && a.color == b.color;
+}
+
+static bool operator==(Filter::HueRotate::Zero const&, Filter::HueRotate::Zero const&)
+{
+    return true;
+}
+
+static bool operator==(Filter::Color const& a, Filter::Color const& b)
+{
+    return a.operation == b.operation && a.amount == b.amount;
+}
+
+static bool operator==(Filter::HueRotate const& a, Filter::HueRotate const& b);
+
+static bool variant_equals(auto const& a, auto const& b)
+{
+    return a.visit([&](auto const& held_value) {
+        using HeldType = AK::Detail::Decay<decltype(held_value)>;
+        bool other_holds_same_type = b.template has<HeldType>();
+        return other_holds_same_type && held_value == b.template get<HeldType>();
+    });
+}
+
+static bool operator==(Filter::HueRotate::AngleOrZero const& a, Filter::HueRotate::AngleOrZero const& b)
+{
+    return variant_equals(a, b);
+}
+
+static bool operator==(Filter::HueRotate const& a, Filter::HueRotate const& b)
+{
+    return a.angle == b.angle;
+}
+
+static bool operator==(FilterFunction const& a, FilterFunction const& b)
+{
+    return variant_equals(a, b);
 }
 
 bool FilterValueListStyleValue::equals(StyleValue const& other) const
