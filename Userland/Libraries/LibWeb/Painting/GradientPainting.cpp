@@ -183,6 +183,10 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
     auto& color_stops = data.color_stops;
     auto start_offset = data.repeat_length.has_value() ? color_stops.first().position : 0.0f;
     auto start_offset_int = round_to<int>(start_offset);
+
+    // Note: color.mixed_with() performs premultiplied alpha mixing when necessary as defined in:
+    // https://drafts.csswg.org/css-images/#coloring-gradient-line
+
     for (int loc = 0; loc < gradient_color_count; loc++) {
         Gfx::Color gradient_color = color_stops[0].color.mixed_with(
             color_stops[1].color,

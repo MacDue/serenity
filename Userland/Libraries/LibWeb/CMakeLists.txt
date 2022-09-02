@@ -314,7 +314,6 @@ set(SOURCES
     Page/EditEventHandler.cpp
     Page/EventHandler.cpp
     Page/Page.cpp
-    Painting/BackdropFilterPainting.cpp
     Painting/BackgroundPainting.cpp
     Painting/BorderPainting.cpp
     Painting/BorderRadiusCornerClipper.cpp
@@ -322,6 +321,7 @@ set(SOURCES
     Painting/CanvasPaintable.cpp
     Painting/CheckBoxPaintable.cpp
     Painting/GradientPainting.cpp
+    Painting/FilterPainting.cpp
     Painting/ImagePaintable.cpp
     Painting/InlinePaintable.cpp
     Painting/LabelablePaintable.cpp
