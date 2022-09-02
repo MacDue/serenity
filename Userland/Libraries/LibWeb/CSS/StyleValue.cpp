@@ -1222,7 +1222,7 @@ String FilterValueListStyleValue::to_string() const
                 builder.appendff("drop-shadow({} {}"sv,
                     drop_shadow.offset_x, drop_shadow.offset_y);
                 if (drop_shadow.radius.has_value())
-                    builder.appendff("{} ", drop_shadow.radius->to_string());
+                    builder.appendff(" {}", drop_shadow.radius->to_string());
                 if (drop_shadow.color.has_value()) {
                     builder.append(' ');
                     serialize_a_srgb_value(builder, *drop_shadow.color);

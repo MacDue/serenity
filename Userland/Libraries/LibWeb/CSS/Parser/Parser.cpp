@@ -4465,14 +4465,14 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             return filter;
         };
 
-        if (filter_token == Filter::Blur) {
+        if (filter_token == FilterToken::Blur) {
             if (!tokens.has_next_token())
                 return Filter::Blur {};
             auto blur_radius = parse_length(tokens.next_token());
             if (!blur_radius.has_value())
                 return {};
             return if_no_more_tokens_return(Filter::Blur { *blur_radius });
-        } else if (filter_token == Filter::DropShadow) {
+        } else if (filter_token == FilterToken::DropShadow) {
             if (!tokens.has_next_token())
                 return {};
             auto next_token = [&]() -> auto&
@@ -4487,26 +4487,27 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             Optional<Length> maybe_radius = {};
             auto maybe_color = parse_color(first_param);
             auto x_offset = parse_length(maybe_color.has_value() ? next_token() : first_param);
-            if (!x_offset.has_value() || tokens.has_next_token())
+            if (!x_offset.has_value() || !tokens.has_next_token()) {
                 return {};
+            }
             auto y_offset = parse_length(next_token());
-            if (!y_offset.has_value())
+            if (!y_offset.has_value()) {
                 return {};
+            }
             if (tokens.has_next_token()) {
                 auto& token = next_token();
                 maybe_radius = parse_length(token);
-                if (!maybe_radius.has_value()) {
+                if (!maybe_color.has_value() && (!maybe_radius.has_value() || tokens.has_next_token())) {
+                    maybe_color = parse_color(!maybe_radius.has_value() ? token : next_token());
                     if (!maybe_color.has_value()) {
-                        maybe_color = parse_color(token);
-                        if (!maybe_color.has_value())
-                            return {};
-                    } else {
                         return {};
                     }
+                } else if (!maybe_radius.has_value()) {
+                    return {};
                 }
             }
             return if_no_more_tokens_return(Filter::DropShadow { *x_offset, *y_offset, maybe_radius, maybe_color });
-        } else if (filter_token == Filter::HueRotate) {
+        } else if (filter_token == FilterToken::HueRotate) {
             if (!tokens.has_next_token())
                 return Filter::HueRotate {};
             auto& token = tokens.next_token();
@@ -4514,7 +4515,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
                 // hue-rotate(0)
                 auto number = token.token().number();
                 if (number.is_integer() && number.integer_value() == 0)
-                    return if_no_more_tokens_return(Filter::HueRotate { Filter::HueRotate::Zero });
+                    return if_no_more_tokens_return(Filter::HueRotate { Filter::HueRotate::Zero {} });
                 return {};
             }
             if (!token.is(Token::Type::Dimension))
