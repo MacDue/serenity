@@ -1171,11 +1171,11 @@ bool ContentStyleValue::equals(StyleValue const& other) const
 
 float Filter::Blur::resolved_radius(Layout::Node const& node) const
 {
-    // Note: The radius/sigma of the blur needs to be doubled for LibGfx's blur functions.
     // Default value when omitted is 0px.
     auto sigma = 0;
     if (radius.has_value())
         sigma = radius->resolved(node).to_px(node);
+    // Note: The radius/sigma of the blur needs to be doubled for LibGfx's blur functions.
     return sigma * 2;
 }
 

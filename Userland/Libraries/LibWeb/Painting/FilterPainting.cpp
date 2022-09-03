@@ -22,6 +22,8 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
     for (auto& filter_function : filter_list) {
         filter_function.visit(
             [&](CSS::Filter::Blur const& blur) {
+                // Applies a Gaussian blur to the input image.
+                // The passed parameter defines the value of the standard deviation to the Gaussian function.
                 Gfx::StackBlurFilter filter { target_bitmap };
                 filter.process_rgba(blur.resolved_radius(node), Color::Transparent);
             },
@@ -33,26 +35,39 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
                 };
                 switch (color.operation) {
                 case CSS::Filter::Color::Operation::Grayscale: {
+                    // Converts the input image to grayscale. The passed parameter defines the proportion of the conversion.
+                    // A value of 100% is completely grayscale. A value of 0% leaves the input unchanged.
                     apply_color_filter(Gfx::GrayscaleFilter { amount_clammped });
                     break;
                 }
                 case CSS::Filter::Color::Operation::Brightness: {
+                    // Applies a linear multiplier to input image, making it appear more or less bright.
+                    // A value of 0% will create an image that is completely black. A value of 100% leaves the input unchanged.
+                    // Values of amount over 100% are allowed, providing brighter results.
                     apply_color_filter(Gfx::BrightnessFilter { amount });
                     break;
                 }
                 case CSS::Filter::Color::Operation::Contrast: {
-                    apply_color_filter(Gfx::ContrastFilter { amount_clammped });
+                    // Adjusts the contrast of the input. A value of 0% will create an image that is completely gray.
+                    // A value of 100% leaves the input unchanged. Values of amount over 100% are allowed, providing results with more contrast.
+                    apply_color_filter(Gfx::ContrastFilter { amount });
                     break;
                 }
                 case CSS::Filter::Color::Operation::Invert: {
+                    // Inverts the samples in the input image. The passed parameter defines the proportion of the conversion.
+                    // A value of 100% is completely inverted. A value of 0% leaves the input unchanged.
                     apply_color_filter(Gfx::InvertFilter { amount_clammped });
                     break;
                 }
                 case CSS::Filter::Color::Operation::Opacity: {
+                    // Applies transparency to the samples in the input image. The passed parameter defines the proportion of the conversion.
+                    // A value of 0% is completely transparent. A value of 100% leaves the input unchanged.
                     apply_color_filter(Gfx::OpacityFilter { amount_clammped });
                     break;
                 }
                 case CSS::Filter::Color::Operation::Sepia: {
+                    // Converts the input image to sepia. The passed parameter defines the proportion of the conversion.
+                    // A value of 100% is completely sepia. A value of 0% leaves the input unchanged.
                     apply_color_filter(Gfx::SepiaFilter { amount_clammped });
                     break;
                 }
