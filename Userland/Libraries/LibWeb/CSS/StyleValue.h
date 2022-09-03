@@ -107,12 +107,13 @@ struct DropShadow {
     Length offset_y;
     Optional<Length> radius {};
     Optional<Color> color {};
-    struct ResolvedLengths {
+    struct Resolved {
         float offset_x;
         float offset_y;
-        Optional<float> radius {};
+        float radius;
+        Color color;
     };
-    ResolvedLengths resolved_lengths(Layout::Node const&) const;
+    Resolved resolved(Layout::Node const&) const;
 };
 struct HueRotate {
     struct Zero { };
@@ -131,7 +132,7 @@ struct Color {
         Saturate,
     } operation;
     Optional<NumberPercentage> amount {};
-    float resolved_amount(float default_value = 1.0f) const;
+    float resolved_amount() const;
 };
 };
 
@@ -861,7 +862,7 @@ private:
     {
     }
 
-    // FIXME: This should allow SVG urls too :^(
+    // FIXME: No support for SVG filters yet
     Vector<FilterFunction> m_filter_value_list;
 };
 

@@ -1172,29 +1172,34 @@ bool ContentStyleValue::equals(StyleValue const& other) const
 float Filter::Blur::resolved_radius(Layout::Node const& node) const
 {
     // Note: The radius/sigma of the blur needs to be doubled for LibGfx's blur functions.
+    // Default value when omitted is 0px.
     auto sigma = 0;
     if (radius.has_value())
         sigma = radius->resolved(node).to_px(node);
     return sigma * 2;
 }
 
-Filter::DropShadow::ResolvedLengths Filter::DropShadow::resolved_lengths(Layout::Node const& node) const
+Filter::DropShadow::Resolved Filter::DropShadow::resolved(Layout::Node const& node) const
 {
-    return ResolvedLengths {
+    // The default value for omitted values is missing length values set to 0
+    // and the missing used color is taken from the color property.
+    return Resolved {
         offset_x.resolved(node).to_px(node),
         offset_y.resolved(node).to_px(node),
-        radius.has_value() ? Optional<float> { radius->resolved(node).to_px(node) } : Optional<float> {}
+        radius.has_value() ? radius->resolved(node).to_px(node) : 0.0f,
+        color.has_value() ? *color : node.computed_values().color()
     };
 }
 
 float Filter::HueRotate::angle_degrees() const
 {
+    // Default value when omitted is 0deg.
     if (!angle.has_value())
         return 0.0f;
     return angle->visit([&](Angle const& angle) { return angle.to_degrees(); }, [&](auto) { return 0.0f; });
 }
 
-float Filter::Color::resolved_amount(float default_value) const
+float Filter::Color::resolved_amount() const
 {
     if (amount.has_value()) {
         if (amount->is_percentage())
@@ -1202,7 +1207,8 @@ float Filter::Color::resolved_amount(float default_value) const
         else
             return amount->number().value();
     }
-    return default_value;
+    // All color filters (brightness, sepia, etc) have a default amount of 1.
+    return 1.0f;
 }
 
 String FilterValueListStyleValue::to_string() const

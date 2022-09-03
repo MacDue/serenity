@@ -76,14 +76,30 @@ void apply_filter_list(Gfx::Bitmap& target_bitmap, Layout::Node const& node, Spa
 void apply_backdrop_filter(PaintContext& context, Layout::Node const& node, Gfx::FloatRect const& backdrop_rect, BorderRadiiData const& border_radii_data, CSS::BackdropFilter const& backdrop_filter)
 {
     auto backdrop_region = backdrop_rect.to_rounded<int>();
-    ScopedCornerRadiusClip corner_clipper { context.painter(), backdrop_region, border_radii_data };
+
+    // FIXME: Go through the steps to find the "Backdrop Root Image"
+    // https://drafts.fxtf.org/filter-effects-2/#BackdropRoot
+
+    // 1. Copy the Backdrop Root Image into a temporary buffer, such as a raster image. Call this buffer T’.
     auto maybe_backdrop_bitmap = context.painter().get_region_bitmap(backdrop_region, Gfx::BitmapFormat::BGRA8888);
     if (maybe_backdrop_bitmap.is_error()) {
         dbgln("Failed get region bitmap for backdrop-filter");
         return;
     }
     auto backdrop_bitmap = maybe_backdrop_bitmap.release_value();
+    // 2. Apply the backdrop-filter’s filter operations to the entire contents of T'.
     apply_filter_list(*backdrop_bitmap, node, backdrop_filter.filters());
+
+    // FIXME: 3. If element B has any transforms (between B and the Backdrop Root), apply the inverse of those transforms to the contents of T’.
+
+    // 4. Apply a clip to the contents of T’, using the border box of element B, including border-radius if specified. Note that the children of B are not considered for the sizing or location of this clip.
+    ScopedCornerRadiusClip corner_clipper { context.painter(), backdrop_region, border_radii_data };
+
+    // FIXME: 5. Draw all of element B, including its background, border, and any children elements, into T’.
+
+    // FXIME: 6. If element B has any transforms, effects, or clips, apply those to T’.
+
+    // 7. Composite the contents of T’ into element B’s parent, using source-over compositing.
     context.painter().blit(backdrop_region.location(), *backdrop_bitmap, backdrop_bitmap->rect());
 }
 

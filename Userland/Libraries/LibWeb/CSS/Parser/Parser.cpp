@@ -4466,6 +4466,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
         };
 
         if (filter_token == FilterToken::Blur) {
+            // blur( <length>? )
             if (!tokens.has_next_token())
                 return Filter::Blur {};
             auto blur_radius = parse_length(tokens.next_token());
@@ -4508,6 +4509,7 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             }
             return if_no_more_tokens_return(Filter::DropShadow { *x_offset, *y_offset, maybe_radius, maybe_color });
         } else if (filter_token == FilterToken::HueRotate) {
+            // hue-rotate( [ <angle> | <zero> ]? )
             if (!tokens.has_next_token())
                 return Filter::HueRotate {};
             auto& token = tokens.next_token();
@@ -4528,6 +4530,14 @@ RefPtr<StyleValue> Parser::parse_filter_value_list_value(Vector<ComponentValue> 
             Angle angle { angle_value, angle_unit.release_value() };
             return if_no_more_tokens_return(Filter::HueRotate { angle });
         } else {
+            // Simple filters:
+            // brightness( <number-percentage>? )
+            // contrast( <number-percentage>? )
+            // grayscale( <number-percentage>? )
+            // invert( <number-percentage>? )
+            // opacity( <number-percentage>? )
+            // sepia( <number-percentage>? )
+            // saturate( <number-percentage>? )
             if (!tokens.has_next_token())
                 return Filter::Color { filter_token_to_operation(filter_token) };
             auto amount = parse_number_percentage(tokens.next_token());
