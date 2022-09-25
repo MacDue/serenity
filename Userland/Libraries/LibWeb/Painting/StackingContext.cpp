@@ -304,7 +304,7 @@ void StackingContext::paint(PaintContext& context) const
         // We need to copy the background at the destination because a bunch of our rendering effects now rely on
         // being able to sample the painter (see border radii, shadows, filters, etc).
         auto try_get_scaled_destination_bitmap = [&]() -> ErrorOr<NonnullRefPtr<Gfx::Bitmap>> {
-            auto bitmap = TRY(context.painter().get_region_bitmap(destination_rect, Gfx::BitmapFormat::BGRA8888));
+            auto bitmap = TRY(context.painter().get_region_bitmap(destination_rect, Gfx::BitmapFormat::BGRA8888, destination_rect));
             if (source_rect.size() != transformed_destination_rect.size()) {
                 bitmap = TRY(bitmap->scaled(
                     static_cast<float>(source_rect.width()) / transformed_destination_rect.width(),

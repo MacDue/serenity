@@ -93,12 +93,13 @@ Gfx::FloatRect PaintableBox::absolute_rect() const
 
 Gfx::FloatRect PaintableBox::compute_absolute_paint_rect() const
 {
+    // FIXME: This likely incomplete:
     auto rect = absolute_border_box_rect();
     auto resolved_box_shadow_data = resolve_box_shadow_data();
     for (auto const& shadow : resolved_box_shadow_data) {
         if (shadow.placement == ShadowPlacement::Inner)
             continue;
-        auto inflate = shadow.spread_distance; // + shadow.blur_radius * 2;
+        auto inflate = shadow.spread_distance + shadow.blur_radius;
         auto shadow_rect = rect.inflated(inflate, inflate, inflate, inflate).translated(shadow.offset_x, shadow.offset_y);
         rect = rect.united(shadow_rect);
     }
