@@ -62,6 +62,51 @@ enum class FlexBasis {
     Auto,
 };
 
+enum class RectangularColorSpace {
+    SRGB,
+    SRGBLinear,
+    LAB,
+    OKLAB,
+    XYZ,
+    XYZD50,
+    ZYZD65
+};
+
+enum class PolarColorSpace {
+    HSL,
+    HWB,
+    LCH,
+    OKLCH
+};
+
+enum class HueInterpolationMethod {
+    Shorter,
+    Longer,
+    Increasing,
+    Decreasing,
+    Specified
+};
+
+struct ColorInterpolationMethod {
+    Variant<RectangularColorSpace, PolarColorSpace> color_space;
+    HueInterpolationMethod hue_interpolation_method;
+};
+
+struct AngularColorStop {
+    Color color;
+    Optional<AnglePercentage> position;
+    Optional<AnglePercentage> second_position = {};
+};
+
+struct AngularColorHint {
+    AnglePercentage value;
+};
+
+struct AngularColorStopListElement {
+    Optional<AngularColorHint> transition_hint;
+    AngularColorStop color_stop;
+};
+
 // Note: The sides must be before the corners in this enum (as this order is used in parsing).
 enum class SideOrCorner {
     Top,
@@ -174,6 +219,7 @@ public:
         Calculated,
         Color,
         Content,
+        ConicGradient,
         ExplicitTrackSizing,
         FilterValueList,
         Flex,
@@ -219,6 +265,7 @@ public:
     bool is_calculated() const { return type() == Type::Calculated; }
     bool is_color() const { return type() == Type::Color; }
     bool is_content() const { return type() == Type::Content; }
+    bool is_conic_gradient() const { return type() == Type::ConicGradient; }
     bool is_filter_value_list() const { return type() == Type::FilterValueList; }
     bool is_flex() const { return type() == Type::Flex; }
     bool is_flex_flow() const { return type() == Type::FlexFlow; }
@@ -262,6 +309,7 @@ public:
     CalculatedStyleValue const& as_calculated() const;
     ColorStyleValue const& as_color() const;
     ContentStyleValue const& as_content() const;
+    ConicGradientStyleValue const& as_conic_gradient() const;
     FilterValueListStyleValue const& as_filter_value_list() const;
     FlexFlowStyleValue const& as_flex_flow() const;
     FlexStyleValue const& as_flex() const;
@@ -303,6 +351,7 @@ public:
     CalculatedStyleValue& as_calculated() { return const_cast<CalculatedStyleValue&>(const_cast<StyleValue const&>(*this).as_calculated()); }
     ColorStyleValue& as_color() { return const_cast<ColorStyleValue&>(const_cast<StyleValue const&>(*this).as_color()); }
     ContentStyleValue& as_content() { return const_cast<ContentStyleValue&>(const_cast<StyleValue const&>(*this).as_content()); }
+    ConicGradientStyleValue& as_conic_gradient() { return const_cast<ConicGradientStyleValue&>(const_cast<StyleValue const&>(*this).as_conic_gradient()); }
     FilterValueListStyleValue& as_filter_value_list() { return const_cast<FilterValueListStyleValue&>(const_cast<StyleValue const&>(*this).as_filter_value_list()); }
     FlexFlowStyleValue& as_flex_flow() { return const_cast<FlexFlowStyleValue&>(const_cast<StyleValue const&>(*this).as_flex_flow()); }
     FlexStyleValue& as_flex() { return const_cast<FlexStyleValue&>(const_cast<StyleValue const&>(*this).as_flex()); }
@@ -1136,6 +1185,45 @@ private:
     AK::URL m_url;
     WeakPtr<DOM::Document> m_document;
     RefPtr<Gfx::Bitmap> m_bitmap;
+};
+
+class ConicGradientStyleValue final : public AbstractImageStyleValue {
+    static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+    {
+        VERIFY(color_stop_list.size() >= 2);
+        return adopt_ref(*new ConicGradientStyleValue(from_angle, color_interpolation_method, move(color_stop_list)));
+    }
+
+    virtual String to_string() const override;
+
+    void paint(PaintContext&, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const override;
+
+    virtual bool equals(StyleValue const& other) const override;
+
+    Vector<AngularColorStopListElement> const& color_stop_list() const
+    {
+        return m_color_stop_list;
+    }
+
+    float angle_degrees() const;
+
+    bool is_paintable() const override { return true; }
+
+    virtual ~ConicGradientStyleValue() override = default;
+
+private:
+    ConicGradientStyleValue(Angle from_angle, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+        : AbstractImageStyleValue(Type::ConicGradient)
+        , m_from_angle(from_angle)
+        , m_color_interpolation_method(color_interpolation_method)
+        , m_color_stop_list(move(color_stop_list))
+    {
+    }
+
+    Angle m_from_angle;
+    ColorInterpolationMethod m_color_interpolation_method;
+    Vector<AngularColorStopListElement> m_color_stop_list;
+    // FIXME: Support at <position>
 };
 
 class LinearGradientStyleValue final : public AbstractImageStyleValue {

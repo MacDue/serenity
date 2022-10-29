@@ -37,6 +37,7 @@ class Clip;
 class CalculatedStyleValue;
 class ColorStyleValue;
 class ContentStyleValue;
+class ConicGradientStyleValue;
 class CSSConditionRule;
 class CSSGroupingRule;
 class CSSImportRule;

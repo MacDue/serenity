@@ -96,6 +96,12 @@ ContentStyleValue const& StyleValue::as_content() const
     return static_cast<ContentStyleValue const&>(*this);
 }
 
+ConicGradientStyleValue const& StyleValue::as_conic_gradient() const
+{
+    VERIFY(is_conic_gradient());
+    return static_cast<ConicGradientStyleValue const&>(*this);
+}
+
 FilterValueListStyleValue const& StyleValue::as_filter_value_list() const
 {
     VERIFY(is_filter_value_list());
@@ -1855,6 +1861,25 @@ void LinearGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& 
 {
     VERIFY(m_resolved.has_value());
     Painting::paint_linear_gradient(context, dest_rect, m_resolved->data);
+}
+
+String ConicGradientStyleValue::to_string() const
+{
+    return "";
+}
+
+void ConicGradientStyleValue::paint(PaintContext&, Gfx::IntRect const&, CSS::ImageRendering) const
+{
+}
+
+bool ConicGradientStyleValue::equals(StyleValue const&) const
+{
+    return false;
+}
+
+float ConicGradientStyleValue::angle_degrees() const
+{
+    return 0.0f;
 }
 
 bool InheritStyleValue::equals(StyleValue const& other) const
