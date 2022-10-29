@@ -2560,12 +2560,12 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     bool got_from_angle = false;
     bool got_color_interpolation_method = false;
     while (token.is(Token::Type::Ident)) {
-        (void)tokens.next_token();
         auto token_string = token.token().ident();
 
         if (token_string.equals_ignoring_case("from"sv)) {
             if (got_from_angle)
                 return {};
+            (void)tokens.next_token();
 
             tokens.skip_whitespace();
             if (!tokens.has_next_token())
@@ -2585,6 +2585,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
         } else if (token_string.equals_ignoring_case("in"sv)) {
             if (got_color_interpolation_method)
                 return {};
+            (void)tokens.next_token();
             TODO();
             got_color_interpolation_method = true;
         } else {
