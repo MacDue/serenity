@@ -2581,16 +2581,21 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
                 return {};
 
             from_angle = Angle(angle, *angle_type);
+            got_from_angle = true;
         } else if (token_string.equals_ignoring_case("in"sv)) {
             if (got_color_interpolation_method)
                 return {};
             TODO();
+            got_color_interpolation_method = true;
         } else {
-            return {};
+            break;
         }
+        token = tokens.peek_token();
     }
 
     tokens.skip_whitespace();
+    if (!tokens.has_next_token())
+        return {};
     if ((got_from_angle || got_color_interpolation_method) && !tokens.next_token().is(Token::Type::Comma))
         return {};
 

@@ -254,7 +254,7 @@ public:
 
     Type type() const { return m_type; }
 
-    bool is_abstract_image() const { return AK::first_is_one_of(type(), Type::Image, Type::LinearGradient); }
+    bool is_abstract_image() const { return AK::first_is_one_of(type(), Type::Image, Type::LinearGradient, Type::ConicGradient); }
     bool is_angle() const { return type() == Type::Angle; }
     bool is_background() const { return type() == Type::Background; }
     bool is_background_repeat() const { return type() == Type::BackgroundRepeat; }

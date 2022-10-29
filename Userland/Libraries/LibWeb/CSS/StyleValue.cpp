@@ -1703,6 +1703,26 @@ void ImageStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect
         context.painter().draw_scaled_bitmap(dest_rect, *m_bitmap, m_bitmap->rect(), 1.0f, to_gfx_scaling_mode(image_rendering));
 }
 
+static void serialize_color_stop_list(StringBuilder& builder, auto const& color_stop_list)
+{
+    bool first = true;
+    for (auto const& element : color_stop_list) {
+        if (!first)
+            builder.append(", "sv);
+
+        if (element.transition_hint.has_value()) {
+            builder.appendff("{}, "sv, element.transition_hint->value.to_string());
+        }
+
+        serialize_a_srgb_value(builder, element.color_stop.color);
+        for (auto position : Array { &element.color_stop.position, &element.color_stop.second_position }) {
+            if (position->has_value())
+                builder.appendff(" {}"sv, (*position)->to_string());
+        }
+        first = false;
+    }
+}
+
 String LinearGradientStyleValue::to_string() const
 {
     StringBuilder builder;
@@ -1742,22 +1762,7 @@ String LinearGradientStyleValue::to_string() const
             builder.appendff("{}, "sv, angle.to_string());
         });
 
-    bool first = true;
-    for (auto const& element : m_color_stop_list) {
-        if (!first)
-            builder.append(", "sv);
-
-        if (element.transition_hint.has_value()) {
-            builder.appendff("{}, "sv, element.transition_hint->value.to_string());
-        }
-
-        serialize_a_srgb_value(builder, element.color_stop.color);
-        for (auto position : Array { &element.color_stop.position, &element.color_stop.second_position }) {
-            if (position->has_value())
-                builder.appendff(" {}"sv, (*position)->to_string());
-        }
-        first = false;
-    }
+    serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(")"sv);
     return builder.to_string();
 }
@@ -1865,7 +1870,11 @@ void LinearGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& 
 
 String ConicGradientStyleValue::to_string() const
 {
-    return "";
+    StringBuilder builder;
+    builder.appendff("conic-gradient(from {}, "sv, m_from_angle.to_string());
+    serialize_color_stop_list(builder, m_color_stop_list);
+    builder.append(')');
+    return builder.to_string();
 }
 
 void ConicGradientStyleValue::paint(PaintContext&, Gfx::IntRect const&, CSS::ImageRendering) const
