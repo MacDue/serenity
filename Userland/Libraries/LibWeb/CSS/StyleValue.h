@@ -1188,6 +1188,7 @@ private:
 };
 
 class ConicGradientStyleValue final : public AbstractImageStyleValue {
+public:
     static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
     {
         VERIFY(color_stop_list.size() >= 2);

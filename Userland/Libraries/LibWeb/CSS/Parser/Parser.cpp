@@ -2297,6 +2297,97 @@ Optional<AK::URL> Parser::parse_url_function(ComponentValue const& component_val
     return {};
 }
 
+template<typename TElement, typename TColorStop, typename TColorHint, typename TPosition>
+static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_position, auto get_position, auto parse_color, auto parse_dimension)
+{
+    enum class ElementType {
+        Garbage,
+        ColorStop,
+        ColorHint
+    };
+
+    auto parse_color_stop_list_element = [&](TElement& element) -> ElementType {
+        tokens.skip_whitespace();
+        if (!tokens.has_next_token())
+            return ElementType::Garbage;
+        auto const& token = tokens.next_token();
+
+        Gfx::Color color;
+        Optional<TPosition> position;
+        Optional<TPosition> second_position;
+        auto dimension = parse_dimension(token);
+        if (dimension.has_value() && is_position(*dimension)) {
+            // [<T-percentage> <color>] or [<T-percentage>]
+            position = get_position(*dimension);
+            tokens.skip_whitespace();
+            // <T-percentage>
+            if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma)) {
+                element.transition_hint = TColorHint { *position };
+                return ElementType::ColorHint;
+            }
+            // <T-percentage> <color>
+            auto maybe_color = parse_color(tokens.next_token());
+            if (!maybe_color.has_value())
+                return ElementType::Garbage;
+            color = *maybe_color;
+        } else {
+            // [<color> <T-percentage>?]
+            auto maybe_color = parse_color(token);
+            if (!maybe_color.has_value())
+                return ElementType::Garbage;
+            color = *maybe_color;
+            tokens.skip_whitespace();
+            // Allow up to [<color> <T-percentage> <T-percentage>] (double-position color stops)
+            // Note: Double-position color stops only appear to be valid in this order.
+            for (auto stop_position : Array { &position, &second_position }) {
+                if (tokens.has_next_token() && !tokens.peek_token().is(Token::Type::Comma)) {
+                    auto token = tokens.next_token();
+                    auto dimension = parse_dimension(token);
+                    if (!dimension.has_value() || !is_position(*dimension))
+                        return ElementType::Garbage;
+                    *stop_position = get_position(*dimension);
+                    tokens.skip_whitespace();
+                }
+            }
+        }
+
+        element.color_stop = TColorStop { color, position, second_position };
+        return ElementType::ColorStop;
+    };
+
+    TElement first_element {};
+    if (parse_color_stop_list_element(first_element) != ElementType::ColorStop)
+        return {};
+
+    if (!tokens.has_next_token())
+        return {};
+
+    Vector<TElement> color_stops { first_element };
+    while (tokens.has_next_token()) {
+        TElement list_element {};
+        tokens.skip_whitespace();
+        if (!tokens.next_token().is(Token::Type::Comma))
+            return {};
+        auto element_type = parse_color_stop_list_element(list_element);
+        if (element_type == ElementType::ColorHint) {
+            // <color-hint>, <color-stop>
+            tokens.skip_whitespace();
+            if (!tokens.next_token().is(Token::Type::Comma))
+                return {};
+            // Note: This fills in the color stop on the same list_element as the color hint (it does not overwrite it).
+            if (parse_color_stop_list_element(list_element) != ElementType::ColorStop)
+                return {};
+        } else if (element_type == ElementType::ColorStop) {
+            // <color-stop>
+        } else {
+            return {};
+        }
+        color_stops.append(list_element);
+    }
+
+    return color_stops;
+}
+
 RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& component_value)
 {
     using GradientType = LinearGradientStyleValue::GradientType;
@@ -2429,93 +2520,97 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
 
     // <color-stop-list> =
     //      <linear-color-stop> , [ <linear-color-hint>? , <linear-color-stop> ]#
-
-    enum class ElementType {
-        Garbage,
-        ColorStop,
-        ColorHint
+    auto is_length_percentage = [](Dimension& dimension) {
+        return dimension.is_length_percentage();
     };
-
-    auto parse_color_stop_list_element = [&](ColorStopListElement& element) -> ElementType {
-        tokens.skip_whitespace();
-        if (!tokens.has_next_token())
-            return ElementType::Garbage;
-        auto const& token = tokens.next_token();
-
-        Gfx::Color color;
-        Optional<LengthPercentage> position;
-        Optional<LengthPercentage> second_position;
-        auto dimension = parse_dimension(token);
-        if (dimension.has_value() && dimension->is_length_percentage()) {
-            // [<length-percentage> <color>] or [<length-percentage>]
-            position = dimension->length_percentage();
-            tokens.skip_whitespace();
-            // <length-percentage>
-            if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma)) {
-                element.transition_hint = GradientColorHint { *position };
-                return ElementType::ColorHint;
-            }
-            // <length-percentage> <color>
-            auto maybe_color = parse_color(tokens.next_token());
-            if (!maybe_color.has_value())
-                return ElementType::Garbage;
-            color = *maybe_color;
-        } else {
-            // [<color> <length-percentage>?]
-            auto maybe_color = parse_color(token);
-            if (!maybe_color.has_value())
-                return ElementType::Garbage;
-            color = *maybe_color;
-            tokens.skip_whitespace();
-            // Allow up to [<color> <length-percentage> <length-percentage>] (double-position color stops)
-            // Note: Double-position color stops only appear to be valid in this order.
-            for (auto stop_position : Array { &position, &second_position }) {
-                if (tokens.has_next_token() && !tokens.peek_token().is(Token::Type::Comma)) {
-                    auto token = tokens.next_token();
-                    auto dimension = parse_dimension(token);
-                    if (!dimension.has_value() || !dimension->is_length_percentage())
-                        return ElementType::Garbage;
-                    *stop_position = dimension->length_percentage();
-                    tokens.skip_whitespace();
-                }
-            }
-        }
-
-        element.color_stop = GradientColorStop { color, position, second_position };
-        return ElementType::ColorStop;
+    auto get_length_percentage = [](Dimension& dimension) {
+        return dimension.length_percentage();
     };
+    auto color_stops = parse_color_stop_list<ColorStopListElement, GradientColorStop, GradientColorHint, LengthPercentage>(
+        tokens, is_length_percentage, get_length_percentage,
+        [&](auto& token) { return parse_color(token); },
+        [&](auto& token) { return parse_dimension(token); });
 
-    ColorStopListElement first_element {};
-    if (parse_color_stop_list_element(first_element) != ElementType::ColorStop)
+    if (!color_stops.has_value())
         return {};
+
+    return LinearGradientStyleValue::create(gradient_direction, move(*color_stops), gradient_type, repeating_gradient);
+}
+
+RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& component_value)
+{
+    if (!component_value.is_function())
+        return {};
+    auto function_name = component_value.function().name();
+
+    if (!function_name.equals_ignoring_case("conic-gradient"sv))
+        return {};
+
+    TokenStream tokens { component_value.function().values() };
+    tokens.skip_whitespace();
 
     if (!tokens.has_next_token())
         return {};
 
-    Vector<ColorStopListElement> color_stops { first_element };
-    while (tokens.has_next_token()) {
-        ColorStopListElement list_element {};
-        tokens.skip_whitespace();
-        if (!tokens.next_token().is(Token::Type::Comma))
-            return {};
-        auto element_type = parse_color_stop_list_element(list_element);
-        if (element_type == ElementType::ColorHint) {
-            // <linear-color-hint>, <linear-color-stop>
+    Angle from_angle(0, Angle::Type::Deg);
+
+    // conic-gradient( [ [ from <angle> ]? [ at <position> ]? ]  ||
+    // <color-interpolation-method> , <angular-color-stop-list> )
+    auto token = tokens.peek_token();
+    bool got_from_angle = false;
+    bool got_color_interpolation_method = false;
+    while (token.is(Token::Type::Ident)) {
+        (void)tokens.next_token();
+        auto token_string = token.token().ident();
+
+        if (token_string.equals_ignoring_case("from"sv)) {
+            if (got_from_angle)
+                return {};
+
             tokens.skip_whitespace();
-            if (!tokens.next_token().is(Token::Type::Comma))
+            if (!tokens.has_next_token())
                 return {};
-            // Note: This fills in the color stop on the same list_element as the color hint (it does not overwrite it).
-            if (parse_color_stop_list_element(list_element) != ElementType::ColorStop)
+            auto angle_token = tokens.next_token();
+            if (!angle_token.is(Token::Type::Dimension))
                 return {};
-        } else if (element_type == ElementType::ColorStop) {
-            // <linear-color-stop>
+
+            float angle = angle_token.token().dimension_value();
+            auto angle_unit = angle_token.token().dimension_unit();
+            auto angle_type = Angle::unit_from_name(angle_unit);
+            if (!angle_type.has_value())
+                return {};
+
+            from_angle = Angle(angle, *angle_type);
+        } else if (token_string.equals_ignoring_case("in"sv)) {
+            if (got_color_interpolation_method)
+                return {};
+            TODO();
         } else {
             return {};
         }
-        color_stops.append(list_element);
     }
 
-    return LinearGradientStyleValue::create(gradient_direction, move(color_stops), gradient_type, repeating_gradient);
+    tokens.skip_whitespace();
+    if ((got_from_angle || got_color_interpolation_method) && !tokens.next_token().is(Token::Type::Comma))
+        return {};
+
+    // <angular-color-stop-list> =
+    //   <angular-color-stop> , [ <angular-color-hint>? , <angular-color-stop> ]#
+    auto is_angle_percentage = [](Dimension& dimension) {
+        return dimension.is_angle_percentage();
+    };
+    auto get_angle_percentage = [](Dimension& dimension) {
+        return dimension.angle_percentage();
+    };
+    auto color_stops = parse_color_stop_list<AngularColorStopListElement, AngularColorStop, AngularColorHint, AnglePercentage>(
+        tokens, is_angle_percentage, get_angle_percentage,
+        [&](auto& token) { return parse_color(token); },
+        [&](auto& token) { return parse_dimension(token); });
+
+    if (!color_stops.has_value())
+        return {};
+
+    return ConicGradientStyleValue ::create(from_angle, { RectangularColorSpace::SRGB, HueInterpolationMethod::Shorter }, move(*color_stops));
 }
 
 CSSRule* Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
@@ -3486,7 +3581,10 @@ RefPtr<StyleValue> Parser::parse_image_value(ComponentValue const& component_val
     if (url.has_value())
         return ImageStyleValue::create(url.value());
     // FIXME: Implement other kinds of gradient
-    return parse_linear_gradient_function(component_value);
+    auto linear_gradient = parse_linear_gradient_function(component_value);
+    if (linear_gradient)
+        return linear_gradient;
+    return parse_conic_gradient_function(component_value);
 }
 
 template<typename ParseFunction>
