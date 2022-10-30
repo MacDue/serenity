@@ -2560,22 +2560,28 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     bool got_from_angle = false;
     bool got_color_interpolation_method = false;
     bool got_at_position = false;
+
     while (token.is(Token::Type::Ident)) {
         auto token_string = token.token().ident();
+        auto consume_identifier = [&](auto identifier) {
+            if (token_string.equals_ignoring_case(identifier)) {
+                (void)tokens.next_token();
+                tokens.skip_whitespace();
+                return true;
+            }
+            return false;
+        };
 
-        if (token_string.equals_ignoring_case("from"sv)) {
+        if (consume_identifier("from"sv)) {
             // from <angle>
             if (got_from_angle || got_at_position)
                 return {};
-            (void)tokens.next_token();
-
-            tokens.skip_whitespace();
             if (!tokens.has_next_token())
                 return {};
+
             auto angle_token = tokens.next_token();
             if (!angle_token.is(Token::Type::Dimension))
                 return {};
-
             float angle = angle_token.token().dimension_value();
             auto angle_unit = angle_token.token().dimension_unit();
             auto angle_type = Angle::unit_from_name(angle_unit);
@@ -2584,16 +2590,15 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
 
             from_angle = Angle(angle, *angle_type);
             got_from_angle = true;
-        } else if (token_string.equals_ignoring_case("at"sv)) {
+        } else if (consume_identifier("at"sv)) {
             // at <position>
             if (got_at_position)
                 return {};
             got_at_position = true;
-        } else if (token_string.equals_ignoring_case("in"sv)) {
+        } else if (consume_identifier("in"sv)) {
             // <color-interpolation-method>
             if (got_color_interpolation_method)
                 return {};
-            (void)tokens.next_token();
             dbgln("FIXME: Parse color interpolation method for conic-gradient()");
             got_color_interpolation_method = true;
         } else {

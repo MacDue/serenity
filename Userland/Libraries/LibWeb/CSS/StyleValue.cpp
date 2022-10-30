@@ -1856,7 +1856,7 @@ void LinearGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& 
 String ConicGradientStyleValue::to_string() const
 {
     StringBuilder builder;
-    builder.appendff("conic-gradient(from {}, "sv, m_from_angle.to_string());
+    builder.appendff("conic-gradient("sv, m_from_angle.to_string());
     serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(')');
     return builder.to_string();
