@@ -258,7 +258,7 @@ void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_re
     float approximate_circumference = min(gradient_rect.width(), gradient_rect.height()) * AK::Pi<float>;
     GradientLine gradient_line(round_to<int>(approximate_circumference), 0, data.color_stops);
     auto center = Gfx::IntRect { { 0, 0 }, gradient_rect.size() }.center();
-    float start_angle = data.start_angle + 90.0f;
+    float start_angle = (360.0f - data.start_angle) + 90.0f;
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
             auto point = Gfx::IntPoint { x, y } - center;

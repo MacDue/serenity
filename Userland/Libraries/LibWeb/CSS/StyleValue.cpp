@@ -1881,7 +1881,7 @@ bool ConicGradientStyleValue::equals(StyleValue const&) const
 
 float ConicGradientStyleValue::angle_degrees() const
 {
-    return 0.0f;
+    return m_from_angle.to_degrees();
 }
 
 bool InheritStyleValue::equals(StyleValue const& other) const
