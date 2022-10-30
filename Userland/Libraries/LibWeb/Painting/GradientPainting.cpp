@@ -33,10 +33,8 @@ static float calulate_gradient_length(Gfx::IntSize const& gradient_size, float g
     return calulate_gradient_length(gradient_size, sin_angle, cos_angle);
 }
 
-LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::FloatSize const& gradient_size, CSS::LinearGradientStyleValue const& linear_gradient)
+static ColorStopList resolve_color_stop_positions(auto const& color_stop_list, float gradient_length, auto resolve_position_to_float)
 {
-    auto& color_stop_list = linear_gradient.color_stop_list();
-
     VERIFY(color_stop_list.size() >= 2);
     ColorStopList resolved_color_stops;
 
@@ -55,22 +53,18 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
             resolved_color_stops.append(resolved_stop);
     }
 
-    auto gradient_angle = linear_gradient.angle_degrees(gradient_size);
-    auto gradient_length_px = calulate_gradient_length(gradient_size.to_rounded<int>(), gradient_angle);
-    auto gradient_length = CSS::Length::make_px(gradient_length_px);
-
     // 1. If the first color stop does not have a position, set its position to 0%.
     resolved_color_stops.first().position = 0;
     //    If the last color stop does not have a position, set its position to 100%
-    resolved_color_stops.last().position = gradient_length_px;
+    resolved_color_stops.last().position = gradient_length;
 
     // 2. If a color stop or transition hint has a position that is less than the
     //    specified position of any color stop or transition hint before it in the list,
     //    set its position to be equal to the largest specified position of any color stop
     //    or transition hint before it.
     auto max_previous_color_stop_or_hint = resolved_color_stops[0].position;
-    auto resolve_stop_position = [&](auto& length_percentage) {
-        float value = length_percentage.resolved(node, gradient_length).to_px(node);
+    auto resolve_stop_position = [&](auto& position) {
+        float value = resolve_position_to_float(position);
         value = max(value, max_previous_color_stop_or_hint);
         max_previous_color_stop_or_hint = value;
         return value;
@@ -127,6 +121,19 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
             color_stop.transition_hint = stop_length > 0 ? (*color_stop.transition_hint - previous_color_stop.position) / stop_length : 0;
         }
     }
+
+    return resolved_color_stops;
+}
+
+LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::FloatSize const& gradient_size, CSS::LinearGradientStyleValue const& linear_gradient)
+{
+    auto gradient_angle = linear_gradient.angle_degrees(gradient_size);
+    auto gradient_length_px = calulate_gradient_length(gradient_size.to_rounded<int>(), gradient_angle);
+    auto gradient_length = CSS::Length::make_px(gradient_length_px);
+
+    auto resolved_color_stops = resolve_color_stop_positions(linear_gradient.color_stop_list(), gradient_length_px, [&](auto const& length_percentage) {
+        return length_percentage.resolved(node, gradient_length).to_px(node);
+    });
 
     Optional<float> repeat_length = {};
     if (linear_gradient.is_repeating())

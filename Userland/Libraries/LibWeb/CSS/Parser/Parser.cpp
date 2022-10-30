@@ -2616,7 +2616,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     if (!color_stops.has_value())
         return {};
 
-    return ConicGradientStyleValue ::create(from_angle, { RectangularColorSpace::SRGB, HueInterpolationMethod::Shorter }, move(*color_stops));
+    return ConicGradientStyleValue::create(from_angle, { RectangularColorSpace::SRGB, HueInterpolationMethod::Shorter }, move(*color_stops));
 }
 
 CSSRule* Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
