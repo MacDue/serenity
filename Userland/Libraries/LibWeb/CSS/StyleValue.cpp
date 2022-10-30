@@ -1862,7 +1862,7 @@ String ConicGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
-void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const&) const override
+void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const&) const
 {
     if (!m_resolved.has_value())
         m_resolved = Painting::resolve_conic_gradient_data(node, *this);

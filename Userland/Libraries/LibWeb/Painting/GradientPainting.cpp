@@ -178,6 +178,41 @@ static float color_stop_step(ColorStop const& previous_stop, ColorStop const& ne
     return c;
 }
 
+class GradientLine {
+public:
+    GradientLine(int length, int start_offset, Span<ColorStop const> color_stops)
+    {
+        m_gradient_line_colors.resize(length);
+        // Note: color.mixed_with() performs premultiplied alpha mixing when necessary as defined in:
+        // https://drafts.csswg.org/css-images/#coloring-gradient-line
+        for (int loc = 0; loc < length; loc++) {
+            Gfx::Color gradient_color = color_stops[0].color.mixed_with(
+                color_stops[1].color,
+                color_stop_step(
+                    color_stops[0],
+                    color_stops[1],
+                    loc + start_offset));
+            for (size_t i = 1; i < color_stops.size() - 1; i++) {
+                gradient_color = gradient_color.mixed_with(
+                    color_stops[i + 1].color,
+                    color_stop_step(
+                        color_stops[i],
+                        color_stops[i + 1],
+                        loc + start_offset));
+            }
+            m_gradient_line_colors[loc] = gradient_color;
+        }
+    }
+
+    Gfx::Color lookup_color(int loc) const
+    {
+        return m_gradient_line_colors[clamp(loc, 0, m_gradient_line_colors.size() - 1)];
+    }
+
+private:
+    Vector<Gfx::Color, 1024> m_gradient_line_colors;
+};
+
 void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
 {
     float angle = normalized_gradient_angle_radians(data.gradient_angle);
@@ -195,37 +230,11 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
     // Rotate gradient line to be horizontal
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
 
-    Vector<Gfx::Color, 1024> gradient_line_colors;
     auto gradient_color_count = round_to<int>(data.repeat_length.value_or(length));
-    gradient_line_colors.resize(gradient_color_count);
     auto& color_stops = data.color_stops;
     auto start_offset = data.repeat_length.has_value() ? color_stops.first().position : 0.0f;
-    auto start_offset_int = round_to<int>(start_offset);
 
-    // Note: color.mixed_with() performs premultiplied alpha mixing when necessary as defined in:
-    // https://drafts.csswg.org/css-images/#coloring-gradient-line
-
-    for (int loc = 0; loc < gradient_color_count; loc++) {
-        Gfx::Color gradient_color = color_stops[0].color.mixed_with(
-            color_stops[1].color,
-            color_stop_step(
-                color_stops[0],
-                color_stops[1],
-                loc + start_offset_int));
-        for (size_t i = 1; i < color_stops.size() - 1; i++) {
-            gradient_color = gradient_color.mixed_with(
-                color_stops[i + 1].color,
-                color_stop_step(
-                    color_stops[i],
-                    color_stops[i + 1],
-                    loc + start_offset_int));
-        }
-        gradient_line_colors[loc] = gradient_color;
-    }
-
-    auto lookup_color = [&](int loc) {
-        return gradient_line_colors[clamp(loc, 0, gradient_color_count - 1)];
-    };
+    GradientLine gradient_line(gradient_color_count, round_to<int>(start_offset), color_stops);
 
     auto repeat_wrap_if_required = [&](float loc) {
         if (data.repeat_length.has_value())
@@ -238,14 +247,17 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
             auto loc = repeat_wrap_if_required((x * cos_angle - (gradient_rect.height() - y) * -sin_angle) - rotated_start_point_x - start_offset);
             auto blend = loc - static_cast<int>(loc);
             // Blend between the two neighbouring colors (this fixes some nasty aliasing issues at small angles)
-            auto gradient_color = lookup_color(loc).mixed_with(lookup_color(repeat_wrap_if_required(loc + 1)), blend);
+            auto gradient_color = gradient_line.lookup_color(loc).mixed_with(gradient_line.lookup_color(repeat_wrap_if_required(loc + 1)), blend);
             context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color, gradient_color.alpha() < 255);
         }
     }
 }
 
-void paint_conic_gradient(PaintContext&, Gfx::IntRect const&, ConicGradientData const&)
+void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, ConicGradientData const& data)
 {
+    (void)context;
+    (void)gradient_rect;
+    (void)data;
 }
 
 }
