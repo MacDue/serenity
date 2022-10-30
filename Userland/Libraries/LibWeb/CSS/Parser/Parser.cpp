@@ -2559,11 +2559,13 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     auto token = tokens.peek_token();
     bool got_from_angle = false;
     bool got_color_interpolation_method = false;
+    bool got_at_position = false;
     while (token.is(Token::Type::Ident)) {
         auto token_string = token.token().ident();
 
         if (token_string.equals_ignoring_case("from"sv)) {
-            if (got_from_angle)
+            // from <angle>
+            if (got_from_angle || got_at_position)
                 return {};
             (void)tokens.next_token();
 
@@ -2582,11 +2584,17 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
 
             from_angle = Angle(angle, *angle_type);
             got_from_angle = true;
+        } else if (token_string.equals_ignoring_case("at"sv)) {
+            // at <position>
+            if (got_at_position)
+                return {};
+            got_at_position = true;
         } else if (token_string.equals_ignoring_case("in"sv)) {
+            // <color-interpolation-method>
             if (got_color_interpolation_method)
                 return {};
             (void)tokens.next_token();
-            TODO();
+            dbgln("FIXME: Parse color interpolation method for conic-gradient()");
             got_color_interpolation_method = true;
         } else {
             break;
@@ -2616,7 +2624,9 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     if (!color_stops.has_value())
         return {};
 
-    return ConicGradientStyleValue::create(from_angle, { RectangularColorSpace::SRGB, HueInterpolationMethod::Shorter }, move(*color_stops));
+    // FIXME: This color interpolation method is just a placeholder till we use/parse this information.
+    ColorInterpolationMethod color_interpolation_method { RectangularColorSpace::SRGB, HueInterpolationMethod::Specified };
+    return ConicGradientStyleValue::create(from_angle, color_interpolation_method, move(*color_stops));
 }
 
 CSSRule* Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
