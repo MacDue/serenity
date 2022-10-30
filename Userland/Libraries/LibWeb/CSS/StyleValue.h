@@ -1202,6 +1202,8 @@ public:
 
     bool is_paintable() const override { return true; }
 
+    void resolve_for_size(Layout::Node const&, Gfx::FloatSize const&) const override;
+
     virtual ~ConicGradientStyleValue() override = default;
 
 private:
@@ -1217,6 +1219,8 @@ private:
     ColorInterpolationMethod m_color_interpolation_method;
     Vector<AngularColorStopListElement> m_color_stop_list;
     // FIXME: Support at <position>
+
+    mutable Optional<Painting::ConicGradientData> m_resolved;
 };
 
 class LinearGradientStyleValue final : public AbstractImageStyleValue {

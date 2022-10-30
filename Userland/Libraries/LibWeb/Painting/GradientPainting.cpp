@@ -151,6 +151,33 @@ ConicGradientData resolve_conic_gradient_data(Layout::Node const& node, CSS::Con
     return { conic_gradient.angle_degrees(), resolved_color_stops };
 }
 
+static float color_stop_step(ColorStop const& previous_stop, ColorStop const& next_stop, float position)
+{
+    if (position < previous_stop.position)
+        return 0;
+    if (position > next_stop.position)
+        return 1;
+    // For any given point between the two color stops,
+    // determine the point’s location as a percentage of the distance between the two color stops.
+    // Let this percentage be P.
+    auto stop_length = next_stop.position - previous_stop.position;
+    // FIXME: Avoids NaNs... Still not quite correct?
+    if (stop_length <= 0)
+        return 1;
+    auto p = (position - previous_stop.position) / stop_length;
+    if (!next_stop.transition_hint.has_value())
+        return p;
+    if (*next_stop.transition_hint >= 1)
+        return 0;
+    if (*next_stop.transition_hint <= 0)
+        return 1;
+    // Let C, the color weighting at that point, be equal to P^(logH(.5)).
+    auto c = AK::pow(p, AK::log<float>(0.5) / AK::log(*next_stop.transition_hint));
+    // The color at that point is then a linear blend between the colors of the two color stops,
+    // blending (1 - C) of the first stop and C of the second stop.
+    return c;
+}
+
 void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
 {
     float angle = normalized_gradient_angle_radians(data.gradient_angle);
@@ -167,32 +194,6 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
 
     // Rotate gradient line to be horizontal
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
-
-    auto color_stop_step = [&](auto& previous_stop, auto& next_stop, float position) -> float {
-        if (position < previous_stop.position)
-            return 0;
-        if (position > next_stop.position)
-            return 1;
-        // For any given point between the two color stops,
-        // determine the point’s location as a percentage of the distance between the two color stops.
-        // Let this percentage be P.
-        auto stop_length = next_stop.position - previous_stop.position;
-        // FIXME: Avoids NaNs... Still not quite correct?
-        if (stop_length <= 0)
-            return 1;
-        auto p = (position - previous_stop.position) / stop_length;
-        if (!next_stop.transition_hint.has_value())
-            return p;
-        if (*next_stop.transition_hint >= 1)
-            return 0;
-        if (*next_stop.transition_hint <= 0)
-            return 1;
-        // Let C, the color weighting at that point, be equal to P^(logH(.5)).
-        auto c = AK::pow(p, AK::log<float>(0.5) / AK::log(*next_stop.transition_hint));
-        // The color at that point is then a linear blend between the colors of the two color stops,
-        // blending (1 - C) of the first stop and C of the second stop.
-        return c;
-    };
 
     Vector<Gfx::Color, 1024> gradient_line_colors;
     auto gradient_color_count = round_to<int>(data.repeat_length.value_or(length));

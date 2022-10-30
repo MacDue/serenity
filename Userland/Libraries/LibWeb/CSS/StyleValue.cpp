@@ -1862,8 +1862,16 @@ String ConicGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
-void ConicGradientStyleValue::paint(PaintContext&, Gfx::IntRect const&, CSS::ImageRendering) const
+void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const&) const override
 {
+    if (!m_resolved.has_value())
+        m_resolved = Painting::resolve_conic_gradient_data(node, *this);
+}
+
+void ConicGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const
+{
+    VERIFY(m_resolved.has_value());
+    Painting::paint_conic_gradient(context, dest_rect, *m_resolved);
 }
 
 bool ConicGradientStyleValue::equals(StyleValue const&) const
