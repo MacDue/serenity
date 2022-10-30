@@ -2297,7 +2297,7 @@ Optional<AK::URL> Parser::parse_url_function(ComponentValue const& component_val
     return {};
 }
 
-template<typename TElement, typename TColorStop, typename TColorHint, typename TPosition>
+template<typename TElement>
 static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_position, auto get_position, auto parse_color, auto parse_dimension)
 {
     enum class ElementType {
@@ -2313,8 +2313,8 @@ static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_po
         auto const& token = tokens.next_token();
 
         Gfx::Color color;
-        Optional<TPosition> position;
-        Optional<TPosition> second_position;
+        Optional<typename TElement::PositionType> position;
+        Optional<typename TElement::PositionType> second_position;
         auto dimension = parse_dimension(token);
         if (dimension.has_value() && is_position(*dimension)) {
             // [<T-percentage> <color>] or [<T-percentage>]
@@ -2322,7 +2322,7 @@ static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_po
             tokens.skip_whitespace();
             // <T-percentage>
             if (!tokens.has_next_token() || tokens.peek_token().is(Token::Type::Comma)) {
-                element.transition_hint = TColorHint { *position };
+                element.transition_hint = typename TElement::ColorHint { *position };
                 return ElementType::ColorHint;
             }
             // <T-percentage> <color>
@@ -2351,7 +2351,7 @@ static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_po
             }
         }
 
-        element.color_stop = TColorStop { color, position, second_position };
+        element.color_stop = typename TElement::ColorStop { color, position, second_position };
         return ElementType::ColorStop;
     };
 
@@ -2526,7 +2526,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     auto get_length_percentage = [](Dimension& dimension) {
         return dimension.length_percentage();
     };
-    auto color_stops = parse_color_stop_list<ColorStopListElement, GradientColorStop, GradientColorHint, LengthPercentage>(
+    auto color_stops = parse_color_stop_list<LinearColorStopListElement>(
         tokens, is_length_percentage, get_length_percentage,
         [&](auto& token) { return parse_color(token); },
         [&](auto& token) { return parse_dimension(token); });
@@ -2608,7 +2608,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     auto get_angle_percentage = [](Dimension& dimension) {
         return dimension.angle_percentage();
     };
-    auto color_stops = parse_color_stop_list<AngularColorStopListElement, AngularColorStop, AngularColorHint, AnglePercentage>(
+    auto color_stops = parse_color_stop_list<AngularColorStopListElement>(
         tokens, is_angle_percentage, get_angle_percentage,
         [&](auto& token) { return parse_color(token); },
         [&](auto& token) { return parse_dimension(token); });

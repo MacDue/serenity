@@ -92,21 +92,6 @@ struct ColorInterpolationMethod {
     HueInterpolationMethod hue_interpolation_method;
 };
 
-struct AngularColorStop {
-    Color color;
-    Optional<AnglePercentage> position;
-    Optional<AnglePercentage> second_position = {};
-};
-
-struct AngularColorHint {
-    AnglePercentage value;
-};
-
-struct AngularColorStopListElement {
-    Optional<AngularColorHint> transition_hint;
-    AngularColorStop color_stop;
-};
-
 // Note: The sides must be before the corners in this enum (as this order is used in parsing).
 enum class SideOrCorner {
     Top,
@@ -119,20 +104,27 @@ enum class SideOrCorner {
     BottomRight
 };
 
-struct GradientColorStop {
-    Color color;
-    Optional<LengthPercentage> position;
-    Optional<LengthPercentage> second_position = {};
-};
-
-struct GradientColorHint {
-    LengthPercentage value;
-};
-
+template<typename TPosition>
 struct ColorStopListElement {
-    Optional<GradientColorHint> transition_hint;
-    GradientColorStop color_stop;
+    using PositionType = TPosition;
+    struct ColorHint {
+        TPosition value;
+        inline bool operator==(ColorHint const&) const = default;
+    };
+
+    Optional<ColorHint> transition_hint;
+    struct ColorStop {
+        Color color;
+        Optional<TPosition> position;
+        Optional<TPosition> second_position = {};
+        inline bool operator==(ColorStop const&) const = default;
+    } color_stop;
+
+    inline bool operator==(ColorStopListElement const&) const = default;
 };
+
+using LinearColorStopListElement = ColorStopListElement<LengthPercentage>;
+using AngularColorStopListElement = ColorStopListElement<AnglePercentage>;
 
 struct EdgeRect {
     Length top_edge;
@@ -1241,7 +1233,7 @@ public:
         No
     };
 
-    static NonnullRefPtr<LinearGradientStyleValue> create(GradientDirection direction, Vector<ColorStopListElement> color_stop_list, GradientType type, Repeating repeating)
+    static NonnullRefPtr<LinearGradientStyleValue> create(GradientDirection direction, Vector<LinearColorStopListElement> color_stop_list, GradientType type, Repeating repeating)
     {
         VERIFY(color_stop_list.size() >= 2);
         return adopt_ref(*new LinearGradientStyleValue(direction, move(color_stop_list), type, repeating));
@@ -1251,7 +1243,7 @@ public:
     virtual ~LinearGradientStyleValue() override = default;
     virtual bool equals(StyleValue const& other) const override;
 
-    Vector<ColorStopListElement> const& color_stop_list() const
+    Vector<LinearColorStopListElement> const& color_stop_list() const
     {
         return m_color_stop_list;
     }
@@ -1266,7 +1258,7 @@ public:
     void paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering image_rendering) const override;
 
 private:
-    LinearGradientStyleValue(GradientDirection direction, Vector<ColorStopListElement> color_stop_list, GradientType type, Repeating repeating)
+    LinearGradientStyleValue(GradientDirection direction, Vector<LinearColorStopListElement> color_stop_list, GradientType type, Repeating repeating)
         : AbstractImageStyleValue(Type::LinearGradient)
         , m_direction(direction)
         , m_color_stop_list(move(color_stop_list))
@@ -1276,7 +1268,7 @@ private:
     }
 
     GradientDirection m_direction;
-    Vector<ColorStopListElement> m_color_stop_list;
+    Vector<LinearColorStopListElement> m_color_stop_list;
     GradientType m_gradient_type;
     Repeating m_repeating;
 

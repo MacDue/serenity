@@ -75,6 +75,7 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
         max_previous_color_stop_or_hint = value;
         return value;
     };
+    // Move this step somewhere generic (since I think this code can be mostly reused for conic gradients)
     size_t resolved_index = 0;
     for (auto& stop : color_stop_list) {
         if (stop.transition_hint.has_value())

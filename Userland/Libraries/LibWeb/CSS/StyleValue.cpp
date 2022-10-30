@@ -1776,21 +1776,6 @@ static bool operator==(LinearGradientStyleValue::GradientDirection const& a, Lin
     return false;
 }
 
-static bool operator==(GradientColorHint const& a, GradientColorHint const& b)
-{
-    return a.value == b.value;
-}
-
-static bool operator==(GradientColorStop const& a, GradientColorStop const& b)
-{
-    return a.color == b.color && a.position == b.position && a.second_position == b.second_position;
-}
-
-static bool operator==(ColorStopListElement const& a, ColorStopListElement const& b)
-{
-    return a.transition_hint == b.transition_hint && a.color_stop == b.color_stop;
-}
-
 static bool operator==(EdgeRect const& a, EdgeRect const& b)
 {
     return a.top_edge == b.top_edge && a.right_edge == b.right_edge && a.bottom_edge == b.bottom_edge && a.left_edge == b.left_edge;
