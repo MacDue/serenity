@@ -126,6 +126,38 @@ struct ColorStopListElement {
 using LinearColorStopListElement = ColorStopListElement<LengthPercentage>;
 using AngularColorStopListElement = ColorStopListElement<AnglePercentage>;
 
+// FIXME: Named PositionValue to avoid conflicts with enums, but this represents a <position>
+struct PositionValue {
+    enum class HorizontalPreset {
+        Left,
+        Center,
+        Right
+    };
+
+    enum class VerticalPreset {
+        Top,
+        Center,
+        Bottom
+    };
+
+    enum class HorizontalEdge {
+        Left,
+        Right
+    };
+
+    enum class VerticalEdge {
+        Top,
+        Bottom
+    };
+
+    HorizontalEdge m_x_relative_to { HorizontalEdge::Left };
+    VerticalEdge m_y_relative_to { VerticalEdge::Top };
+    Variant<HorizontalPreset, LengthPercentage> m_horizontal_position;
+    Variant<VerticalPreset, LengthPercentage> m_vertical_position;
+
+    Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect) const;
+};
+
 struct EdgeRect {
     Length top_edge;
     Length right_edge;

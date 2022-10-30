@@ -250,6 +250,7 @@ private:
     Optional<Ratio> parse_ratio(TokenStream<ComponentValue>&);
     Optional<UnicodeRange> parse_unicode_range(TokenStream<ComponentValue>&);
     Optional<UnicodeRange> parse_unicode_range(StringView);
+    Optional<PositionValue> parse_position(TokenStream<ComponentValue>&);
 
     enum class AllowedDataUrlType {
         None,

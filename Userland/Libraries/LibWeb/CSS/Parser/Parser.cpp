@@ -2537,6 +2537,11 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     return LinearGradientStyleValue::create(gradient_direction, move(*color_stops), gradient_type, repeating_gradient);
 }
 
+Optional<PositionValue> parse_position(TokenStream<ComponentValue>&)
+{
+    return {};
+}
+
 RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& component_value)
 {
     if (!component_value.is_function())
