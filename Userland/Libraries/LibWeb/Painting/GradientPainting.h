@@ -34,7 +34,7 @@ struct ConicGradientData {
 };
 
 LinearGradientData resolve_linear_gradient_data(Layout::Node const&, Gfx::FloatSize const&, CSS::LinearGradientStyleValue const&);
-ConicGradientData resolve_conic_gradient_data(Layout::Node const&, Gfx::FloatSize const&, CSS::ConicGradientStyleValue const&);
+ConicGradientData resolve_conic_gradient_data(Layout::Node const&, CSS::ConicGradientStyleValue const&);
 
 void paint_linear_gradient(PaintContext&, Gfx::IntRect const&, LinearGradientData const&);
 void paint_conic_gradient(PaintContext&, Gfx::IntRect const&, ConicGradientData const&);

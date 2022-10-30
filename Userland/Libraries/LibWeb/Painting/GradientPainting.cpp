@@ -142,6 +142,15 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const& node, Gfx::F
     return { gradient_angle, resolved_color_stops, repeat_length };
 }
 
+ConicGradientData resolve_conic_gradient_data(Layout::Node const& node, CSS::ConicGradientStyleValue const& conic_gradient)
+{
+    CSS::Angle one_turn(360.0f, CSS::Angle::Type::Deg);
+    auto resolved_color_stops = resolve_color_stop_positions(conic_gradient.color_stop_list(), one_turn.to_degrees(), [&](auto const& angle_percentage) {
+        return angle_percentage.resolved(node, one_turn).to_degrees();
+    });
+    return { conic_gradient.angle_degrees(), resolved_color_stops };
+}
+
 void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
 {
     float angle = normalized_gradient_angle_radians(data.gradient_angle);
@@ -232,6 +241,10 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
             context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color, gradient_color.alpha() < 255);
         }
     }
+}
+
+void paint_conic_gradient(PaintContext&, Gfx::IntRect const&, ConicGradientData const&)
+{
 }
 
 }
