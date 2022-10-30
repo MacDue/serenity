@@ -2803,6 +2803,9 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
         } else {
             break;
         }
+        tokens.skip_whitespace();
+        if (!tokens.has_next_token())
+            return {};
         token = tokens.peek_token();
     }
 
