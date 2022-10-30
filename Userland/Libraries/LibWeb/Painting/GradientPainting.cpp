@@ -255,9 +255,19 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
 
 void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, ConicGradientData const& data)
 {
-    (void)context;
-    (void)gradient_rect;
-    (void)data;
+    float approximate_circumference = min(gradient_rect.width(), gradient_rect.height()) * AK::Pi<float>;
+    GradientLine gradient_line(round_to<int>(approximate_circumference), 0, data.color_stops);
+    auto center = Gfx::IntRect { { 0, 0 }, gradient_rect.size() }.center();
+    float start_angle = data.start_angle + 90.0f;
+    for (int y = 0; y < gradient_rect.height(); y++) {
+        for (int x = 0; x < gradient_rect.width(); x++) {
+            auto point = Gfx::IntPoint { x, y } - center;
+            float loc = fmod((AK::atan2(float(point.y()), float(point.x())) * 180.0f / AK::Pi<float> + 360.0f + start_angle), 360.0f);
+            auto blend = loc - static_cast<int>(loc);
+            auto gradient_color = gradient_line.lookup_color(loc).mixed_with(gradient_line.lookup_color(loc + 1), blend);
+            context.painter().set_pixel(gradient_rect.x() + x, gradient_rect.y() + y, gradient_color, gradient_color.alpha() < 255);
+        }
+    }
 }
 
 }
