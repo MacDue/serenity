@@ -156,11 +156,11 @@ struct PositionValue {
     }
 
     Variant<HorizontalPreset, LengthPercentage> horizontal_position { HorizontalPreset::Left };
-    Variant<VerticalPreset, LengthPercentage> vertical_position { HorizontalPreset::Top };
+    Variant<VerticalPreset, LengthPercentage> vertical_position { VerticalPreset::Top };
     HorizontalEdge x_relative_to { HorizontalEdge::Left };
     VerticalEdge y_relative_to { VerticalEdge::Top };
 
-    Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect) const;
+    Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect const&) const;
 };
 
 struct EdgeRect {
@@ -1243,7 +1243,7 @@ public:
 
     virtual ~ConicGradientStyleValue() override = default;
 
-    Gfx::FloatPoint resolve_position(Node const&, Gfx::FloatRect const&) const;
+    Gfx::FloatPoint resolve_position(Layout::Node const&, Gfx::FloatRect const&) const;
 
 private:
     ConicGradientStyleValue(Angle from_angle, PositionValue position, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
@@ -1260,7 +1260,12 @@ private:
     ColorInterpolationMethod m_color_interpolation_method;
     Vector<AngularColorStopListElement> m_color_stop_list;
 
-    mutable Optional<Painting::ConicGradientData> m_resolved;
+    struct ResolvedData {
+        Painting::ConicGradientData data;
+        Gfx::FloatPoint position;
+    };
+
+    mutable Optional<ResolvedData> m_resolved;
 };
 
 class LinearGradientStyleValue final : public AbstractImageStyleValue {

@@ -2556,11 +2556,11 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
 
     auto parse_vertical_preset = [&](auto ident) -> Optional<PositionValue::VerticalPreset> {
         if (ident.equals_ignoring_case("top"sv))
-            return PositionValue::VerticalPreset::Left;
+            return PositionValue::VerticalPreset::Top;
         if (ident.equals_ignoring_case("center"sv))
             return PositionValue::VerticalPreset::Center;
         if (ident.equals_ignoring_case("bottom"sv))
-            return PositionValue::VerticalPreset::Right;
+            return PositionValue::VerticalPreset::Bottom;
         return {};
     };
 
@@ -2569,13 +2569,15 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
             return PositionValue::HorizontalEdge::Left;
         if (ident.equals_ignoring_case("right"sv))
             return PositionValue::HorizontalEdge::Right;
+        return {};
     };
 
     auto parse_vertical_edge = [&](auto ident) -> Optional<PositionValue::VerticalEdge> {
         if (ident.equals_ignoring_case("top"sv))
-            return PositionValue::VerticalEdge::Left;
+            return PositionValue::VerticalEdge::Top;
         if (ident.equals_ignoring_case("bottom"sv))
-            return PositionValue::VerticalEdge::Right;
+            return PositionValue::VerticalEdge::Bottom;
+        return {};
     };
 
     // [ left | center | right ] || [ top | center | bottom ]
@@ -2627,7 +2629,7 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
         PositionValue position {};
         auto& first_token = tokens.next_token();
         if (first_token.is(Token::Type::Ident)) {
-            auto horizontal_position = parse_horizontal_preset(ident);
+            auto horizontal_position = parse_horizontal_preset(first_token.token().ident());
             if (!horizontal_position.has_value())
                 return {};
             position.horizontal_position = *horizontal_position;
@@ -2640,13 +2642,13 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
         tokens.skip_whitespace();
         if (tokens.has_next_token()) {
             auto& second_token = tokens.next_token();
-            if (first_token.is(Token::Type::Ident)) {
-                auto vertical_position = parse_vertical_preset(ident);
+            if (second_token.is(Token::Type::Ident)) {
+                auto vertical_position = parse_vertical_preset(second_token.token().ident());
                 if (!vertical_position.has_value())
                     return {};
                 position.vertical_position = *vertical_position;
             } else {
-                auto dimension = parse_dimension(first_token);
+                auto dimension = parse_dimension(second_token);
                 if (!dimension.has_value() || !dimension->is_length_percentage())
                     return {};
                 position.vertical_position = dimension->length_percentage();
@@ -2682,7 +2684,7 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
             auto dimension = parse_dimension(second_token);
             if (!dimension.has_value() || !dimension->is_length_percentage())
                 return false;
-            position.horizontal_position = dimension->length_percentage;
+            position.horizontal_position = dimension->length_percentage();
             transaction.commit();
             return true;
         };
@@ -2707,7 +2709,7 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
             auto dimension = parse_dimension(second_token);
             if (!dimension.has_value() || !dimension->is_length_percentage())
                 return false;
-            position.vertical_position = dimension->length_percentage;
+            position.vertical_position = dimension->length_percentage();
             transaction.commit();
             return true;
         };
@@ -2754,7 +2756,6 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     bool got_from_angle = false;
     bool got_color_interpolation_method = false;
     bool got_at_position = false;
-
     while (token.is(Token::Type::Ident)) {
         auto token_string = token.token().ident();
         auto consume_identifier = [&](auto identifier) {
@@ -2788,9 +2789,10 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
             // at <position>
             if (got_at_position)
                 return {};
-            at_position = parse_position(tokens);
-            if (!at_position.has_value())
+            auto position = parse_position(tokens);
+            if (!position.has_value())
                 return {};
+            at_position = *position;
             got_at_position = true;
         } else if (consume_identifier("in"sv)) {
             // <color-interpolation-method>

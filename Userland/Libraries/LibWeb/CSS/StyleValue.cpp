@@ -1853,6 +1853,51 @@ void LinearGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& 
     Painting::paint_linear_gradient(context, dest_rect, m_resolved->data);
 }
 
+Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect const& rect) const
+{
+    float x = horizontal_position.visit(
+        [&](HorizontalPreset preset) {
+            return rect.width() * [&] {
+                switch (preset) {
+                case HorizontalPreset::Left:
+                    return 0.0f;
+                case HorizontalPreset::Center:
+                    return 0.5f;
+                case HorizontalPreset::Right:
+                    return 1.0f;
+                default:
+                    VERIFY_NOT_REACHED();
+                }
+            }();
+        },
+        [&](LengthPercentage length_percentage) {
+            return length_percentage.resolved(node, rect.width()).to_px();
+        });
+    float y = vertical_position.visit(
+        [&](VerticalPreset preset) {
+            return rect.width() * [&] {
+                switch (preset) {
+                case VerticalPreset::Top:
+                    return 0.0f;
+                case VerticalPreset::Center:
+                    return 0.5f;
+                case VerticalPreset::Bottom:
+                    return 1.0f;
+                default:
+                    VERIFY_NOT_REACHED();
+                }
+            }();
+        },
+        [&](LengthPercentage length_percentage) {
+            return length_percentage.resolved(node, rect.width()).to_px();
+        });
+    if (x_relative_to == HorizontalEdge::Right)
+        x = rect.width() - x;
+    if (y_relative_to == VerticalEdge::Bottom)
+        y = rect.height() - y;
+    return Gfx::FloatPoint { x, y };
+}
+
 String ConicGradientStyleValue::to_string() const
 {
     StringBuilder builder;
@@ -1862,10 +1907,11 @@ String ConicGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
-void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const&) const
+void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const& size) const
 {
     if (!m_resolved.has_value())
-        m_resolved = Painting::resolve_conic_gradient_data(node, *this);
+        m_resolved = { Painting::resolve_conic_gradient_data(node, *this) };
+    m_resolved->position = m_position.resolved(node, size);
 }
 
 void ConicGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const
