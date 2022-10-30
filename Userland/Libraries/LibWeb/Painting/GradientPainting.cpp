@@ -253,15 +253,14 @@ void paint_linear_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
     }
 }
 
-void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, ConicGradientData const& data)
+void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, ConicGradientData const& data, Gfx::IntPoint position)
 {
     // FIXME: Do we need/want sub-degree accuracy for the gradient line?
     GradientLine gradient_line(360, 0, data.color_stops);
-    auto center = Gfx::IntRect { { 0, 0 }, gradient_rect.size() }.center();
     float start_angle = (360.0f - data.start_angle) + 90.0f;
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
-            auto point = Gfx::IntPoint { x, y } - center;
+            auto point = Gfx::IntPoint { x, y } - position;
             float loc = fmod((AK::atan2(float(point.y()), float(point.x())) * 180.0f / AK::Pi<float> + 360.0f + start_angle), 360.0f);
             auto blend = loc - static_cast<int>(loc);
             auto gradient_color = gradient_line.lookup_color(loc).mixed_with(gradient_line.lookup_color(loc + 1), blend);

@@ -37,6 +37,6 @@ LinearGradientData resolve_linear_gradient_data(Layout::Node const&, Gfx::FloatS
 ConicGradientData resolve_conic_gradient_data(Layout::Node const&, CSS::ConicGradientStyleValue const&);
 
 void paint_linear_gradient(PaintContext&, Gfx::IntRect const&, LinearGradientData const&);
-void paint_conic_gradient(PaintContext&, Gfx::IntRect const&, ConicGradientData const&);
+void paint_conic_gradient(PaintContext&, Gfx::IntRect const&, ConicGradientData const&, Gfx::IntPoint position);
 
 }

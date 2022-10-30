@@ -1871,7 +1871,7 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
             }();
         },
         [&](LengthPercentage length_percentage) {
-            return length_percentage.resolved(node, rect.width()).to_px();
+            return length_percentage.resolved(node, Length::make_px(rect.width())).to_px(node);
         });
     float y = vertical_position.visit(
         [&](VerticalPreset preset) {
@@ -1889,13 +1889,13 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
             }();
         },
         [&](LengthPercentage length_percentage) {
-            return length_percentage.resolved(node, rect.width()).to_px();
+            return length_percentage.resolved(node, Length::make_px(rect.height())).to_px(node);
         });
     if (x_relative_to == HorizontalEdge::Right)
         x = rect.width() - x;
     if (y_relative_to == VerticalEdge::Bottom)
         y = rect.height() - y;
-    return Gfx::FloatPoint { x, y };
+    return Gfx::FloatPoint { rect.x() + x, rect.y() + y };
 }
 
 String ConicGradientStyleValue::to_string() const
@@ -1910,14 +1910,14 @@ String ConicGradientStyleValue::to_string() const
 void ConicGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const& size) const
 {
     if (!m_resolved.has_value())
-        m_resolved = { Painting::resolve_conic_gradient_data(node, *this) };
-    m_resolved->position = m_position.resolved(node, size);
+        m_resolved = ResolvedData { Painting::resolve_conic_gradient_data(node, *this), {} };
+    m_resolved->position = m_position.resolved(node, Gfx::FloatRect { { 0, 0 }, size });
 }
 
 void ConicGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const
 {
     VERIFY(m_resolved.has_value());
-    Painting::paint_conic_gradient(context, dest_rect, *m_resolved);
+    Painting::paint_conic_gradient(context, dest_rect, m_resolved->data, m_resolved->position.to_rounded<int>());
 }
 
 bool ConicGradientStyleValue::equals(StyleValue const&) const
