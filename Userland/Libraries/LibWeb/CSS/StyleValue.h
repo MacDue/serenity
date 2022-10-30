@@ -150,10 +150,15 @@ struct PositionValue {
         Bottom
     };
 
-    HorizontalEdge m_x_relative_to { HorizontalEdge::Left };
-    VerticalEdge m_y_relative_to { VerticalEdge::Top };
-    Variant<HorizontalPreset, LengthPercentage> m_horizontal_position;
-    Variant<VerticalPreset, LengthPercentage> m_vertical_position;
+    inline static PositionValue center()
+    {
+        return PositionValue { HorizontalPreset::Center, VerticalPreset::Center };
+    }
+
+    Variant<HorizontalPreset, LengthPercentage> horizontal_position { HorizontalPreset::Left };
+    Variant<VerticalPreset, LengthPercentage> vertical_position { HorizontalPreset::Top };
+    HorizontalEdge x_relative_to { HorizontalEdge::Left };
+    VerticalEdge y_relative_to { VerticalEdge::Top };
 
     Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect) const;
 };
@@ -1213,10 +1218,10 @@ private:
 
 class ConicGradientStyleValue final : public AbstractImageStyleValue {
 public:
-    static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+    static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, PositionValue position, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
     {
         VERIFY(color_stop_list.size() >= 2);
-        return adopt_ref(*new ConicGradientStyleValue(from_angle, color_interpolation_method, move(color_stop_list)));
+        return adopt_ref(*new ConicGradientStyleValue(from_angle, position, color_interpolation_method, move(color_stop_list)));
     }
 
     virtual String to_string() const override;
@@ -1238,19 +1243,22 @@ public:
 
     virtual ~ConicGradientStyleValue() override = default;
 
+    Gfx::FloatPoint resolve_position(Node const&, Gfx::FloatRect const&) const;
+
 private:
-    ConicGradientStyleValue(Angle from_angle, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+    ConicGradientStyleValue(Angle from_angle, PositionValue position, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
         : AbstractImageStyleValue(Type::ConicGradient)
         , m_from_angle(from_angle)
+        , m_position(position)
         , m_color_interpolation_method(color_interpolation_method)
         , m_color_stop_list(move(color_stop_list))
     {
     }
 
     Angle m_from_angle;
+    PositionValue m_position;
     ColorInterpolationMethod m_color_interpolation_method;
     Vector<AngularColorStopListElement> m_color_stop_list;
-    // FIXME: Support at <position>
 
     mutable Optional<Painting::ConicGradientData> m_resolved;
 };

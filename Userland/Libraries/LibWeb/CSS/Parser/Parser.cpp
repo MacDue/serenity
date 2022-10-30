@@ -2537,9 +2537,197 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     return LinearGradientStyleValue::create(gradient_direction, move(*color_stops), gradient_type, repeating_gradient);
 }
 
-Optional<PositionValue> parse_position(TokenStream<ComponentValue>&)
+Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& tokens)
 {
-    return {};
+    auto transaction = tokens.begin_transaction();
+    tokens.skip_whitespace();
+    if (!tokens.has_next_token())
+        return {};
+
+    auto parse_horizontal_preset = [&](auto ident) -> Optional<PositionValue::HorizontalPreset> {
+        if (ident.equals_ignoring_case("left"sv))
+            return PositionValue::HorizontalPreset::Left;
+        if (ident.equals_ignoring_case("center"sv))
+            return PositionValue::HorizontalPreset::Center;
+        if (ident.equals_ignoring_case("right"sv))
+            return PositionValue::HorizontalPreset::Right;
+        return {};
+    };
+
+    auto parse_vertical_preset = [&](auto ident) -> Optional<PositionValue::VerticalPreset> {
+        if (ident.equals_ignoring_case("top"sv))
+            return PositionValue::VerticalPreset::Left;
+        if (ident.equals_ignoring_case("center"sv))
+            return PositionValue::VerticalPreset::Center;
+        if (ident.equals_ignoring_case("bottom"sv))
+            return PositionValue::VerticalPreset::Right;
+        return {};
+    };
+
+    auto parse_horizontal_edge = [&](auto ident) -> Optional<PositionValue::HorizontalEdge> {
+        if (ident.equals_ignoring_case("left"sv))
+            return PositionValue::HorizontalEdge::Left;
+        if (ident.equals_ignoring_case("right"sv))
+            return PositionValue::HorizontalEdge::Right;
+    };
+
+    auto parse_vertical_edge = [&](auto ident) -> Optional<PositionValue::VerticalEdge> {
+        if (ident.equals_ignoring_case("top"sv))
+            return PositionValue::VerticalEdge::Left;
+        if (ident.equals_ignoring_case("bottom"sv))
+            return PositionValue::VerticalEdge::Right;
+    };
+
+    // [ left | center | right ] || [ top | center | bottom ]
+    auto alternation_1 = [&]() -> Optional<PositionValue> {
+        auto transaction = tokens.begin_transaction();
+        PositionValue position {};
+        auto& first_token = tokens.next_token();
+        if (!first_token.is(Token::Type::Ident))
+            return {};
+        auto ident = first_token.token().ident();
+        // <horizontal-position> <vertical-position>?
+        auto horizontal_position = parse_horizontal_preset(ident);
+        if (horizontal_position.has_value()) {
+            position.horizontal_position = *horizontal_position;
+            tokens.skip_whitespace();
+            if (tokens.has_next_token()) {
+                auto& second_token = tokens.next_token();
+                if (!second_token.is(Token::Type::Ident))
+                    return {};
+                auto vertical_position = parse_vertical_preset(second_token.token().ident());
+                if (!vertical_position.has_value())
+                    return {};
+                position.vertical_position = *vertical_position;
+            }
+        } else {
+            // <vertical-position> <horizontal-position>?
+            auto vertical_position = parse_vertical_preset(ident);
+            if (!vertical_position.has_value())
+                return {};
+            position.vertical_position = *vertical_position;
+            if (tokens.has_next_token()) {
+                auto& second_token = tokens.next_token();
+                if (!second_token.is(Token::Type::Ident))
+                    return {};
+                auto horizontal_position = parse_horizontal_preset(second_token.token().ident());
+                if (!horizontal_position.has_value())
+                    return {};
+                position.horizontal_position = *horizontal_position;
+            }
+        }
+        transaction.commit();
+        return position;
+    };
+
+    // [ left | center | right | <length-percentage> ]
+    // [ top | center | bottom | <length-percentage> ]?
+    auto alternation_2 = [&]() -> Optional<PositionValue> {
+        auto transaction = tokens.begin_transaction();
+        PositionValue position {};
+        auto& first_token = tokens.next_token();
+        if (first_token.is(Token::Type::Ident)) {
+            auto horizontal_position = parse_horizontal_preset(ident);
+            if (!horizontal_position.has_value())
+                return {};
+            position.horizontal_position = *horizontal_position;
+        } else {
+            auto dimension = parse_dimension(first_token);
+            if (!dimension.has_value() || !dimension->is_length_percentage())
+                return {};
+            position.horizontal_position = dimension->length_percentage();
+        }
+        tokens.skip_whitespace();
+        if (tokens.has_next_token()) {
+            auto& second_token = tokens.next_token();
+            if (first_token.is(Token::Type::Ident)) {
+                auto vertical_position = parse_vertical_preset(ident);
+                if (!vertical_position.has_value())
+                    return {};
+                position.vertical_position = *vertical_position;
+            } else {
+                auto dimension = parse_dimension(first_token);
+                if (!dimension.has_value() || !dimension->is_length_percentage())
+                    return {};
+                position.vertical_position = dimension->length_percentage();
+            }
+        }
+        transaction.commit();
+        return position;
+    };
+
+    // [ [ left | right ] <length-percentage> ] &&
+    // [ [ top | bottom ] <length-percentage> ]
+    auto alternation_3 = [&]() -> Optional<PositionValue> {
+        auto transaction = tokens.begin_transaction();
+        PositionValue position {};
+
+        auto parse_horizontal = [&] {
+            // [ left | right ] <length-percentage> ]
+            auto transaction = tokens.begin_transaction();
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return false;
+            auto& first_token = tokens.next_token();
+            if (!first_token.is(Token::Type::Ident))
+                return false;
+            auto horizontal_egde = parse_horizontal_edge(first_token.token().ident());
+            if (!horizontal_egde.has_value())
+                return false;
+            position.x_relative_to = *horizontal_egde;
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return false;
+            auto& second_token = tokens.next_token();
+            auto dimension = parse_dimension(second_token);
+            if (!dimension.has_value() || !dimension->is_length_percentage())
+                return false;
+            position.horizontal_position = dimension->length_percentage;
+            transaction.commit();
+            return true;
+        };
+
+        auto parse_vertical = [&] {
+            // [ top | bottom ] <length-percentage> ]
+            auto transaction = tokens.begin_transaction();
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return false;
+            auto& first_token = tokens.next_token();
+            if (!first_token.is(Token::Type::Ident))
+                return false;
+            auto vertical_edge = parse_vertical_edge(first_token.token().ident());
+            if (!vertical_edge.has_value())
+                return false;
+            position.y_relative_to = *vertical_edge;
+            tokens.skip_whitespace();
+            if (!tokens.has_next_token())
+                return false;
+            auto& second_token = tokens.next_token();
+            auto dimension = parse_dimension(second_token);
+            if (!dimension.has_value() || !dimension->is_length_percentage())
+                return false;
+            position.vertical_position = dimension->length_percentage;
+            transaction.commit();
+            return true;
+        };
+
+        if ((parse_horizontal() && parse_vertical()) || (parse_vertical() && parse_horizontal())) {
+            transaction.commit();
+            return position;
+        }
+
+        return {};
+    };
+
+    auto position = alternation_1();
+    if (!position.has_value())
+        position = alternation_2();
+    if (!position.has_value())
+        position = alternation_3();
+    if (position.has_value())
+        transaction.commit();
+    return position;
 }
 
 RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& component_value)
@@ -2558,6 +2746,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
         return {};
 
     Angle from_angle(0, Angle::Type::Deg);
+    PositionValue at_position = PositionValue::center();
 
     // conic-gradient( [ [ from <angle> ]? [ at <position> ]? ]  ||
     // <color-interpolation-method> , <angular-color-stop-list> )
@@ -2599,6 +2788,9 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
             // at <position>
             if (got_at_position)
                 return {};
+            at_position = parse_position(tokens);
+            if (!at_position.has_value())
+                return {};
             got_at_position = true;
         } else if (consume_identifier("in"sv)) {
             // <color-interpolation-method>
@@ -2636,7 +2828,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
 
     // FIXME: This color interpolation method is just a placeholder till we use/parse this information.
     ColorInterpolationMethod color_interpolation_method { RectangularColorSpace::SRGB, HueInterpolationMethod::Specified };
-    return ConicGradientStyleValue::create(from_angle, color_interpolation_method, move(*color_stops));
+    return ConicGradientStyleValue::create(from_angle, at_position, color_interpolation_method, move(*color_stops));
 }
 
 CSSRule* Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
