@@ -2732,11 +2732,12 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
         return {};
     };
 
-    auto position = alternation_1();
+    // Note: The alternatives must be attempted in this order since `alternation_2' can match a prefix of `alternation_3'
+    auto position = alternation_3();
     if (!position.has_value())
         position = alternation_2();
     if (!position.has_value())
-        position = alternation_3();
+        position = alternation_1();
     if (position.has_value())
         transaction.commit();
     return position;

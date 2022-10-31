@@ -261,6 +261,7 @@ void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_re
     for (int y = 0; y < gradient_rect.height(); y++) {
         for (int x = 0; x < gradient_rect.width(); x++) {
             auto point = Gfx::IntPoint { x, y } - position;
+            // FIXME: We could probably get away with some approximation here:
             float loc = fmod((AK::atan2(float(point.y()), float(point.x())) * 180.0f / AK::Pi<float> + 360.0f + start_angle), 360.0f);
             auto blend = loc - static_cast<int>(loc);
             auto gradient_color = gradient_line.lookup_color(loc).mixed_with(gradient_line.lookup_color(loc + 1), blend);

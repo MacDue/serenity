@@ -1901,8 +1901,10 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
 
 void PositionValue::serialize(StringBuilder& builder) const
 {
-    if (x_relative_to == HorizontalEdge::Right)
-        builder.append("right "sv);
+    // Note: This means our serialization with simplify any with explicit edges that are just `top left`.
+    bool has_relative_edges = x_relative_to == HorizontalEdge::Right || y_relative_to == VerticalEdge::Bottom;
+    if (has_relative_edges)
+        builder.append(x_relative_to == HorizontalEdge::Left ? "left "sv : "right "sv);
     horizontal_position.visit(
         [&](HorizontalPreset preset) {
             builder.append([&] {
@@ -1922,8 +1924,8 @@ void PositionValue::serialize(StringBuilder& builder) const
             builder.append(length_percentage.to_string());
         });
     builder.append(' ');
-    if (y_relative_to == VerticalEdge::Bottom)
-        builder.append("bottom "sv);
+    if (has_relative_edges)
+        builder.append(y_relative_to == VerticalEdge::Top ? "top "sv : "bottom "sv);
     vertical_position.visit(
         [&](VerticalPreset preset) {
             builder.append([&] {
