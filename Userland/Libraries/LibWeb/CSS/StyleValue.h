@@ -62,36 +62,6 @@ enum class FlexBasis {
     Auto,
 };
 
-enum class RectangularColorSpace {
-    SRGB,
-    SRGBLinear,
-    LAB,
-    OKLAB,
-    XYZ,
-    XYZD50,
-    ZYZD65
-};
-
-enum class PolarColorSpace {
-    HSL,
-    HWB,
-    LCH,
-    OKLCH
-};
-
-enum class HueInterpolationMethod {
-    Shorter,
-    Longer,
-    Increasing,
-    Decreasing,
-    Specified
-};
-
-struct ColorInterpolationMethod {
-    Variant<RectangularColorSpace, PolarColorSpace> color_space;
-    HueInterpolationMethod hue_interpolation_method;
-};
-
 // Note: The sides must be before the corners in this enum (as this order is used in parsing).
 enum class SideOrCorner {
     Top,
@@ -1220,10 +1190,10 @@ private:
 
 class ConicGradientStyleValue final : public AbstractImageStyleValue {
 public:
-    static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, PositionValue position, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+    static NonnullRefPtr<ConicGradientStyleValue> create(Angle from_angle, PositionValue position, Vector<AngularColorStopListElement> color_stop_list)
     {
         VERIFY(color_stop_list.size() >= 2);
-        return adopt_ref(*new ConicGradientStyleValue(from_angle, position, color_interpolation_method, move(color_stop_list)));
+        return adopt_ref(*new ConicGradientStyleValue(from_angle, position, move(color_stop_list)));
     }
 
     virtual String to_string() const override;
@@ -1248,18 +1218,17 @@ public:
     Gfx::FloatPoint resolve_position(Layout::Node const&, Gfx::FloatRect const&) const;
 
 private:
-    ConicGradientStyleValue(Angle from_angle, PositionValue position, ColorInterpolationMethod color_interpolation_method, Vector<AngularColorStopListElement> color_stop_list)
+    ConicGradientStyleValue(Angle from_angle, PositionValue position, Vector<AngularColorStopListElement> color_stop_list)
         : AbstractImageStyleValue(Type::ConicGradient)
         , m_from_angle(from_angle)
         , m_position(position)
-        , m_color_interpolation_method(color_interpolation_method)
         , m_color_stop_list(move(color_stop_list))
     {
     }
 
+    // FIXME: Support <color-interpolation-method>
     Angle m_from_angle;
     PositionValue m_position;
-    ColorInterpolationMethod m_color_interpolation_method;
     Vector<AngularColorStopListElement> m_color_stop_list;
 
     struct ResolvedData {

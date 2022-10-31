@@ -2842,9 +2842,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     if (!color_stops.has_value())
         return {};
 
-    // FIXME: This color interpolation method is just a placeholder till we use/parse this information.
-    ColorInterpolationMethod color_interpolation_method { RectangularColorSpace::SRGB, HueInterpolationMethod::Specified };
-    return ConicGradientStyleValue::create(from_angle, at_position, color_interpolation_method, move(*color_stops));
+    return ConicGradientStyleValue::create(from_angle, at_position, move(*color_stops));
 }
 
 CSSRule* Parser::convert_to_rule(NonnullRefPtr<Rule> rule)
