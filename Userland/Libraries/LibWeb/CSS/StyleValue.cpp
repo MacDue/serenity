@@ -1876,7 +1876,7 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
         });
     float y = vertical_position.visit(
         [&](VerticalPreset preset) {
-            return rect.width() * [&] {
+            return rect.height() * [&] {
                 switch (preset) {
                 case VerticalPreset::Top:
                     return 0.0f;
