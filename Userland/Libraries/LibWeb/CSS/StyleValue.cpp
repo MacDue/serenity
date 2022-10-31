@@ -1902,17 +1902,19 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
 void PositionValue::serialize(StringBuilder& builder) const
 {
     if (x_relative_to == HorizontalEdge::Right)
-        builder.append("right ");
+        builder.append("right "sv);
     horizontal_position.visit(
         [&](HorizontalPreset preset) {
             builder.append([&] {
                 switch (preset) {
                 case HorizontalPreset::Left:
-                    return "left";
+                    return "left"sv;
                 case HorizontalPreset::Center:
-                    return "center";
+                    return "center"sv;
                 case HorizontalPreset::Right:
-                    return "right";
+                    return "right"sv;
+                default:
+                    VERIFY_NOT_REACHED();
                 }
             }());
         },
@@ -1921,17 +1923,19 @@ void PositionValue::serialize(StringBuilder& builder) const
         });
     builder.append(' ');
     if (y_relative_to == VerticalEdge::Bottom)
-        builder.append("bottom ");
+        builder.append("bottom "sv);
     vertical_position.visit(
         [&](VerticalPreset preset) {
             builder.append([&] {
                 switch (preset) {
                 case VerticalPreset::Top:
-                    return "top";
+                    return "top"sv;
                 case VerticalPreset::Center:
-                    return "center";
+                    return "center"sv;
                 case VerticalPreset::Bottom:
-                    return "bottom";
+                    return "bottom"sv;
+                default:
+                    VERIFY_NOT_REACHED();
                 }
             }());
         },
@@ -1940,11 +1944,29 @@ void PositionValue::serialize(StringBuilder& builder) const
         });
 }
 
+bool PositionValue::operator==(PositionValue const& other) const
+{
+    return (
+        x_relative_to == other.x_relative_to
+        && y_relative_to == other.y_relative_to
+        && variant_equals(horizontal_position, other.horizontal_position)
+        && variant_equals(vertical_position, other.vertical_position));
+}
+
 String ConicGradientStyleValue::to_string() const
 {
     StringBuilder builder;
-    builder.appendff("conic-gradient(from {} at"sv, m_from_angle.to_string());
-    m_position.serialize(builder);
+    builder.append("conic-gradient("sv);
+    bool has_from_angle = false;
+    if ((has_from_angle = m_from_angle.to_degrees() != 0))
+        builder.appendff("from {}", m_from_angle.to_string());
+    if (m_position != PositionValue::center()) {
+        if (!has_from_angle)
+            builder.append(' ');
+        builder.appendff("at "sv);
+        m_position.serialize(builder);
+    }
+    builder.append(", "sv);
     serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(')');
     return builder.to_string();

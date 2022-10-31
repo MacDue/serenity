@@ -162,6 +162,7 @@ struct PositionValue {
 
     Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect const&) const;
     void serialize(StringBuilder&) const;
+    bool operator==(PositionValue const&) const;
 };
 
 struct EdgeRect {
