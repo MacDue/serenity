@@ -1958,15 +1958,17 @@ String ConicGradientStyleValue::to_string() const
     StringBuilder builder;
     builder.append("conic-gradient("sv);
     bool has_from_angle = false;
+    bool has_at_position = false;
     if ((has_from_angle = m_from_angle.to_degrees() != 0))
         builder.appendff("from {}", m_from_angle.to_string());
-    if (m_position != PositionValue::center()) {
-        if (!has_from_angle)
+    if ((has_at_position = m_position != PositionValue::center())) {
+        if (has_from_angle)
             builder.append(' ');
         builder.appendff("at "sv);
         m_position.serialize(builder);
     }
-    builder.append(", "sv);
+    if (has_from_angle || has_at_position)
+        builder.append(", "sv);
     serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(')');
     return builder.to_string();
