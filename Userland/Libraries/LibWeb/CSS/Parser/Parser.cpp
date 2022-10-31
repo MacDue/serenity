@@ -2580,6 +2580,16 @@ Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& toke
         return {};
     };
 
+    // <position> = [
+    //   [ left | center | right ] || [ top | center | bottom ]
+    // |
+    //   [ left | center | right | <length-percentage> ]
+    //   [ top | center | bottom | <length-percentage> ]?
+    // |
+    //   [ [ left | right ] <length-percentage> ] &&
+    //   [ [ top | bottom ] <length-percentage> ]
+    // ]
+
     // [ left | center | right ] || [ top | center | bottom ]
     auto alternation_1 = [&]() -> Optional<PositionValue> {
         auto transaction = tokens.begin_transaction();

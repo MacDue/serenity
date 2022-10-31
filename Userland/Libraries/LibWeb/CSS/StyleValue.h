@@ -161,6 +161,7 @@ struct PositionValue {
     VerticalEdge y_relative_to { VerticalEdge::Top };
 
     Gfx::FloatPoint resolved(Layout::Node const&, Gfx::FloatRect const&) const;
+    void serialize(StringBuilder&) const;
 };
 
 struct EdgeRect {

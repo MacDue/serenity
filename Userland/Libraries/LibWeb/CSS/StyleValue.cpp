@@ -1855,6 +1855,7 @@ void LinearGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& 
 
 Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect const& rect) const
 {
+    // Note: A preset + a none default x/y_relative_to is impossible in the syntax (and makes little sense)
     float x = horizontal_position.visit(
         [&](HorizontalPreset preset) {
             return rect.width() * [&] {
@@ -1898,10 +1899,52 @@ Gfx::FloatPoint PositionValue::resolved(Layout::Node const& node, Gfx::FloatRect
     return Gfx::FloatPoint { rect.x() + x, rect.y() + y };
 }
 
+void PositionValue::serialize(StringBuilder& builder) const
+{
+    if (x_relative_to == HorizontalEdge::Right)
+        builder.append("right ");
+    horizontal_position.visit(
+        [&](HorizontalPreset preset) {
+            builder.append([&] {
+                switch (preset) {
+                case HorizontalPreset::Left:
+                    return "left";
+                case HorizontalPreset::Center:
+                    return "center";
+                case HorizontalPreset::Right:
+                    return "right";
+                }
+            }());
+        },
+        [&](LengthPercentage length_percentage) {
+            builder.append(length_percentage.to_string());
+        });
+    builder.append(' ');
+    if (y_relative_to == VerticalEdge::Bottom)
+        builder.append("bottom ");
+    vertical_position.visit(
+        [&](VerticalPreset preset) {
+            builder.append([&] {
+                switch (preset) {
+                case VerticalPreset::Top:
+                    return "top";
+                case VerticalPreset::Center:
+                    return "center";
+                case VerticalPreset::Bottom:
+                    return "bottom";
+                }
+            }());
+        },
+        [&](LengthPercentage length_percentage) {
+            builder.append(length_percentage.to_string());
+        });
+}
+
 String ConicGradientStyleValue::to_string() const
 {
     StringBuilder builder;
-    builder.appendff("conic-gradient("sv, m_from_angle.to_string());
+    builder.appendff("conic-gradient(from {} at"sv, m_from_angle.to_string());
+    m_position.serialize(builder);
     serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(')');
     return builder.to_string();
