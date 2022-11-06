@@ -2388,6 +2388,38 @@ static Optional<Vector<TElement>> parse_color_stop_list(auto& tokens, auto is_po
     return color_stops;
 }
 
+Optional<Vector<LinearColorStopListElement>> Parser::parse_linear_color_stop_list(TokenStream<ComponentValue>& tokens)
+{
+    // <color-stop-list> =
+    //      <linear-color-stop> , [ <linear-color-hint>? , <linear-color-stop> ]#
+    auto is_length_percentage = [](Dimension& dimension) {
+        return dimension.is_length_percentage();
+    };
+    auto get_length_percentage = [](Dimension& dimension) {
+        return dimension.length_percentage();
+    };
+    return parse_color_stop_list<LinearColorStopListElement>(
+        tokens, is_length_percentage, get_length_percentage,
+        [&](auto& token) { return parse_color(token); },
+        [&](auto& token) { return parse_dimension(token); });
+}
+
+Optional<Vector<AngularColorStopListElement>> Parser::parse_angular_color_stop_list(TokenStream<ComponentValue>& tokens)
+{
+    // <angular-color-stop-list> =
+    //   <angular-color-stop> , [ <angular-color-hint>? , <angular-color-stop> ]#
+    auto is_angle_percentage = [](Dimension& dimension) {
+        return dimension.is_angle_percentage();
+    };
+    auto get_angle_percentage = [](Dimension& dimension) {
+        return dimension.angle_percentage();
+    };
+    return parse_color_stop_list<AngularColorStopListElement>(
+        tokens, is_angle_percentage, get_angle_percentage,
+        [&](auto& token) { return parse_color(token); },
+        [&](auto& token) { return parse_dimension(token); });
+}
+
 static StringView consume_if_starts_with(StringView str, StringView start, auto found_callback)
 {
     if (str.starts_with(start, CaseSensitivity::CaseInsensitive)) {
@@ -2518,19 +2550,7 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     if (has_direction_param && !tokens.next_token().is(Token::Type::Comma))
         return {};
 
-    // <color-stop-list> =
-    //      <linear-color-stop> , [ <linear-color-hint>? , <linear-color-stop> ]#
-    auto is_length_percentage = [](Dimension& dimension) {
-        return dimension.is_length_percentage();
-    };
-    auto get_length_percentage = [](Dimension& dimension) {
-        return dimension.length_percentage();
-    };
-    auto color_stops = parse_color_stop_list<LinearColorStopListElement>(
-        tokens, is_length_percentage, get_length_percentage,
-        [&](auto& token) { return parse_color(token); },
-        [&](auto& token) { return parse_dimension(token); });
-
+    auto color_stops = parse_linear_color_stop_list(tokens);
     if (!color_stops.has_value())
         return {};
 
@@ -2627,23 +2647,18 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     if ((got_from_angle || got_at_position || got_color_interpolation_method) && !tokens.next_token().is(Token::Type::Comma))
         return {};
 
-    // <angular-color-stop-list> =
-    //   <angular-color-stop> , [ <angular-color-hint>? , <angular-color-stop> ]#
-    auto is_angle_percentage = [](Dimension& dimension) {
-        return dimension.is_angle_percentage();
-    };
-    auto get_angle_percentage = [](Dimension& dimension) {
-        return dimension.angle_percentage();
-    };
-    auto color_stops = parse_color_stop_list<AngularColorStopListElement>(
-        tokens, is_angle_percentage, get_angle_percentage,
-        [&](auto& token) { return parse_color(token); },
-        [&](auto& token) { return parse_dimension(token); });
-
+    auto color_stops = parse_angular_color_stop_list(tokens);
     if (!color_stops.has_value())
         return {};
 
     return ConicGradientStyleValue::create(from_angle, at_position, move(*color_stops), repeating_gradient);
+}
+
+RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& component_value)
+{
+    // TODO
+    (void)component_value;
+    return {};
 }
 
 Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& tokens)
@@ -3819,11 +3834,13 @@ RefPtr<StyleValue> Parser::parse_image_value(ComponentValue const& component_val
     auto url = parse_url_function(component_value, AllowedDataUrlType::Image);
     if (url.has_value())
         return ImageStyleValue::create(url.value());
-    // FIXME: Implement other kinds of gradient
     auto linear_gradient = parse_linear_gradient_function(component_value);
     if (linear_gradient)
         return linear_gradient;
-    return parse_conic_gradient_function(component_value);
+    auto conic_gradient = parse_conic_gradient_function(component_value);
+    if (conic_gradient)
+        return conic_gradient;
+    return parse_radial_gradient_function(component_value);
 }
 
 template<typename ParseFunction>

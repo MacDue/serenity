@@ -264,8 +264,12 @@ private:
     };
     Optional<AK::URL> parse_url_function(ComponentValue const&, AllowedDataUrlType = AllowedDataUrlType::None);
 
+    Optional<Vector<LinearColorStopListElement>> parse_linear_color_stop_list(TokenStream<ComponentValue>&);
+    Optional<Vector<AngularColorStopListElement>> parse_angular_color_stop_list(TokenStream<ComponentValue>&);
+
     RefPtr<StyleValue> parse_linear_gradient_function(ComponentValue const&);
     RefPtr<StyleValue> parse_conic_gradient_function(ComponentValue const&);
+    RefPtr<StyleValue> parse_radial_gradient_function(ComponentValue const&);
 
     ParseErrorOr<NonnullRefPtr<StyleValue>> parse_css_value(PropertyID, TokenStream<ComponentValue>&);
     RefPtr<StyleValue> parse_css_value(ComponentValue const&);
