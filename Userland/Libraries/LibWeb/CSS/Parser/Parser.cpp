@@ -2557,17 +2557,6 @@ RefPtr<StyleValue> Parser::parse_linear_gradient_function(ComponentValue const& 
     return LinearGradientStyleValue::create(gradient_direction, move(*color_stops), gradient_type, repeating_gradient);
 }
 
-static bool consume_identifier(TokenStream<ComponentValue>& tokens, StringView identifier)
-{
-    auto token_string = token.token().ident();
-    if (token_string.equals_ignoring_case(identifier)) {
-        (void)tokens.next_token();
-        tokens.skip_whitespace();
-        return true;
-    }
-    return false;
-};
-
 RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& component_value)
 {
     if (!component_value.is_function())
@@ -2600,8 +2589,17 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
     bool got_color_interpolation_method = false;
     bool got_at_position = false;
     while (token.is(Token::Type::Ident)) {
+        auto consume_identifier = [&](auto identifier) {
+            auto token_string = token.token().ident();
+            if (token_string.equals_ignoring_case(identifier)) {
+                (void)tokens.next_token();
+                tokens.skip_whitespace();
+                return true;
+            }
+            return false;
+        };
 
-        if (consume_identifier(tokens, "from"sv)) {
+        if (consume_identifier("from"sv)) {
             // from <angle>
             if (got_from_angle || got_at_position)
                 return {};
@@ -2619,7 +2617,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
 
             from_angle = Angle(angle, *angle_type);
             got_from_angle = true;
-        } else if (consume_identifier(tokens, "at"sv)) {
+        } else if (consume_identifier("at"sv)) {
             // at <position>
             if (got_at_position)
                 return {};
@@ -2628,7 +2626,7 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
                 return {};
             at_position = *position;
             got_at_position = true;
-        } else if (consume_identifier(tokens, "in"sv)) {
+        } else if (consume_identifier("in"sv)) {
             // <color-interpolation-method>
             if (got_color_interpolation_method)
                 return {};
@@ -2709,7 +2707,7 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
             return Extent::ClosestSide;
         if (keyword.equals_ignoring_case("farthest-corner"sv))
             return Extent::FarthestCorner;
-        if (keyword.equals_ignoring_case("farthest-side"))
+        if (keyword.equals_ignoring_case("farthest-side"sv))
             return Extent::FarthestSide;
         return {};
     };
@@ -2724,10 +2722,10 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
             auto extent = parse_extent_keyword(token.token().ident());
             if (!extent.has_value())
                 return {};
-            return commit_value(extent, transaction_size);
+            return commit_value(*extent, transaction_size);
         }
         auto first_dimension = parse_dimension(token);
-        if (!dimension.has_value())
+        if (!first_dimension.has_value())
             return {};
         if (!first_dimension->is_length_percentage())
             return {};
@@ -2772,7 +2770,9 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     if (!tokens.has_next_token())
         return {};
 
-    if (consume_identifier(tokens, "at"sv)) {
+    auto& token = tokens.peek_token();
+    if (token.is(Token::Type::Ident) && token.token().ident().equals_ignoring_case("at"sv)) {
+        (void)tokens.next_token();
         auto position = parse_position(tokens);
         if (!position.has_value())
             return {};
@@ -2790,7 +2790,7 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     if (!color_stops.has_value())
         return {};
 
-    return RadialGradientStyleValue::create(ending_shape, size, gradient_type, at_position, move(color_stops));
+    return RadialGradientStyleValue::create(ending_shape, size, at_position, move(*color_stops));
 }
 
 Optional<PositionValue> Parser::parse_position(TokenStream<ComponentValue>& tokens)
