@@ -2656,8 +2656,26 @@ RefPtr<StyleValue> Parser::parse_conic_gradient_function(ComponentValue const& c
 
 RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& component_value)
 {
-    // TODO
-    (void)component_value;
+    using EndingShape = RadialGradientStyleValue::EndingShape;
+    using Extent = RadialGradientStyleValue::Extent;
+    using CircleSize = RadialGradientStyleValue::CircleSize;
+    using EllipseSize = RadialGradientStyleValue::EllipseSize;
+    using Size = RadialGradientStyleValue::Size;
+
+    if (!component_value.is_function())
+        return {};
+
+    auto function_name = component_value.function().name();
+
+    if (!function_name.equals_ignoring_case("radial-gradient"sv))
+        return {};
+
+    TokenStream tokens { component_value.function().values() };
+    tokens.skip_whitespace();
+
+    if (!tokens.has_next_token())
+        return {};
+
     return {};
 }
 
