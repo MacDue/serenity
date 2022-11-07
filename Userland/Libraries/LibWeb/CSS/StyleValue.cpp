@@ -1992,7 +1992,7 @@ String RadialGradientStyleValue::to_string() const
         m_position.serialize(builder);
     }
 
-    builder.append(',');
+    builder.append(", "sv);
     serialize_color_stop_list(builder, m_color_stop_list);
     builder.append(')');
     return builder.to_string();
