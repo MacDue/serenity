@@ -1967,20 +1967,25 @@ String RadialGradientStyleValue::to_string() const
     builder.appendff("radial-gradient({} "sv,
         m_ending_shape == EndingShape::Circle ? "circle"sv : "ellipse"sv);
 
-    m_size.visit([&](Extent extent) { builder.append([&] {
-                                          switch (extent) {
-                                          case Extent::ClosestCorner:
-                                              return "closest-corner"sv;
-                                          case Extent::ClosestSide:
-                                              return "closest-side"sv;
-                                          case Extent::FarthestCorner:
-                                              return "farthest-corner"sv;
-                                          case Extent::FarthestSide:
-                                              return "farthest-side"sv;
-                                          default:
-                                              VERIFY_NOT_REACHED();
-                                          }
-                                      }()); }, [&](CircleSize const& circle_size) { builder.append(circle_size.radius.to_string()); }, [&](EllipseSize const& ellipse_size) { builder.appendff("{} {}", ellipse_size.radius_a.to_string(), ellipse_size.radius_b.to_string()); });
+    m_size.visit(
+        [&](Extent extent) {
+            builder.append([&] {
+                switch (extent) {
+                case Extent::ClosestCorner:
+                    return "closest-corner"sv;
+                case Extent::ClosestSide:
+                    return "closest-side"sv;
+                case Extent::FarthestCorner:
+                    return "farthest-corner"sv;
+                case Extent::FarthestSide:
+                    return "farthest-side"sv;
+                default:
+                    VERIFY_NOT_REACHED();
+                }
+            }());
+        },
+        [&](CircleSize const& circle_size) { builder.append(circle_size.radius.to_string()); },
+        [&](EllipseSize const& ellipse_size) { builder.appendff("{} {}", ellipse_size.radius_a.to_string(), ellipse_size.radius_b.to_string()); });
 
     if (m_position != PositionValue::center()) {
         builder.appendff(" at "sv);
