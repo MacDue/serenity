@@ -271,6 +271,7 @@ void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_re
     GradientLine gradient_line(360, data.color_stops);
     float start_angle = (360.0f - data.start_angle) + 90.0f;
     // Translate position/center to the center of the pixel (avoids some funky painting)
+    // FIXME: Only do translation is at center (for x and y respectively)
     auto center_point = Gfx::FloatPoint { position }.translated(0.5, 0.5);
     gradient_line.paint_into_rect(context.painter(), gradient_rect, [&](int x, int y) {
         auto point = Gfx::FloatPoint { x, y } - center_point;
