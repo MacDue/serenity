@@ -216,6 +216,12 @@ PositionStyleValue const& StyleValue::as_position() const
     return static_cast<PositionStyleValue const&>(*this);
 }
 
+RadialGradientStyleValue const& StyleValue::as_radial_gradient() const
+{
+    VERIFY(is_radial_gradient());
+    return static_cast<RadialGradientStyleValue const&>(*this);
+}
+
 RectStyleValue const& StyleValue::as_rect() const
 {
     VERIFY(is_rect());
@@ -1953,6 +1959,53 @@ bool PositionValue::operator==(PositionValue const& other) const
         && y_relative_to == other.y_relative_to
         && variant_equals(horizontal_position, other.horizontal_position)
         && variant_equals(vertical_position, other.vertical_position));
+}
+
+String RadialGradientStyleValue::to_string() const
+{
+    StringBuilder builder;
+    builder.appendff("radial-gradient({} "sv,
+        m_ending_shape == EndingShape::Circle ? "circle"sv : "ellipse"sv);
+
+    m_size.visit([&](Extent extent) { builder.append([&] {
+                                          switch (extent) {
+                                          case Extent::ClosestCorner:
+                                              return "closest-corner"sv;
+                                          case Extent::ClosestSide:
+                                              return "closest-side"sv;
+                                          case Extent::FarthestCorner:
+                                              return "farthest-corner"sv;
+                                          case Extent::FarthestSide:
+                                              return "farthest-side"sv;
+                                          default:
+                                              VERIFY_NOT_REACHED();
+                                          }
+                                      }()); }, [&](CircleSize const& circle_size) { builder.append(circle_size.radius.to_string()); }, [&](EllipseSize const& ellipse_size) { builder.appendff("{} {}", ellipse_size.radius_a.to_string(), ellipse_size.radius_b.to_string()); });
+
+    if (m_position != PositionValue::center()) {
+        builder.appendff(" at "sv);
+        m_position.serialize(builder);
+    }
+
+    builder.append(',');
+    serialize_color_stop_list(builder, m_color_stop_list);
+    builder.append(')');
+    return builder.to_string();
+}
+
+bool RadialGradientStyleValue::equals(StyleValue const&) const
+{
+    return false;
+}
+
+void RadialGradientStyleValue::paint(PaintContext&, Gfx::IntRect const&, CSS::ImageRendering) const
+{
+    // TODO
+}
+
+void RadialGradientStyleValue::resolve_for_size(Layout::Node const&, Gfx::FloatSize const&) const
+{
+    // TODO
 }
 
 String ConicGradientStyleValue::to_string() const
