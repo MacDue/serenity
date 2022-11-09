@@ -1998,6 +1998,61 @@ String RadialGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
+Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, Gfx::FloatRect const& size) const
+{
+    auto center = m_position.resolved(node, size);
+
+    auto distance_from = [&](float v, float a, float b, auto distance_fn) {
+        return distance_fn(fabs(a - v), fabs(b - v));
+    };
+
+    auto side_shape = [&](auto distance_fn) {
+        auto x_dist = distance_from(center.x(), size.left(), size.right(), distance_fn);
+        auto y_dist = distance_from(center.y(), size.top(), size.bottom(), distance_fn);
+        if (m_ending_shape == EndingShape::Circle) {
+            auto dist = distance_fn(x_closest, y_closest);
+            return Gfx::FloatSize { dist, dist };
+        } else {
+            return Gfx::FloatSize { x_dist, y_dist };
+        }
+    };
+
+    auto closest_side_shape = [&] {
+        return side_shape(min);
+    };
+
+    auto farthest_side_shape = [&] {
+        return side_shape(max);
+    };
+
+    constexpr auto corner_scale = 1 + AK::Sqrt1_2<float>;
+
+    m_size.visit(
+        [&](Extent extent) {
+            switch (extent) {
+            case Extent::ClosestSide:
+                return closest_side_shape();
+            case Extent::ClosestCorner:
+                return closest_side_shape().scaled_by(corner_scale);
+            case Extent::FarthestCorner:
+                return farthest_side_shape().scaled_by(corner_scale);
+            case Extent::FarthestSide:
+                farthest_side_shape();
+            default:
+                VERIFY_NOT_REACHED();
+            }
+        },
+        [&](CircleSize const& circle_size) {
+            auto radius = circle_size.radius.to_px(node);
+            return Gfx::FloatSize { radius, radius }
+        },
+        [&](EllipseSize const& ellipse_size) {
+            auto radius_a = ellipse_size.radius_a.resolved(node, size.width()).to_px(node);
+            auto radius_b = ellipse_size.radius_b.resolved(node, size.height()).to_px(node);
+            return Gfx::FloatSize { radius_a, radius_b };
+        });
+}
+
 bool RadialGradientStyleValue::equals(StyleValue const&) const
 {
     return false;
