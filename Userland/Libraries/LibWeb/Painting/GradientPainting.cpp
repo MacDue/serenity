@@ -161,7 +161,7 @@ RadialGradientData resolve_radial_gradient_data(Layout::Node const& node, Gfx::F
     auto gradient_length = CSS::Length::make_px(gradient_size.width());
     auto resolved_color_stops = resolve_color_stop_positions(
         radial_gradient.color_stop_list(), [&](auto const& length_percentage) {
-            return length_percentage.resolved(node, gradient_length).to_degrees() / gradient_size.width();
+            return length_percentage.resolved(node, gradient_length).to_px(node) / gradient_size.width();
         },
         false);
     return { resolved_color_stops };
@@ -303,8 +303,17 @@ void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_re
     });
 }
 
-void paint_radial_gradient(PaintContext&, Gfx::IntRect const&, RadialGradientData const&, Gfx::IntPoint, Gfx::FloatSize const&)
+void paint_radial_gradient(PaintContext& context, Gfx::IntRect const& gradient_rect, RadialGradientData const& data, Gfx::IntPoint center, Gfx::FloatSize const& size)
 {
+    GradientLine gradient_line(size.width(), data.color_stops);
+    auto center_point = Gfx::FloatPoint { center }.translated(0.5, 0.5);
+    gradient_line.paint_into_rect(context.painter(), gradient_rect, [&](int x, int y) {
+        auto point = (Gfx::FloatPoint { x, y } - center_point);
+        float grad_x = point.x() / size.width();
+        float grad_y = point.y() / size.height();
+        float loc = AK::sqrt(grad_x * grad_x + grad_y * grad_y) * size.width();
+        return loc;
+    });
 }
 
 }

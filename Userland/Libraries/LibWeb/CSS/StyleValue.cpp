@@ -2023,7 +2023,7 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
         return side_shape(AK::max<float>);
     };
 
-    constexpr auto corner_scale = 1 + AK::Sqrt1_2<float>;
+    constexpr auto corner_scale = AK::Sqrt2<float>;
     return m_size.visit(
         [&](Extent extent) {
             switch (extent) {
