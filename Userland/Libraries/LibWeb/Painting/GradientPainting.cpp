@@ -155,15 +155,16 @@ ConicGradientData resolve_conic_gradient_data(Layout::Node const& node, CSS::Con
     return { conic_gradient.angle_degrees(), resolved_color_stops };
 }
 
-RadialGradientData resolve_radial_gradient_data(Layout::Node const& node, CSS::RadialGradientStyleValue const& radial_gradient)
+RadialGradientData resolve_radial_gradient_data(Layout::Node const& node, Gfx::FloatSize const& gradient_size, CSS::RadialGradientStyleValue const& radial_gradient)
 {
     // Start center, goes right to ending point, where the gradient line intersects the ending shape
-    // auto resolved_color_stops = resolve_color_stop_positions(
-    //     radial_gradient.color_stop_list(), [&](auto const& angle_percentage) {
-    //         return angle_percentage.resolved(node, one_turn).to_degrees() / one_turn.to_degrees();
-    //     },
-    //     conic_gradient.is_repeating());
-    // return { resolved_color_stops };
+    auto gradient_length = CSS::Length::make_px(gradient_size.width());
+    auto resolved_color_stops = resolve_color_stop_positions(
+        radial_gradient.color_stop_list(), [&](auto const& length_percentage) {
+            return length_percentage.resolved(node, gradient_length).to_degrees() / gradient_size.width();
+        },
+        false);
+    return { resolved_color_stops };
 }
 
 static float color_stop_step(ColorStop const& previous_stop, ColorStop const& next_stop, float position)
@@ -300,6 +301,10 @@ void paint_conic_gradient(PaintContext& context, Gfx::IntRect const& gradient_re
         auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + start_angle), 360.0f);
         return should_floor_angles ? floor(loc) : loc;
     });
+}
+
+void paint_radial_gradient(PaintContext&, Gfx::IntRect const&, RadialGradientData const&, Gfx::IntPoint, Gfx::FloatSize const&)
+{
 }
 
 }

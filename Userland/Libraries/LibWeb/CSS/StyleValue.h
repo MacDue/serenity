@@ -1245,7 +1245,7 @@ public:
 
     void resolve_for_size(Layout::Node const&, Gfx::FloatSize const&) const override;
 
-    Gfx::FloatSize resolve_size(Layout::Node const&, Gfx::FloatRect const&) const;
+    Gfx::FloatSize resolve_size(Layout::Node const&, Gfx::FloatPoint, Gfx::FloatRect const&) const;
 
     virtual ~RadialGradientStyleValue() override = default;
 
@@ -1263,6 +1263,14 @@ private:
     Size m_size;
     PositionValue m_position;
     Vector<LinearColorStopListElement> m_color_stop_list;
+
+    struct ResolvedData {
+        Painting::RadialGradientData data;
+        Gfx::FloatSize gradient_size;
+        Gfx::FloatPoint center;
+    };
+
+    mutable Optional<ResolvedData> m_resolved;
 };
 
 class ConicGradientStyleValue final : public AbstractImageStyleValue {

@@ -1998,10 +1998,8 @@ String RadialGradientStyleValue::to_string() const
     return builder.to_string();
 }
 
-Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, Gfx::FloatRect const& size) const
+Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, Gfx::FloatPoint center, Gfx::FloatRect const& size) const
 {
-    auto center = m_position.resolved(node, size);
-
     auto distance_from = [&](float v, float a, float b, auto distance_fn) {
         return distance_fn(fabs(a - v), fabs(b - v));
     };
@@ -2010,7 +2008,7 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
         auto x_dist = distance_from(center.x(), size.left(), size.right(), distance_fn);
         auto y_dist = distance_from(center.y(), size.top(), size.bottom(), distance_fn);
         if (m_ending_shape == EndingShape::Circle) {
-            auto dist = distance_fn(x_closest, y_closest);
+            auto dist = distance_fn(x_dist, y_dist);
             return Gfx::FloatSize { dist, dist };
         } else {
             return Gfx::FloatSize { x_dist, y_dist };
@@ -2018,16 +2016,15 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
     };
 
     auto closest_side_shape = [&] {
-        return side_shape(min);
+        return side_shape(AK::min<float>);
     };
 
     auto farthest_side_shape = [&] {
-        return side_shape(max);
+        return side_shape(AK::max<float>);
     };
 
     constexpr auto corner_scale = 1 + AK::Sqrt1_2<float>;
-
-    m_size.visit(
+    return m_size.visit(
         [&](Extent extent) {
             switch (extent) {
             case Extent::ClosestSide:
@@ -2037,20 +2034,34 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
             case Extent::FarthestCorner:
                 return farthest_side_shape().scaled_by(corner_scale);
             case Extent::FarthestSide:
-                farthest_side_shape();
+                return farthest_side_shape();
             default:
                 VERIFY_NOT_REACHED();
             }
         },
         [&](CircleSize const& circle_size) {
             auto radius = circle_size.radius.to_px(node);
-            return Gfx::FloatSize { radius, radius }
+            return Gfx::FloatSize { radius, radius };
         },
         [&](EllipseSize const& ellipse_size) {
-            auto radius_a = ellipse_size.radius_a.resolved(node, size.width()).to_px(node);
-            auto radius_b = ellipse_size.radius_b.resolved(node, size.height()).to_px(node);
+            auto radius_a = ellipse_size.radius_a.resolved(node, CSS::Length::make_px(size.width())).to_px(node);
+            auto radius_b = ellipse_size.radius_b.resolved(node, CSS::Length::make_px(size.height())).to_px(node);
             return Gfx::FloatSize { radius_a, radius_b };
         });
+}
+
+void RadialGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::FloatSize const& paint_size) const
+{
+    Gfx::FloatRect gradient_box { { 0, 0 }, paint_size };
+    auto center = m_position.resolved(node, gradient_box);
+    auto gradient_size = resolve_size(node, center, gradient_box);
+    if (m_resolved.has_value() && m_resolved->gradient_size == gradient_size)
+        return;
+    m_resolved = ResolvedData {
+        Painting::resolve_radial_gradient_data(node, gradient_size, *this),
+        gradient_size,
+        center,
+    };
 }
 
 bool RadialGradientStyleValue::equals(StyleValue const&) const
@@ -2058,14 +2069,10 @@ bool RadialGradientStyleValue::equals(StyleValue const&) const
     return false;
 }
 
-void RadialGradientStyleValue::paint(PaintContext&, Gfx::IntRect const&, CSS::ImageRendering) const
+void RadialGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const
 {
-    // TODO
-}
-
-void RadialGradientStyleValue::resolve_for_size(Layout::Node const&, Gfx::FloatSize const&) const
-{
-    // TODO
+    VERIFY(m_resolved.has_value());
+    Painting::paint_radial_gradient(context, dest_rect, m_resolved->data, m_resolved->center.to_rounded<int>(), m_resolved->gradient_size);
 }
 
 String ConicGradientStyleValue::to_string() const
