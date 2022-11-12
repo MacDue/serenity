@@ -2157,7 +2157,7 @@ void ConicGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& d
     Painting::paint_conic_gradient(context, dest_rect, m_resolved->data, m_resolved->position.to_rounded<int>());
 }
 
-bool ConicGradientStyleValue::equals(StyleValue const&) const
+bool ConicGradientStyleValue::equals(StyleValue const& other) const
 {
     if (type() != other.type())
         return false;

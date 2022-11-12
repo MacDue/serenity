@@ -308,11 +308,11 @@ void paint_radial_gradient(PaintContext& context, Gfx::IntRect const& gradient_r
     GradientLine gradient_line(size.width(), data.color_stops);
     auto center_point = Gfx::FloatPoint { center }.translated(0.5, 0.5);
     gradient_line.paint_into_rect(context.painter(), gradient_rect, [&](int x, int y) {
+        // FIXME: See if there's a more efficient calculation we do there :^)
         auto point = (Gfx::FloatPoint { x, y } - center_point);
-        float grad_x = point.x() / size.width();
-        float grad_y = point.y() / size.height();
-        float loc = AK::sqrt(grad_x * grad_x + grad_y * grad_y) * size.width();
-        return loc;
+        auto gradient_x = point.x() / size.width();
+        auto gradient_y = point.y() / size.height();
+        return AK::sqrt(gradient_x * gradient_x + gradient_y * gradient_y) * size.width();
     });
 }
 
