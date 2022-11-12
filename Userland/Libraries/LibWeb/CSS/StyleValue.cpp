@@ -1792,19 +1792,10 @@ bool LinearGradientStyleValue::equals(StyleValue const& other_) const
     if (type() != other_.type())
         return false;
     auto& other = other_.as_linear_gradient();
-
-    if (m_gradient_type != other.m_gradient_type
-        || m_repeating != other.m_repeating
-        || m_direction != other.m_direction
-        || m_color_stop_list.size() != other.m_color_stop_list.size()) {
-        return false;
-    }
-
-    for (size_t i = 0; i < m_color_stop_list.size(); i++) {
-        if (m_color_stop_list[i] != other.m_color_stop_list[i])
-            return false;
-    }
-    return true;
+    return (m_gradient_type == other.m_gradient_type
+        && m_repeating == other.m_repeating
+        && m_direction == other.m_direction
+        && m_color_stop_list == other.m_color_stop_list);
 }
 
 float LinearGradientStyleValue::angle_degrees(Gfx::FloatSize const& gradient_size) const
@@ -2113,9 +2104,15 @@ void RadialGradientStyleValue::resolve_for_size(Layout::Node const& node, Gfx::F
     };
 }
 
-bool RadialGradientStyleValue::equals(StyleValue const&) const
+bool RadialGradientStyleValue::equals(StyleValue const& other) const
 {
-    return false;
+    if (type() != other.type())
+        return false;
+    auto& other_gradient = other.as_radial_gradient();
+    return (m_ending_shape == other_gradient.m_ending_shape
+        && variant_equals(m_size, other_gradient.m_size)
+        && m_position == other_gradient.m_position
+        && m_color_stop_list == other_gradient.m_color_stop_list);
 }
 
 void RadialGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& dest_rect, CSS::ImageRendering) const
@@ -2162,7 +2159,13 @@ void ConicGradientStyleValue::paint(PaintContext& context, Gfx::IntRect const& d
 
 bool ConicGradientStyleValue::equals(StyleValue const&) const
 {
-    return false;
+    if (type() != other.type())
+        return false;
+    auto& other_gradient = other.as_conic_gradient();
+    return (m_from_angle == other_gradient.m_from_angle
+        && m_position == other_gradient.m_position
+        && m_color_stop_list == other_gradient.m_color_stop_list
+        && m_repeating == other_gradient.m_repeating);
 }
 
 float ConicGradientStyleValue::angle_degrees() const

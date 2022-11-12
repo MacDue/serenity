@@ -1215,11 +1215,13 @@ public:
 
     struct CircleSize {
         Length radius;
+        bool operator==(CircleSize const&) const = default;
     };
 
     struct EllipseSize {
         LengthPercentage radius_a;
         LengthPercentage radius_b;
+        bool operator==(EllipseSize const&) const = default;
     };
 
     using Size = Variant<Extent, CircleSize, EllipseSize>;
