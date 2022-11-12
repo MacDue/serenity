@@ -365,6 +365,8 @@ void StackingContext::paint(PaintContext& context) const
         auto try_get_scaled_destination_bitmap = [&]() -> ErrorOr<NonnullRefPtr<Gfx::Bitmap>> {
             Gfx::IntRect actual_destination_rect;
             auto bitmap = TRY(context.painter().get_region_bitmap(destination_rect, Gfx::BitmapFormat::BGRA8888, actual_destination_rect));
+            if (bitmap->rect().width() <= 1 || bitmap->rect().height() <= 1)
+                return Error::from_string_literal("FIXME: Bitmap too small for scaling!");
             // get_region_bitmap() may clip to a smaller region if the requested rect goes outside the painter, so we need to account for that.
             destination_clipped_fixup = Gfx::FloatPoint { destination_rect.location() - actual_destination_rect.location() };
             destination_rect = actual_destination_rect;
