@@ -2000,19 +2000,39 @@ String RadialGradientStyleValue::to_string() const
 
 Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, Gfx::FloatPoint center, Gfx::FloatRect const& size) const
 {
-    auto distance_from = [&](float v, float a, float b, auto distance_fn) {
-        return distance_fn(fabs(a - v), fabs(b - v));
-    };
-
-    auto side_shape = [&](auto distance_fn) {
-        auto x_dist = distance_from(center.x(), size.left(), size.right(), distance_fn);
-        auto y_dist = distance_from(center.y(), size.top(), size.bottom(), distance_fn);
+    auto side_shape = [&](auto distance_function) {
+        auto distance_from = [&](float v, float a, float b, auto distance_function) {
+            return distance_function(fabs(a - v), fabs(b - v));
+        };
+        auto x_dist = distance_from(center.x(), size.left(), size.right(), distance_function);
+        auto y_dist = distance_from(center.y(), size.top(), size.bottom(), distance_function);
         if (m_ending_shape == EndingShape::Circle) {
-            auto dist = distance_fn(x_dist, y_dist);
+            auto dist = distance_function(x_dist, y_dist);
             return Gfx::FloatSize { dist, dist };
         } else {
             return Gfx::FloatSize { x_dist, y_dist };
         }
+    };
+
+    auto corner_distance = [&](auto distance_compare, Gfx::FloatPoint& corner) {
+        auto top_left_distance = size.top_left().distance_from(center);
+        auto top_right_distance = size.top_right().distance_from(center);
+        auto bottom_right_distance = size.bottom_right().distance_from(center);
+        auto bottom_left_distance = size.bottom_left().distance_from(center);
+        auto distance = top_left_distance;
+        if (distance_compare(distance, top_right_distance)) {
+            corner = size.top_right();
+            distance = top_right_distance;
+        }
+        if (distance_compare(distance, bottom_right_distance)) {
+            corner = size.top_right();
+            distance = bottom_right_distance;
+        }
+        if (distance_compare(distance, bottom_left_distance)) {
+            corner = size.top_right();
+            distance = bottom_left_distance;
+        }
+        return distance;
     };
 
     auto closest_side_shape = [&] {
@@ -2023,16 +2043,37 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
         return side_shape(AK::max<float>);
     };
 
-    constexpr auto corner_scale = AK::Sqrt2<float>;
+    auto closest_corner_distance = [&](Gfx::FloatPoint& corner) {
+        return corner_distance([](float a, float b) { return a < b; }, corner);
+    };
+
+    auto farthest_corner_distance = [&](Gfx::FloatPoint& corner) {
+        return corner_distance([](float a, float b) { return a > b; }, corner);
+    };
+
+    auto corner_shape = [&](auto corner_distance, auto get_shape) {
+        Gfx::FloatPoint corner {};
+        auto distance = corner_distance(corner);
+        if (m_ending_shape == EndingShape::Ellipse) {
+            auto shape = get_shape();
+            auto aspect_ratio = shape.width() / shape.height();
+            auto p = corner - center;
+            auto radius_a = AK::sqrt(p.y() * p.y() * aspect_ratio * aspect_ratio + p.x() * p.x());
+            auto radius_b = radius_a / aspect_ratio;
+            return Gfx::FloatSize { radius_a, radius_b };
+        }
+        return Gfx::FloatSize { distance, distance };
+    };
+
     return m_size.visit(
         [&](Extent extent) {
             switch (extent) {
             case Extent::ClosestSide:
                 return closest_side_shape();
             case Extent::ClosestCorner:
-                return closest_side_shape().scaled_by(corner_scale);
+                return corner_shape(closest_corner_distance, closest_side_shape);
             case Extent::FarthestCorner:
-                return farthest_side_shape().scaled_by(corner_scale);
+                return corner_shape(farthest_corner_distance, farthest_side_shape);
             case Extent::FarthestSide:
                 return farthest_side_shape();
             default:
