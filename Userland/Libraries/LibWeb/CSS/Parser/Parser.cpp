@@ -2682,6 +2682,8 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
         return value;
     };
 
+    // radial-gradient( [ <ending-shape> || <size> ]? [ at <position> ]? , <color-stop-list> )
+
     Size size = Extent::FarthestCorner;
     EndingShape ending_shape = EndingShape::Circle;
     PositionValue at_position = PositionValue::center();
@@ -2713,6 +2715,10 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     };
 
     auto parse_size = [&]() -> Optional<Size> {
+        // <size> =
+        //      <extent-keyword>              |
+        //      <length [0,∞]>                |
+        //      <length-percentage [0,∞]>{2}
         auto transaction_size = tokens.begin_transaction();
         tokens.skip_whitespace();
         if (!tokens.has_next_token())
@@ -2744,6 +2750,7 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     };
 
     {
+        // [ <ending-shape> || <size> ]?
         auto maybe_ending_shape = parse_ending_shape();
         auto maybe_size = parse_size();
         if (!maybe_ending_shape.has_value() && maybe_size.has_value())
@@ -2784,6 +2791,7 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     if (expect_comma && !tokens.next_token().is(Token::Type::Comma))
         return {};
 
+    // <color-stop-list>
     auto color_stops = parse_linear_color_stop_list(tokens);
     if (!color_stops.has_value())
         return {};
