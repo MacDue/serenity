@@ -2746,9 +2746,7 @@ RefPtr<StyleValue> Parser::parse_radial_gradient_function(ComponentValue const& 
     {
         auto maybe_ending_shape = parse_ending_shape();
         auto maybe_size = parse_size();
-        if (maybe_ending_shape.has_value())
-            maybe_size = parse_size();
-        else if (maybe_size.has_value())
+        if (!maybe_ending_shape.has_value() && maybe_size.has_value())
             maybe_ending_shape = parse_ending_shape();
         if (maybe_size.has_value()) {
             size = *maybe_size;

@@ -2014,33 +2014,33 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
         }
     };
 
-    auto corner_distance = [&](auto distance_compare, Gfx::FloatPoint& corner) {
-        auto top_left_distance = size.top_left().distance_from(center);
-        auto top_right_distance = size.top_right().distance_from(center);
-        auto bottom_right_distance = size.bottom_right().distance_from(center);
-        auto bottom_left_distance = size.bottom_left().distance_from(center);
-        auto distance = top_left_distance;
-        if (distance_compare(distance, top_right_distance)) {
-            corner = size.top_right();
-            distance = top_right_distance;
-        }
-        if (distance_compare(distance, bottom_right_distance)) {
-            corner = size.top_right();
-            distance = bottom_right_distance;
-        }
-        if (distance_compare(distance, bottom_left_distance)) {
-            corner = size.top_right();
-            distance = bottom_left_distance;
-        }
-        return distance;
-    };
-
     auto closest_side_shape = [&] {
         return side_shape(AK::min<float>);
     };
 
     auto farthest_side_shape = [&] {
         return side_shape(AK::max<float>);
+    };
+
+    auto corner_distance = [&](auto distance_compare, Gfx::FloatPoint& corner) {
+        auto top_left_distance = size.top_left().distance_from(center);
+        auto top_right_distance = size.top_right().distance_from(center);
+        auto bottom_right_distance = size.bottom_right().distance_from(center);
+        auto bottom_left_distance = size.bottom_left().distance_from(center);
+        auto distance = top_left_distance;
+        if (distance_compare(top_right_distance, distance)) {
+            corner = size.top_right();
+            distance = top_right_distance;
+        }
+        if (distance_compare(bottom_right_distance, distance)) {
+            corner = size.top_right();
+            distance = bottom_right_distance;
+        }
+        if (distance_compare(bottom_left_distance, distance)) {
+            corner = size.top_right();
+            distance = bottom_left_distance;
+        }
+        return distance;
     };
 
     auto closest_corner_distance = [&](Gfx::FloatPoint& corner) {
@@ -2065,16 +2065,24 @@ Gfx::FloatSize RadialGradientStyleValue::resolve_size(Layout::Node const& node, 
         return Gfx::FloatSize { distance, distance };
     };
 
+    // https://w3c.github.io/csswg-drafts/css-images/#radial-gradient-syntax
     return m_size.visit(
         [&](Extent extent) {
             switch (extent) {
             case Extent::ClosestSide:
+                // The ending shape is sized so that it exactly meets the side of the gradient box closest to the gradient’s center.
+                // If the shape is an ellipse, it exactly meets the closest side in each dimension.
                 return closest_side_shape();
             case Extent::ClosestCorner:
+                // The ending shape is sized so that it passes through the corner of the gradient box closest to the gradient’s center.
+                // If the shape is an ellipse, the ending shape is given the same aspect-ratio it would have if closest-side were specified
                 return corner_shape(closest_corner_distance, closest_side_shape);
             case Extent::FarthestCorner:
+                // Same as closest-corner, except the ending shape is sized based on the farthest corner.
+                // If the shape is an ellipse, the ending shape is given the same aspect ratio it would have if farthest-side were specified.
                 return corner_shape(farthest_corner_distance, farthest_side_shape);
             case Extent::FarthestSide:
+                // Same as closest-side, except the ending shape is sized based on the farthest side(s).
                 return farthest_side_shape();
             default:
                 VERIFY_NOT_REACHED();
