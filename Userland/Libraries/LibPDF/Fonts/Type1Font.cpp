@@ -80,19 +80,16 @@ void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::FloatPoint point, float w
 {
     if (!m_data.font_program)
         return;
-
-    RefPtr<Gfx::Bitmap> bitmap;
-
-    auto maybe_bitmap = m_glyph_cache.get(char_code);
-    if (maybe_bitmap.has_value()) {
-        bitmap = maybe_bitmap.value();
-    } else {
-        bitmap = m_data.font_program->rasterize_glyph(char_code, width);
-        m_glyph_cache.set(char_code, bitmap);
-    }
-
     auto translation = m_data.font_program->glyph_translation(char_code, width);
-    painter.blit_filtered(point.translated(translation), *bitmap, bitmap->rect(), [color](Color pixel) -> Color {
+    point = point.translated(translation);
+
+    auto int_x = static_cast<int>(floor(point.x()));
+    auto x_shift = AK::ceil((point.x() - int_x) / 0.33f) * 0.33f;
+    auto int_y = static_cast<int>(floor(point.y()));
+    auto y_shift = AK::ceil((point.y() - int_y) / 0.33f) * 0.33f;
+
+    RefPtr<Gfx::Bitmap> bitmap = m_data.font_program->rasterize_glyph(char_code, width, x_shift, y_shift);
+    painter.blit_filtered(Gfx::IntPoint { int_x, int_y }, *bitmap, bitmap->rect(), [color](Color pixel) -> Color {
         return pixel.multiply(color);
     });
 }
