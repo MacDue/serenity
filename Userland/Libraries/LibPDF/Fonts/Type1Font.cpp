@@ -76,7 +76,7 @@ float Type1Font::get_char_width(u16 char_code) const
     return static_cast<float>(width) / 1000.0f;
 }
 
-void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::IntPoint point, float width, u32 char_code, Color color)
+void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::FloatPoint point, float width, u32 char_code, Color color)
 {
     if (!m_data.font_program)
         return;
@@ -92,7 +92,7 @@ void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::IntPoint point, float wid
     }
 
     auto translation = m_data.font_program->glyph_translation(char_code, width);
-    painter.blit_filtered(point.translated(translation.to_rounded<int>()), *bitmap, bitmap->rect(), [color](Color pixel) -> Color {
+    painter.blit_filtered(point.translated(translation), *bitmap, bitmap->rect(), [color](Color pixel) -> Color {
         return pixel.multiply(color);
     });
 }
