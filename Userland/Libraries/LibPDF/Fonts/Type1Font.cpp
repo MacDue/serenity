@@ -95,7 +95,6 @@ void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::FloatPoint point, float w
         m_glyph_cache.set(index, bitmap);
     }
 
-    RefPtr<Gfx::Bitmap> bitmap = m_data.font_program->rasterize_glyph(char_code, width, glyph_position.subpixel_offset);
     painter.blit_filtered(glyph_position.blit_position, *bitmap, bitmap->rect(), [color](Color pixel) -> Color {
         return pixel.multiply(color);
     });
