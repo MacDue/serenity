@@ -1431,7 +1431,7 @@ FLATTEN void Painter::draw_glyph(FloatPoint point, u32 code_point, Font const& f
     if (glyph.is_glyph_bitmap()) {
         draw_bitmap(top_left.to_type<int>(), glyph.glyph_bitmap(), color);
     } else {
-        blit_filtered(top_left.to_type<int>(), *glyph.bitmap(), glyph.bitmap()->rect(), [color](Color pixel) -> Color {
+        blit_filtered(top_left, *glyph.bitmap(), glyph.bitmap()->rect(), [color](Color pixel) -> Color {
             return pixel.multiply(color);
         });
     }
