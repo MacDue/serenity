@@ -53,7 +53,7 @@ public:
 
     Glyph glyph(u32 code_point) const override;
 
-    Glyph glyph(u32 code_point, GlyphSubpixelOffset) const
+    Glyph glyph(u32 code_point, GlyphSubpixelOffset) const override
     {
         return glyph(code_point);
     }

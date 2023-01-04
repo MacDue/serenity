@@ -84,6 +84,16 @@ void Type1Font::draw_glyph(Gfx::Painter& painter, Gfx::FloatPoint point, float w
     point = point.translated(translation);
 
     auto glyph_position = Gfx::GlyphPosition::from_render_position(point);
+    Gfx::GlyphIndexWithSubpixelOffset index { char_code, glyph_position.subpixel_offset };
+
+    RefPtr<Gfx::Bitmap> bitmap;
+    auto maybe_bitmap = m_glyph_cache.get(index);
+    if (maybe_bitmap.has_value()) {
+        bitmap = maybe_bitmap.value();
+    } else {
+        bitmap = m_data.font_program->rasterize_glyph(char_code, width, glyph_position.subpixel_offset);
+        m_glyph_cache.set(index, bitmap);
+    }
 
     RefPtr<Gfx::Bitmap> bitmap = m_data.font_program->rasterize_glyph(char_code, width, glyph_position.subpixel_offset);
     painter.blit_filtered(glyph_position.blit_position, *bitmap, bitmap->rect(), [color](Color pixel) -> Color {

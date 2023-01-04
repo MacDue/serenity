@@ -98,6 +98,8 @@ struct GlyphSubpixelOffset {
     {
         return FloatPoint(x / float(subpixel_divisions()), y / float(subpixel_divisions()));
     }
+
+    bool operator==(GlyphSubpixelOffset const&) const = default;
 };
 
 struct GlyphPosition {
@@ -109,7 +111,7 @@ struct GlyphPosition {
         constexpr auto subpixel_divisions = GlyphSubpixelOffset::subpixel_divisions();
         auto compute_offset = [](float pos, int& blit_pos, u8& subpixel_offset) {
             blit_pos = floor(pos);
-            subpixel_offset = AK::ceil((pos - blit_pos) / (1.0 / subpixel_divisions));
+            subpixel_offset = AK::ceil((pos - blit_pos) / (1.0f / subpixel_divisions));
             if (subpixel_offset >= subpixel_divisions) {
                 blit_pos += 1;
                 subpixel_offset = 0;

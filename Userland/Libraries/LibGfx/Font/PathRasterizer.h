@@ -20,7 +20,7 @@ public:
 
     void translate(Gfx::FloatPoint delta)
     {
-        m_translation.translated(delta);
+        m_translation.translate_by(delta);
     }
 
     Gfx::FloatPoint translation() const { return m_translation; }

@@ -19,6 +19,8 @@ namespace Gfx {
 struct GlyphIndexWithSubpixelOffset {
     u32 glyph_id;
     GlyphSubpixelOffset subpixel_offset;
+
+    bool operator==(GlyphIndexWithSubpixelOffset const&) const = default;
 };
 
 class ScaledFont : public Gfx::Font {
@@ -86,6 +88,8 @@ private:
 
 }
 
+namespace AK {
+
 template<>
 struct Traits<Gfx::GlyphIndexWithSubpixelOffset> : public GenericTraits<Gfx::GlyphIndexWithSubpixelOffset> {
     static unsigned hash(Gfx::GlyphIndexWithSubpixelOffset const& index)
@@ -93,3 +97,5 @@ struct Traits<Gfx::GlyphIndexWithSubpixelOffset> : public GenericTraits<Gfx::Gly
         return pair_int_hash(index.glyph_id, (index.subpixel_offset.x << 8) | index.subpixel_offset.y);
     }
 };
+
+}
