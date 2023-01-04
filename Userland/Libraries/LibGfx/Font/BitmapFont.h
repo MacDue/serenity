@@ -52,7 +52,7 @@ public:
     void set_slope(u8 slope) { m_slope = slope; }
 
     Glyph glyph(u32 code_point) const override;
-    Glyph glyph(u32 code_point, GlyphSubpixelOffset) const { return glyph(code_point); }
+    Glyph glyph(u32 code_point, GlyphSubpixelOffset) const override { return glyph(code_point); }
 
     float glyph_left_bearing(u32) const override { return 0; }
 
