@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <LibGfx/Font/ScaledFont.h>
 #include <LibPDF/Fonts/PDFFont.h>
 #include <LibPDF/Fonts/PS1FontProgram.h>
 
@@ -33,7 +34,7 @@ public:
 
 private:
     Data m_data;
-    HashMap<u32, RefPtr<Gfx::Bitmap>> m_glyph_cache;
+    HashMap<Gfx::GlyphIndexWithSubpixelOffset, RefPtr<Gfx::Bitmap>> m_glyph_cache;
 };
 
 }

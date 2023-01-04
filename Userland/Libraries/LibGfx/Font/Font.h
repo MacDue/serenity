@@ -86,6 +86,43 @@ private:
     float m_ascent;
 };
 
+struct GlyphSubpixelOffset {
+    u8 x, y;
+
+    static constexpr int subpixel_divisions()
+    {
+        return 3;
+    }
+
+    FloatPoint to_float_point() const
+    {
+        return FloatPoint(x / float(subpixel_divisions()), y / float(subpixel_divisions()));
+    }
+};
+
+struct GlyphPosition {
+    IntPoint blit_position;
+    GlyphSubpixelOffset subpixel_offset;
+
+    static GlyphPosition from_render_position(FloatPoint position)
+    {
+        constexpr auto subpixel_divisions = GlyphSubpixelOffset::subpixel_divisions();
+        auto compute_offset = [](float pos, int& blit_pos, u8& subpixel_offset) {
+            blit_pos = floor(pos);
+            subpixel_offset = AK::ceil((pos - blit_pos) / (1.0 / subpixel_divisions));
+            if (subpixel_offset >= subpixel_divisions) {
+                blit_pos += 1;
+                subpixel_offset = 0;
+            }
+        };
+        int blit_x, blit_y;
+        u8 subpixel_x, subpixel_y;
+        compute_offset(position.x(), blit_x, subpixel_x);
+        compute_offset(position.y(), blit_y, subpixel_y);
+        return GlyphPosition { { blit_x, blit_y }, { subpixel_x, subpixel_y } };
+    }
+};
+
 struct FontPixelMetrics {
     float size { 0 };
     float x_height { 0 };
@@ -124,6 +161,7 @@ public:
 
     virtual u16 weight() const = 0;
     virtual Glyph glyph(u32 code_point) const = 0;
+    virtual Glyph glyph(u32 code_point, GlyphSubpixelOffset) const = 0;
     virtual bool contains_glyph(u32 code_point) const = 0;
 
     virtual float glyph_width(u32 code_point) const = 0;

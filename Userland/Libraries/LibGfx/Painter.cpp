@@ -942,49 +942,6 @@ void Painter::blit_with_opacity(IntPoint position, Gfx::Bitmap const& source, In
     }
 }
 
-void Painter::blit_filtered(FloatPoint position, Gfx::Bitmap const& source, IntRect const& src_rect, Function<Color(Color)> filter)
-{
-    if (position.to_type<int>().to_type<float>() == position)
-        return blit_filtered(position, source, src_rect, move(filter));
-    VERIFY(scale() == 1 && (source.scale() == 1 || source.scale() == scale()));
-    IntRect safe_src_rect = src_rect.intersected(source.rect());
-
-    auto dst_rect = enclosing_int_rect(FloatRect(position, safe_src_rect.size().to_type<float>())).translated(translation());
-    auto clipped_rect = dst_rect.intersected(clip_rect());
-    if (clipped_rect.is_empty())
-        return;
-
-    auto int_x = static_cast<int>(floor(position.x()));
-    auto x_shift = position.x() - int_x;
-    auto int_y = static_cast<int>(floor(position.y()));
-    auto y_shift = position.y() - int_y;
-
-    auto get_pixel = [&](int x, int y) -> Color {
-        if (source.rect().contains({ x, y }))
-            return source.get_pixel(x, y);
-        return Color::Transparent;
-    };
-
-    auto sample_shifted_pixels = [&](int x, int y) {
-        /// s1 | s2
-        /// s3 | s4
-        Color s1 = get_pixel(x - 1, y);
-        Color s2 = get_pixel(x, y);
-        Color s3 = get_pixel(x - 1, y - 1);
-        Color s4 = get_pixel(x, y - 1);
-        return s2.interpolate(s1, x_shift).interpolate(s4.interpolate(s3, x_shift), y_shift);
-    };
-
-    auto offset = clipped_rect.location() - dst_rect.location();
-    for (int y = 0; y < clipped_rect.height(); y++) {
-        for (int x = 0; x < clipped_rect.width(); x++) {
-            auto color = sample_shifted_pixels(x + offset.x(), y + offset.y());
-            if (color.alpha())
-                set_physical_pixel(clipped_rect.location().translated(x, y), filter(color), true);
-        }
-    }
-}
-
 void Painter::blit_filtered(IntPoint position, Gfx::Bitmap const& source, IntRect const& src_rect, Function<Color(Color)> filter)
 {
     VERIFY((source.scale() == 1 || source.scale() == scale()) && "blit_filtered only supports integer upsampling");
@@ -1425,13 +1382,14 @@ FLATTEN void Painter::draw_glyph(FloatPoint point, u32 code_point, Color color)
 
 FLATTEN void Painter::draw_glyph(FloatPoint point, u32 code_point, Font const& font, Color color)
 {
-    auto glyph = font.glyph(code_point);
+    auto glyph_position = Gfx::GlyphPosition::from_render_position(point);
+    auto glyph = font.glyph(code_point, glyph_position.subpixel_offset);
     auto top_left = point + FloatPoint(glyph.left_bearing(), 0);
 
     if (glyph.is_glyph_bitmap()) {
         draw_bitmap(top_left.to_type<int>(), glyph.glyph_bitmap(), color);
     } else {
-        blit_filtered(top_left, *glyph.bitmap(), glyph.bitmap()->rect(), [color](Color pixel) -> Color {
+        blit_filtered(glyph_position.blit_position, *glyph.bitmap(), glyph.bitmap()->rect(), [color](Color pixel) -> Color {
             return pixel.multiply(color);
         });
     }

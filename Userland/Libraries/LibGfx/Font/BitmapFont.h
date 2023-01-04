@@ -52,6 +52,12 @@ public:
     void set_slope(u8 slope) { m_slope = slope; }
 
     Glyph glyph(u32 code_point) const override;
+
+    Glyph glyph(u32 code_point, GlyphSubpixelOffset) const
+    {
+        return glyph(code_point);
+    }
+
     Glyph raw_glyph(u32 code_point) const;
     bool contains_glyph(u32 code_point) const override;
     bool contains_raw_glyph(u32 code_point) const { return m_glyph_widths[code_point] > 0; }

@@ -94,30 +94,25 @@ PDFErrorOr<void> PS1FontProgram::create(ReadonlyBytes const& bytes, RefPtr<Encod
     return parse_encrypted_portion(decrypted);
 }
 
-RefPtr<Gfx::Bitmap> PS1FontProgram::rasterize_glyph(u32 char_code, float width, float x_offset, float y_offset)
+RefPtr<Gfx::Bitmap> PS1FontProgram::rasterize_glyph(u32 char_code, float width, Gfx::GlyphSubpixelOffset subpixel_offset)
 {
-    auto path = build_char(char_code, width, x_offset, y_offset);
+    auto path = build_char(char_code, width);
     auto bounding_box = path.bounding_box().size();
 
     u32 w = (u32)ceilf(bounding_box.width()) + 2;
     u32 h = (u32)ceilf(bounding_box.height()) + 2;
 
     Gfx::PathRasterizer rasterizer(Gfx::IntSize(w, h));
-    Gfx::AffineTransform t;
-    t.translate({ x_offset, y_offset });
-    path = path.copy_transformed(t);
+    rasterizer.translate(subpixel_offset.to_float_point());
     rasterizer.draw_path(path);
     return rasterizer.accumulate();
 }
 
-Gfx::Path PS1FontProgram::build_char(u32 char_code, float width, float x_offset, float y_offset)
+Gfx::Path PS1FontProgram::build_char(u32 char_code, float width)
 {
     auto maybe_glyph = m_glyph_map.get(char_code);
     if (!maybe_glyph.has_value())
         return {};
-
-    (void)x_offset;
-    (void)y_offset;
 
     auto& glyph = maybe_glyph.value();
     auto transform = glyph_transform_to_device_space(glyph, width);

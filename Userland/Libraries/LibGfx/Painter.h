@@ -76,7 +76,6 @@ public:
     void blit(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, float opacity = 1.0f, bool apply_alpha = true);
     void blit_dimmed(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect);
     void blit_brightened(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect);
-    void blit_filtered(FloatPoint, Gfx::Bitmap const&, IntRect const& src_rect, Function<Color(Color)>);
     void blit_filtered(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, Function<Color(Color)>);
     void draw_tiled_bitmap(IntRect const& dst_rect, Gfx::Bitmap const&);
     void blit_offset(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, IntPoint);
