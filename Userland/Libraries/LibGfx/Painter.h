@@ -76,11 +76,19 @@ public:
     void blit(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, float opacity = 1.0f, bool apply_alpha = true);
     void blit_dimmed(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect);
     void blit_brightened(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect);
+    void blit_filtered(FloatPoint, Gfx::Bitmap const&, IntRect const& src_rect, Function<Color(Color)>);
     void blit_filtered(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, Function<Color(Color)>);
     void draw_tiled_bitmap(IntRect const& dst_rect, Gfx::Bitmap const&);
     void blit_offset(IntPoint, Gfx::Bitmap const&, IntRect const& src_rect, IntPoint);
     void blit_disabled(IntPoint, Gfx::Bitmap const&, IntRect const&, Palette const&);
     void blit_tiled(IntRect const&, Gfx::Bitmap const&, IntRect const& src_rect);
+    void draw_text(FloatRect const&, StringView, Font const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(FloatRect const&, StringView, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(FloatRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(FloatRect const&, Utf32View const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, FloatRect const&, StringView, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, FloatRect const&, Utf8View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, FloatRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_text(IntRect const&, StringView, Font const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_text(IntRect const&, StringView, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_text(IntRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
@@ -94,6 +102,10 @@ public:
     void draw_emoji(IntPoint, Gfx::Bitmap const&, Font const&);
     void draw_glyph_or_emoji(IntPoint, u32, Font const&, Color);
     void draw_glyph_or_emoji(IntPoint, Utf8CodePointIterator&, Font const&, Color);
+    void draw_glyph(FloatPoint, u32, Color);
+    void draw_glyph(FloatPoint, u32, Font const&, Color);
+    void draw_glyph_or_emoji(FloatPoint, u32, Font const&, Color);
+    void draw_glyph_or_emoji(FloatPoint, Utf8CodePointIterator&, Font const&, Color);
     void draw_circle_arc_intersecting(IntRect const&, IntPoint, int radius, Color, int thickness);
 
     // Streamlined text drawing routine that does no wrapping/elision/alignment.
@@ -214,7 +226,7 @@ private:
     Vector<DirectionalRun> split_text_into_directional_runs(Utf8View const&, TextDirection initial_direction);
     bool text_contains_bidirectional_text(Utf8View const&, TextDirection);
     template<typename DrawGlyphFunction>
-    void do_draw_text(IntRect const&, Utf8View const& text, Font const&, TextAlignment, TextElision, TextWrapping, DrawGlyphFunction);
+    void do_draw_text(FloatRect const&, Utf8View const& text, Font const&, TextAlignment, TextElision, TextWrapping, DrawGlyphFunction);
 };
 
 class PainterStateSaver {
