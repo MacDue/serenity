@@ -92,9 +92,9 @@ public:
     void draw_text(IntRect const&, StringView, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_text(IntRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_text(IntRect const&, Utf32View const&, TextAlignment = TextAlignment::TopLeft, Color = Color::Black, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
-    void draw_text(Function<void(IntRect const&, Utf8CodePointIterator&)>, IntRect const&, StringView, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
-    void draw_text(Function<void(IntRect const&, Utf8CodePointIterator&)>, IntRect const&, Utf8View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
-    void draw_text(Function<void(IntRect const&, Utf8CodePointIterator&)>, IntRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, IntRect const&, StringView, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, IntRect const&, Utf8View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
+    void draw_text(Function<void(FloatRect const&, Utf8CodePointIterator&)>, IntRect const&, Utf32View const&, Font const&, TextAlignment = TextAlignment::TopLeft, TextElision = TextElision::None, TextWrapping = TextWrapping::DontWrap);
     void draw_ui_text(Gfx::IntRect const&, StringView, Gfx::Font const&, TextAlignment, Gfx::Color);
     void draw_glyph(IntPoint, u32, Color);
     void draw_glyph(IntPoint, u32, Font const&, Color);
