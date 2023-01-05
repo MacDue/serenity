@@ -54,6 +54,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
 
 find_package(Threads REQUIRED)
+link_libraries(Threads::Threads)
 
 if (ENABLE_LAGOM_CCACHE)
     include(setup_ccache)
