@@ -100,6 +100,7 @@ struct GlyphSubpixelOffset {
 struct GlyphRasterPosition {
     // Where the glyph bitmap should be drawn/blitted.
     IntPoint blit_position;
+
     // A subpixel offset to be used when rendering the glyph.
     // This improves kerning and alignment at the expense of caching a few extra bitmaps.
     // This is (currently) snapped to thirds of a subpixel (i.e. 0, 0.33, 0.66).
