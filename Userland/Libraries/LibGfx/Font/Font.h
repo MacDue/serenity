@@ -87,42 +87,24 @@ private:
 };
 
 struct GlyphSubpixelOffset {
-    u8 x, y;
+    u8 x;
+    u8 y;
 
-    static constexpr int subpixel_divisions()
-    {
-        return 3;
-    }
-
-    FloatPoint to_float_point() const
-    {
-        return FloatPoint(x / float(subpixel_divisions()), y / float(subpixel_divisions()));
-    }
+    // TODO: Allow setting this at runtime via some config?
+    static constexpr int subpixel_divisions() { return 3; }
+    FloatPoint to_float_point() const { return FloatPoint(x / float(subpixel_divisions()), y / float(subpixel_divisions())); }
 
     bool operator==(GlyphSubpixelOffset const&) const = default;
 };
 
-struct GlyphPosition {
+struct GlyphRasterPosition {
+    // Where the glyph bitmap should be drawn/blitted.
     IntPoint blit_position;
+    // A subpixel [0,1) of x/y offset to be used when rendering the glyph.
+    // This is (currently) snapped to thirds of a subpixel (i.e. 0, 0.33, 0.66).
     GlyphSubpixelOffset subpixel_offset;
 
-    static GlyphPosition from_render_position(FloatPoint position)
-    {
-        constexpr auto subpixel_divisions = GlyphSubpixelOffset::subpixel_divisions();
-        auto compute_offset = [](float pos, int& blit_pos, u8& subpixel_offset) {
-            blit_pos = floor(pos);
-            subpixel_offset = AK::ceil((pos - blit_pos) / (1.0f / subpixel_divisions));
-            if (subpixel_offset >= subpixel_divisions) {
-                blit_pos += 1;
-                subpixel_offset = 0;
-            }
-        };
-        int blit_x, blit_y;
-        u8 subpixel_x, subpixel_y;
-        compute_offset(position.x(), blit_x, subpixel_x);
-        compute_offset(position.y(), blit_y, subpixel_y);
-        return GlyphPosition { { blit_x, blit_y }, { subpixel_x, subpixel_y } };
-    }
+    static GlyphRasterPosition get_nearest_fit_for(FloatPoint position);
 };
 
 struct FontPixelMetrics {
