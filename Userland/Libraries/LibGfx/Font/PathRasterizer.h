@@ -18,11 +18,7 @@ public:
     void draw_path(Gfx::Path&);
     RefPtr<Gfx::Bitmap> accumulate();
 
-    void translate(Gfx::FloatPoint delta)
-    {
-        m_translation.translate_by(delta);
-    }
-
+    void translate(Gfx::FloatPoint delta) { m_translation.translate_by(delta); }
     Gfx::FloatPoint translation() const { return m_translation; }
 
 private:
