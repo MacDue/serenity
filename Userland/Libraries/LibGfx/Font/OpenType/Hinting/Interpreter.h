@@ -16,7 +16,6 @@ namespace OpenType::Hinting {
 using F2Dot14 = FixedPoint<30, u16>;
 using F2Dot30 = FixedPoint<30, u32>;
 using F26Dot6 = FixedPoint<6, u32>;
-
 struct Interpreter : InstructionHandler {
 
     // TODO:

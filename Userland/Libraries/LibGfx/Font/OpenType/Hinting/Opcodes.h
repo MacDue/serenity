@@ -194,6 +194,11 @@ struct InstructionStream {
     bool at_end() const;
     void jump_to_next(Opcode);
 
+    struct Context {
+        Opcode opcode;
+        InstructionStream& stream;
+    };
+
 private:
     Opcode next_opcode() { static_cast<Opcode>(next_byte()); }
 
@@ -208,133 +213,137 @@ private:
 // Callbacks for each logically identical set of opcodes.
 // Basic parsing handled by InstructionStream.
 struct InstructionHandler {
-    virtual void npush_bytes(InstructionStream&, ReadonlyBytes values) { }
-    virtual void npush_words(InstructionStream&, ReadonlyBytes values) { }
-    virtual void push_bytes(InstructionStream&, ReadonlyBytes values) { }
-    virtual void push_words(InstructionStream&, ReadonlyBytes values) { }
+    using Context = InstructionStream::Context;
 
-    virtual void read_store(InstructionStream&) { }
-    virtual void write_store(InstructionStream&) { }
+    virtual void default_handler(Context) = 0;
 
-    virtual void write_control_value_table_px(InstructionStream&) { }
-    virtual void write_control_value_table_fuints(InstructionStream&) { }
-    virtual void read_control_value_table(InstructionStream&) { }
+    virtual void npush_bytes(Context context, ReadonlyBytes) { default_handler(context); }
+    virtual void npush_words(Context context, ReadonlyBytes) { default_handler(context); }
+    virtual void push_bytes(Context context, ReadonlyBytes) { default_handler(context); }
+    virtual void push_words(Context context, ReadonlyBytes) { default_handler(context); }
 
-    virtual void set_freedom_and_projection_vectors_to_coordinate_axis(InstructionStream&, bool a) { }
-    virtual void set_projection_vector_to_coordinate_axis(InstructionStream&, bool a) { }
-    virtual void set_freedom_vector_to_coordinate_axis(InstructionStream&, bool a) { }
-    virtual void set_projection_vector_to_line(InstructionStream&, bool a) { }
-    virtual void set_freedom_vector_vector_to_line(InstructionStream&, bool a) { }
-    virtual void set_freedom_vector_to_projection_vector(InstructionStream&) { }
-    virtual void set_dual_projection_vector_to_line(InstructionStream&, bool a) { }
-    virtual void set_projection_vector_from_stack(InstructionStream&) { }
-    virtual void set_freedom_vector_from_stack(InstructionStream&) { }
-    virtual void get_projection_vector(InstructionStream&) { }
-    virtual void get_freedom_vector(InstructionStream&) { }
-    virtual void set_refrence_point(InstructionStream&, int reference_point) { }
-    virtual void set_zone_pointer(InstructionStream&, int zone_pointer) { }
-    virtual void set_zone_pointers(InstructionStream&) { }
-    virtual void round_to_half_grid(InstructionStream&) { }
-    virtual void round_to_grid(InstructionStream&) { }
-    virtual void round_to_double_grid(InstructionStream&) { }
-    virtual void round_down_to_grid(InstructionStream&) { }
-    virtual void round_up_to_grid(InstructionStream&) { }
-    virtual void round_off(InstructionStream&) { }
-    virtual void super_round(InstructionStream&) { }
-    virtual void super_round_45_degrees(InstructionStream&) { }
-    virtual void set_loop_variable(InstructionStream&) { }
-    virtual void set_minimum_distance(InstructionStream&) { }
-    virtual void instruction_execution_control(InstructionStream&) { }
-    virtual void scan_conversion_control(InstructionStream&) { }
-    virtual void scantype(InstructionStream&) { }
-    virtual void set_control_value_table_in(InstructionStream&) { }
-    virtual void set_single_width_cut_in(InstructionStream&) { }
-    virtual void set_single_width(InstructionStream&) { }
-    virtual void set_auto_flip_boolean(InstructionStream&, bool) { }
-    virtual void set_angle_weight(InstructionStream&) { }
-    virtual void set_delta_base(InstructionStream&) { }
-    virtual void set_delta_shift(InstructionStream&) { }
+    virtual void read_store(Context context) { default_handler(context); }
+    virtual void write_store(Context context) { default_handler(context); }
 
-    virtual void get_coordinate_projected_onto_projection_vector(InstructionStream&, bool a) { }
-    virtual void set_coordinate_from_stack_using_projection_and_freedom_vectors(InstructionStream&) { }
-    virtual void measure_distance(InstructionStream&, bool a) { }
-    virtual void measure_pixels_per_em(InstructionStream&) { }
-    virtual void measure_point_size(InstructionStream&) { }
-    virtual void flip_point(InstructionStream&) { }
-    virtual void flip_range_on(InstructionStream&) { }
-    virtual void flip_range_off(InstructionStream&) { }
-    virtual void shift_point_by_last_point(InstructionStream&, bool a) { }
-    virtual void shift_contour_by_last_point(InstructionStream&, bool a) { }
-    virtual void shift_zone_by_last_point(InstructionStream&, bool a) { }
-    virtual void shift_point_by_pixel_amount(InstructionStream&) { }
-    virtual void move_stack_indirect_relative_point(InstructionStream&, bool a) { }
-    virtual void move_direct_absolute_point(InstructionStream&, bool a) { }
-    virtual void move_indirect_absolute_point(InstructionStream&, bool a) { }
-    virtual void move_direct_relative_point(InstructionStream&, bool a, bool b, bool c, u8 de) { }
-    virtual void move_indirect_relative_point(InstructionStream&, bool a, bool b, bool c, u8 de) { }
-    virtual void align_relative_point(InstructionStream&) { }
-    virtual void adjust_angle(InstructionStream&) { }
-    virtual void intersect_lines(InstructionStream&) { }
-    virtual void align_points(InstructionStream&) { }
-    virtual void interpolate_point_by_last_relative_stretch(InstructionStream&) { }
-    virtual void untouch_point(InstructionStream&) { }
-    virtual void interpolate_untouched_points_through_outline(InstructionStream&, bool a) { }
+    virtual void write_control_value_table_px(Context context) { default_handler(context); }
+    virtual void write_control_value_table_fuints(Context context) { default_handler(context); }
+    virtual void read_control_value_table(Context context) { default_handler(context); }
 
-    virtual void delta_exception_p(InstructionStream&, int p) { }
-    virtual void delta_exception_c(InstructionStream&, int c) { }
+    virtual void set_freedom_and_projection_vectors_to_coordinate_axis(Context context, bool) { default_handler(context); }
+    virtual void set_projection_vector_to_coordinate_axis(Context context, bool) { default_handler(context); }
+    virtual void set_freedom_vector_to_coordinate_axis(Context context, bool) { default_handler(context); }
+    virtual void set_projection_vector_to_line(Context context, bool) { default_handler(context); }
+    virtual void set_freedom_vector_vector_to_line(Context context, bool) { default_handler(context); }
+    virtual void set_freedom_vector_to_projection_vector(Context context) { default_handler(context); }
+    virtual void set_dual_projection_vector_to_line(Context context, bool) { default_handler(context); }
+    virtual void set_projection_vector_from_stack(Context context) { default_handler(context); }
+    virtual void set_freedom_vector_from_stack(Context context) { default_handler(context); }
+    virtual void get_projection_vector(Context context) { default_handler(context); }
+    virtual void get_freedom_vector(Context context) { default_handler(context); }
+    virtual void set_refrence_point(Context context, int) { default_handler(context); }
+    virtual void set_zone_pointer(Context context, int) { default_handler(context); }
+    virtual void set_zone_pointers(Context context) { default_handler(context); }
+    virtual void round_to_half_grid(Context context) { default_handler(context); }
+    virtual void round_to_grid(Context context) { default_handler(context); }
+    virtual void round_to_double_grid(Context context) { default_handler(context); }
+    virtual void round_down_to_grid(Context context) { default_handler(context); }
+    virtual void round_up_to_grid(Context context) { default_handler(context); }
+    virtual void round_off(Context context) { default_handler(context); }
+    virtual void super_round(Context context) { default_handler(context); }
+    virtual void super_round_45_degrees(Context context) { default_handler(context); }
+    virtual void set_loop_variable(Context context) { default_handler(context); }
+    virtual void set_minimum_distance(Context context) { default_handler(context); }
+    virtual void instruction_execution_control(Context context) { default_handler(context); }
+    virtual void scan_conversion_control(Context context) { default_handler(context); }
+    virtual void scantype(Context context) { default_handler(context); }
+    virtual void set_control_value_table_in(Context context) { default_handler(context); }
+    virtual void set_single_width_cut_in(Context context) { default_handler(context); }
+    virtual void set_single_width(Context context) { default_handler(context); }
+    virtual void set_auto_flip_boolean(Context context, bool) { default_handler(context); }
+    virtual void set_angle_weight(Context context) { default_handler(context); }
+    virtual void set_delta_base(Context context) { default_handler(context); }
+    virtual void set_delta_shift(Context context) { default_handler(context); }
 
-    virtual void stack_dup(InstructionStream&) { }
-    virtual void stack_pop(InstructionStream&) { }
-    virtual void stack_clear(InstructionStream&) { }
-    virtual void stack_swap(InstructionStream&) { }
-    virtual void stack_depth(InstructionStream&) { }
-    virtual void stack_copy_indexed_element(InstructionStream&) { }
-    virtual void stack_move_indexed_element(InstructionStream&) { }
-    virtual void stack_roll_three_elements(InstructionStream&) { }
+    virtual void get_coordinate_projected_onto_projection_vector(Context context, bool) { default_handler(context); }
+    virtual void set_coordinate_from_stack_using_projection_and_freedom_vectors(Context context) { default_handler(context); }
+    virtual void measure_distance(Context context, bool) { default_handler(context); }
+    virtual void measure_pixels_per_em(Context context) { default_handler(context); }
+    virtual void measure_point_size(Context context) { default_handler(context); }
+    virtual void flip_point(Context context) { default_handler(context); }
+    virtual void flip_range_on(Context context) { default_handler(context); }
+    virtual void flip_range_off(Context context) { default_handler(context); }
+    virtual void shift_point_by_last_point(Context context, bool) { default_handler(context); }
+    virtual void shift_contour_by_last_point(Context context, bool) { default_handler(context); }
+    virtual void shift_zone_by_last_point(Context context, bool) { default_handler(context); }
+    virtual void shift_point_by_pixel_amount(Context context) { default_handler(context); }
+    virtual void move_stack_indirect_relative_point(Context context, bool) { default_handler(context); }
+    virtual void move_direct_absolute_point(Context context, bool) { default_handler(context); }
+    virtual void move_indirect_absolute_point(Context context, bool) { default_handler(context); }
+    virtual void move_direct_relative_point(Context context, bool, bool, bool, u8) { default_handler(context); }
+    virtual void move_indirect_relative_point(Context context, bool, bool, bool, u8) { default_handler(context); }
+    virtual void align_relative_point(Context context) { default_handler(context); }
+    virtual void adjust_angle(Context context) { default_handler(context); }
+    virtual void intersect_lines(Context context) { default_handler(context); }
+    virtual void align_points(Context context) { default_handler(context); }
+    virtual void interpolate_point_by_last_relative_stretch(Context context) { default_handler(context); }
+    virtual void untouch_point(Context context) { default_handler(context); }
+    virtual void interpolate_untouched_points_through_outline(Context context, bool) { default_handler(context); }
 
-    virtual void if_test(InstructionStream&) { }
-    virtual void else_case(InstructionStream&) { }
-    virtual void end_if(InstructionStream&) { }
-    virtual void jump_relative_on_true(InstructionStream&) { }
-    virtual void jump(InstructionStream&) { }
-    virtual void jump_relative_on_false(InstructionStream&) { }
+    virtual void delta_exception_p(Context context, int) { default_handler(context); }
+    virtual void delta_exception_c(Context context, int) { default_handler(context); }
 
-    virtual void less_than(InstructionStream&) { }
-    virtual void less_than_or_equal(InstructionStream&) { }
-    virtual void greater_than(InstructionStream&) { }
-    virtual void greater_than_or_equal(InstructionStream&) { }
-    virtual void equal(InstructionStream&) { }
-    virtual void not_equal(InstructionStream&) { }
-    virtual void odd(InstructionStream&) { }
-    virtual void even(InstructionStream&) { }
-    virtual void logical_and(InstructionStream&) { }
-    virtual void logical_or(InstructionStream&) { }
-    virtual void logical_not(InstructionStream&) { }
+    virtual void stack_dup(Context context) { default_handler(context); }
+    virtual void stack_pop(Context context) { default_handler(context); }
+    virtual void stack_clear(Context context) { default_handler(context); }
+    virtual void stack_swap(Context context) { default_handler(context); }
+    virtual void stack_depth(Context context) { default_handler(context); }
+    virtual void stack_copy_indexed_element(Context context) { default_handler(context); }
+    virtual void stack_move_indexed_element(Context context) { default_handler(context); }
+    virtual void stack_roll_three_elements(Context context) { default_handler(context); }
 
-    virtual void add(InstructionStream&) { }
-    virtual void subtract(InstructionStream&) { }
-    virtual void divide(InstructionStream&) { }
-    virtual void multiply(InstructionStream&) { }
-    virtual void absolute_value(InstructionStream&) { }
-    virtual void negate(InstructionStream&) { }
-    virtual void floor(InstructionStream&) { }
-    virtual void ceiling(InstructionStream&) { }
-    virtual void max(InstructionStream&) { }
-    virtual void min(InstructionStream&) { }
+    virtual void if_test(Context context) { default_handler(context); }
+    virtual void else_case(Context context) { default_handler(context); }
+    virtual void end_if(Context context) { default_handler(context); }
+    virtual void jump_relative_on_true(Context context) { default_handler(context); }
+    virtual void jump(Context context) { default_handler(context); }
+    virtual void jump_relative_on_false(Context context) { default_handler(context); }
 
-    virtual void round(InstructionStream&, bool a, bool b) { }
-    virtual void no_round(InstructionStream&, bool a, bool b) { }
+    virtual void less_than(Context context) { default_handler(context); }
+    virtual void less_than_or_equal(Context context) { default_handler(context); }
+    virtual void greater_than(Context context) { default_handler(context); }
+    virtual void greater_than_or_equal(Context context) { default_handler(context); }
+    virtual void equal(Context context) { default_handler(context); }
+    virtual void not_equal(Context context) { default_handler(context); }
+    virtual void odd(Context context) { default_handler(context); }
+    virtual void even(Context context) { default_handler(context); }
+    virtual void logical_and(Context context) { default_handler(context); }
+    virtual void logical_or(Context context) { default_handler(context); }
+    virtual void logical_not(Context context) { default_handler(context); }
 
-    virtual void function_definition(InstructionStream&) { }
-    virtual void end_function_definition(InstructionStream&) { }
-    virtual void call_function(InstructionStream&) { }
-    virtual void loop_and_call_function(InstructionStream&) { }
-    virtual void instruction_definition(InstructionStream&) { }
+    virtual void add(Context context) { default_handler(context); }
+    virtual void subtract(Context context) { default_handler(context); }
+    virtual void divide(Context context) { default_handler(context); }
+    virtual void multiply(Context context) { default_handler(context); }
+    virtual void absolute_value(Context context) { default_handler(context); }
+    virtual void negate(Context context) { default_handler(context); }
+    virtual void floor(Context context) { default_handler(context); }
+    virtual void ceiling(Context context) { default_handler(context); }
+    virtual void max(Context context) { default_handler(context); }
+    virtual void min(Context context) { default_handler(context); }
 
-    virtual void debug_call(InstructionStream&) { }
+    virtual void round(Context context, bool, bool) { default_handler(context); }
+    virtual void no_round(Context context, bool, bool) { default_handler(context); }
 
-    virtual void get_information(InstructionStream&) { }
-    virtual void get_variation(InstructionStream&) { }
+    virtual void function_definition(Context context) { default_handler(context); }
+    virtual void end_function_definition(Context context) { default_handler(context); }
+    virtual void call_function(Context context) { default_handler(context); }
+    virtual void loop_and_call_function(Context context) { default_handler(context); }
+    virtual void instruction_definition(Context context) { default_handler(context); }
+
+    virtual void debug_call(Context context) { default_handler(context); }
+
+    virtual void get_information(Context context) { default_handler(context); }
+    virtual void get_variation(Context context) { default_handler(context); }
 };
 
 }
