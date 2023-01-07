@@ -26,19 +26,21 @@ static void print_words(ReadonlyBytes bytes)
 }
 
 struct InstructionPrinter : InstructionHandler {
-
     void print_instruction(Context context)
     {
         outln("{}[]", opcode_name(context.opcode));
     }
+
     void print_instruction(Context context, bool a)
     {
         outln("{}[{01b}]", opcode_name(context.opcode), a);
     }
+
     void print_instruction(Context context, bool a, bool b)
     {
         outln("{}[{02b}]", opcode_name(context.opcode), (a << 1) | b);
     }
+
     void print_instruction(Context context, bool a, bool b, bool c, u8 de)
     {
         outln("{}[{05b}]", opcode_name(context.opcode), (a << 4) | (b << 3) | (c << 2) | de);
@@ -50,18 +52,21 @@ struct InstructionPrinter : InstructionHandler {
         print_bytes(values);
         outln();
     }
+
     void npush_words(Context context, ReadonlyBytes values) override
     {
         out("{}[] {}", opcode_name(context.opcode), values.size());
         print_words(values);
         outln();
     }
+
     void push_bytes(Context context, ReadonlyBytes values) override
     {
         out("{}[{03b}]", opcode_name(context.opcode), values.size());
         print_bytes(values);
         outln();
     }
+
     void push_words(Context context, ReadonlyBytes values) override
     {
         out("{}[{03b}]", opcode_name(context.opcode), values.size());
