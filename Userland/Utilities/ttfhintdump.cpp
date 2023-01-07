@@ -6,6 +6,7 @@
 
 #include <AK/Format.h>
 #include <LibCore/ArgsParser.h>
+#include <LibGfx/Font/OpenType/Font.h>
 #include <LibGfx/Font/OpenType/Hinting/Opcodes.h>
 #include <LibMain/Main.h>
 
@@ -19,13 +20,19 @@ static void print_bytes(ReadonlyBytes bytes)
 
 static void print_words(ReadonlyBytes bytes)
 {
-    for (size_t i = 0; i < bytes.size(); i++) {
+    for (size_t i = 0; i < bytes.size(); i += 2) {
         u16 word = bytes[i] << 8 | bytes[i + 1];
         out(", {}", word);
     }
 }
 
 struct InstructionPrinter : InstructionHandler {
+    void before_instruction(Context context) override
+    {
+        auto digits = int(AK::log10(float(context.stream.length()))) + 1;
+        out("{:0{}}: ", context.stream.current_position() - 1, digits);
+    }
+
     void print_instruction(Context context)
     {
         outln("{}[]", opcode_name(context.opcode));
@@ -33,17 +40,17 @@ struct InstructionPrinter : InstructionHandler {
 
     void print_instruction(Context context, bool a)
     {
-        outln("{}[{01b}]", opcode_name(context.opcode), a);
+        outln("{}[{:01b}]", opcode_name(context.opcode), a);
     }
 
     void print_instruction(Context context, bool a, bool b)
     {
-        outln("{}[{02b}]", opcode_name(context.opcode), (a << 1) | b);
+        outln("{}[{:02b}]", opcode_name(context.opcode), (a << 1) | b);
     }
 
     void print_instruction(Context context, bool a, bool b, bool c, u8 de)
     {
-        outln("{}[{05b}]", opcode_name(context.opcode), (a << 4) | (b << 3) | (c << 2) | de);
+        outln("{}[{:05b}]", opcode_name(context.opcode), (a << 4) | (b << 3) | (c << 2) | de);
     }
 
     void npush_bytes(Context context, ReadonlyBytes values) override
@@ -55,21 +62,21 @@ struct InstructionPrinter : InstructionHandler {
 
     void npush_words(Context context, ReadonlyBytes values) override
     {
-        out("{}[] {}", opcode_name(context.opcode), values.size());
+        out("{}[] {}", opcode_name(context.opcode), values.size() / 2 - 1);
         print_words(values);
         outln();
     }
 
     void push_bytes(Context context, ReadonlyBytes values) override
     {
-        out("{}[{03b}]", opcode_name(context.opcode), values.size());
+        out("{}[{:03b}]", opcode_name(context.opcode), values.size());
         print_bytes(values);
         outln();
     }
 
     void push_words(Context context, ReadonlyBytes values) override
     {
-        out("{}[{03b}]", opcode_name(context.opcode), values.size());
+        out("{}[{:03b}]", opcode_name(context.opcode), values.size() / 2 - 1);
         print_words(values);
         outln();
     }
@@ -97,4 +104,23 @@ struct InstructionPrinter : InstructionHandler {
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
+    Core::ArgsParser args_parser;
+
+    static StringView font_path;
+    args_parser.add_positional_argument(font_path, "Path to font", "FILE");
+    args_parser.parse(arguments);
+
+    auto font = TRY(OpenType::Font::try_load_from_file(font_path));
+
+    auto program_data = font->font_program_data();
+    if (!program_data.has_value() || program_data->size() == 0)
+        outln("No font program found");
+
+    InstructionPrinter printer {};
+    InstructionStream stream { printer, *program_data };
+
+    while (!stream.at_end())
+        stream.process_next_instruction();
+
+    return 0;
 }

@@ -171,6 +171,21 @@ struct GlyphHorizontalMetrics {
     i16 left_side_bearing;
 };
 
+// https://learn.microsoft.com/en-us/typography/opentype/spec/fpgm
+// fpgm: Font Program
+struct Fpgm {
+public:
+    explicit Fpgm(ReadonlyBytes slice)
+        : m_slice(slice)
+    {
+    }
+
+    ReadonlyBytes program_data() const { return m_slice; }
+
+private:
+    ReadonlyBytes m_slice;
+};
+
 // https://learn.microsoft.com/en-us/typography/opentype/spec/hmtx
 // hmtx: Horizontal Metrics Table
 class Hmtx {

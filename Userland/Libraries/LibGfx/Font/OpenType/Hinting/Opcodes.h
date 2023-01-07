@@ -194,13 +194,16 @@ struct InstructionStream {
     bool at_end() const;
     void jump_to_next(Opcode);
 
+    size_t current_position() const { return m_byte_index; }
+    size_t length() const { return m_bytes.size(); }
+
     struct Context {
         Opcode opcode;
         InstructionStream& stream;
     };
 
 private:
-    Opcode next_opcode() { static_cast<Opcode>(next_byte()); }
+    Opcode next_opcode() { return static_cast<Opcode>(next_byte()); }
 
     u8 next_byte();
     ReadonlyBytes take_n_bytes(size_t n);
@@ -215,6 +218,7 @@ private:
 struct InstructionHandler {
     using Context = InstructionStream::Context;
 
+    virtual void before_instruction(Context) { }
     virtual void default_handler(Context) = 0;
 
     virtual void npush_bytes(Context context, ReadonlyBytes) { default_handler(context); }
@@ -344,6 +348,8 @@ struct InstructionHandler {
 
     virtual void get_information(Context context) { default_handler(context); }
     virtual void get_variation(Context context) { default_handler(context); }
+
+    virtual ~InstructionHandler() = default;
 };
 
 }

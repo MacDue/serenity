@@ -38,6 +38,13 @@ public:
     virtual u8 slope() const override;
     virtual bool is_fixed_width() const override;
 
+    Optional<ReadonlyBytes> font_program_data() const
+    {
+        if (m_fpgm.has_value())
+            return m_fpgm->program_data();
+        return {};
+    }
+
 private:
     enum class Offsets {
         NumTables = 4,
@@ -52,7 +59,7 @@ private:
 
     static ErrorOr<NonnullRefPtr<Font>> try_load_from_offset(ReadonlyBytes, unsigned index = 0);
 
-    Font(ReadonlyBytes bytes, Head&& head, Name&& name, Hhea&& hhea, Maxp&& maxp, Hmtx&& hmtx, Cmap&& cmap, Loca&& loca, Glyf&& glyf, Optional<OS2> os2, Optional<Kern>&& kern)
+    Font(ReadonlyBytes bytes, Head&& head, Name&& name, Hhea&& hhea, Maxp&& maxp, Hmtx&& hmtx, Cmap&& cmap, Loca&& loca, Glyf&& glyf, Optional<OS2> os2, Optional<Kern>&& kern, Optional<Fpgm> fpgm)
         : m_buffer(move(bytes))
         , m_head(move(head))
         , m_name(move(name))
@@ -64,6 +71,7 @@ private:
         , m_cmap(move(cmap))
         , m_os2(move(os2))
         , m_kern(move(kern))
+        , m_fpgm(move(fpgm))
     {
     }
 
@@ -82,6 +90,7 @@ private:
     Cmap m_cmap;
     Optional<OS2> m_os2;
     Optional<Kern> m_kern;
+    Optional<Fpgm> m_fpgm;
 };
 
 }

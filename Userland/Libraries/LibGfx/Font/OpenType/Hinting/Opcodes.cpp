@@ -60,16 +60,19 @@ StringView opcode_name(Opcode opcode)
     // Everything else:
     switch (opcode) {
 #define __ENUMERATE_OPENTYPE_OPCODES(opcode, _) \
-    return #opcode##sv;
+    case Opcode::opcode:                        \
+        return #opcode##sv;
         ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
     }
+    VERIFY_NOT_REACHED();
 }
 
 void InstructionStream::process_next_instruction()
 {
     auto opcode = next_opcode();
     Context context { opcode, *this };
+    m_handler.before_instruction(context);
     switch (opcode) {
     case Opcode::NPUSHB: {
         auto n = next_byte();
