@@ -6,15 +6,10 @@
 
 #pragma once
 
-#include <AK/FixedPoint.h>
 #include <AK/Span.h>
-#include <LibGfx/Point.h>
+#include <AK/StringView.h>
 
 namespace OpenType::Hinting {
-
-using F2Dot14 = FixedPoint<30, u16>;
-using F2Dot30 = FixedPoint<30, u32>;
-using F26Dot6 = FixedPoint<6, u32>;
 
 #define ENUMERATE_OPENTYPE_OPCODES                      \
     /* Pushing data onto the interpreter stack: */      \
@@ -225,13 +220,13 @@ struct InstructionHandler {
     virtual void write_control_value_table_fuints(InstructionStream&) { }
     virtual void read_control_value_table(InstructionStream&) { }
 
-    virtual void set_freedom_and_projection_vectors_to_coordinate_axis(InstructionStream&) { }
-    virtual void set_projection_vector_to_coordinate_axis(InstructionStream&) { }
-    virtual void set_freedom_vector_to_coordinate_axis(InstructionStream&) { }
-    virtual void set_projection_vector_to_line(InstructionStream&) { }
-    virtual void set_freedom_vector_vector_to_line(InstructionStream&) { }
+    virtual void set_freedom_and_projection_vectors_to_coordinate_axis(InstructionStream&, bool a) { }
+    virtual void set_projection_vector_to_coordinate_axis(InstructionStream&, bool a) { }
+    virtual void set_freedom_vector_to_coordinate_axis(InstructionStream&, bool a) { }
+    virtual void set_projection_vector_to_line(InstructionStream&, bool a) { }
+    virtual void set_freedom_vector_vector_to_line(InstructionStream&, bool a) { }
     virtual void set_freedom_vector_to_projection_vector(InstructionStream&) { }
-    virtual void set_dual_projection_vector_to_line(InstructionStream&) { }
+    virtual void set_dual_projection_vector_to_line(InstructionStream&, bool a) { }
     virtual void set_projection_vector_from_stack(InstructionStream&) { }
     virtual void set_freedom_vector_from_stack(InstructionStream&) { }
     virtual void get_projection_vector(InstructionStream&) { }
@@ -275,19 +270,21 @@ struct InstructionHandler {
     virtual void move_stack_indirect_relative_point(InstructionStream&, bool a) { }
     virtual void move_direct_absolute_point(InstructionStream&, bool a) { }
     virtual void move_indirect_absolute_point(InstructionStream&, bool a) { }
-    virtual void move_direct_relative_point(InstructionStream&, bool a, bool b, bool c) { }
-    virtual void move_indirect_relative_point(InstructionStream&, bool a, bool b, bool c) { }
+    virtual void move_direct_relative_point(InstructionStream&, bool a, bool b, bool c, u8 de) { }
+    virtual void move_indirect_relative_point(InstructionStream&, bool a, bool b, bool c, u8 de) { }
     virtual void align_relative_point(InstructionStream&) { }
     virtual void adjust_angle(InstructionStream&) { }
+    virtual void intersect_lines(InstructionStream&) { }
     virtual void align_points(InstructionStream&) { }
     virtual void interpolate_point_by_last_relative_stretch(InstructionStream&) { }
     virtual void untouch_point(InstructionStream&) { }
-    virtual void interpolate_untouched_points_through_outline(InstructionStream&) { }
+    virtual void interpolate_untouched_points_through_outline(InstructionStream&, bool a) { }
 
     virtual void delta_exception_p(InstructionStream&, int p) { }
     virtual void delta_exception_c(InstructionStream&, int c) { }
 
     virtual void stack_dup(InstructionStream&) { }
+    virtual void stack_pop(InstructionStream&) { }
     virtual void stack_clear(InstructionStream&) { }
     virtual void stack_swap(InstructionStream&) { }
     virtual void stack_depth(InstructionStream&) { }
@@ -300,7 +297,7 @@ struct InstructionHandler {
     virtual void end_if(InstructionStream&) { }
     virtual void jump_relative_on_true(InstructionStream&) { }
     virtual void jump(InstructionStream&) { }
-    virtual void jump_relative_on_flase(InstructionStream&) { }
+    virtual void jump_relative_on_false(InstructionStream&) { }
 
     virtual void less_than(InstructionStream&) { }
     virtual void less_than_or_equal(InstructionStream&) { }
@@ -325,8 +322,8 @@ struct InstructionHandler {
     virtual void max(InstructionStream&) { }
     virtual void min(InstructionStream&) { }
 
-    virtual void round(InstructionStream&) { }
-    virtual void no_round(InstructionStream&) { }
+    virtual void round(InstructionStream&, bool a, bool b) { }
+    virtual void no_round(InstructionStream&, bool a, bool b) { }
 
     virtual void function_definition(InstructionStream&) { }
     virtual void end_function_definition(InstructionStream&) { }
@@ -338,35 +335,6 @@ struct InstructionHandler {
 
     virtual void get_information(InstructionStream&) { }
     virtual void get_variation(InstructionStream&) { }
-};
-
-struct Interpreter : InstructionHandler {
-
-    // TODO:
-    struct Zone { };
-
-    // https://learn.microsoft.com/en-us/typography/opentype/spec/tt_graphics_state
-    struct GraphicsState {
-        bool auto_flip { true };
-        F26Dot6 control_value_cut_in { 17 };
-        u32 delta_base { 9 };
-        u32 delta_shift { 3 };
-        Gfx::Point<F2Dot14> dual_projection_vectors;
-        Gfx::Point<F2Dot14> freedom_vector;
-        Zone* zp0 { nullptr };
-        Zone* zp1 { nullptr };
-        Zone* zp2 { nullptr };
-        u32 loop { 0 };
-        F26Dot6 minimum_distance { 1 };
-        Gfx::Point<F2Dot14> projection_vector;
-        u8 round_state { 1 };
-        u32 rp0 { 0 };
-        u32 rp1 { 0 };
-        u32 rp2 { 0 };
-        bool scan_control { false };
-        F26Dot6 singe_width_cut_in { 0 };
-        F26Dot6 single_width_value { 0 };
-    };
 };
 
 }
