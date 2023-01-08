@@ -61,9 +61,9 @@ struct InstructionPrinter : InstructionHandler {
     void default_handler(Context context) override
     {
         auto instruction = context.instruction();
-        auto name = opcode_name(instruction.opcode());
+        auto name = opcode_mnemonic(instruction.opcode());
         if (instruction.flag_bits() > 0)
-            return out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1));
+            return out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits());
         out(INSTRUCTION_FMT, name);
     }
 
@@ -73,19 +73,19 @@ struct InstructionPrinter : InstructionHandler {
         print_bytes(context.instruction().values());
     }
 
-    void npush_NPUSHW(Context context, ReadonlyBytes values) override
+    void handle_NPUSHW(Context context) override
     {
         default_handler(context);
         print_words(context.instruction().values());
     }
 
-    void push_PUSHB(Context context, ReadonlyBytes values) override
+    void handle_PUSHB(Context context) override
     {
         default_handler(context);
         print_bytes(context.instruction().values());
     }
 
-    void push_PUSHW(Context context, ReadonlyBytes values) override
+    void handle_PUSHW(Context context) override
     {
         default_handler(context);
         print_words(context.instruction().values());

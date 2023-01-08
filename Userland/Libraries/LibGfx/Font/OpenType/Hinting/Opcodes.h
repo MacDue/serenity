@@ -179,7 +179,7 @@ private:
     u8 m_flag_bits;
 };
 
-StringView opcode_name(Opcode);
+StringView opcode_mnemonic(Opcode);
 
 struct InstructionHandler;
 

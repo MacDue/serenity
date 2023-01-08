@@ -10,7 +10,7 @@
 
 namespace OpenType::Hinting {
 
-StringView opcode_name(Opcode opcode)
+StringView opcode_mnemonic(Opcode opcode)
 {
     switch (to_underlying(opcode)) {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
@@ -22,7 +22,7 @@ StringView opcode_name(Opcode opcode)
     VERIFY_NOT_REACHED();
 }
 
-static u8 flag_bit_count(Opcode opcode)
+static constexpr u8 flag_bit_count(Opcode opcode)
 {
     switch (to_underlying(opcode)) {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
@@ -74,6 +74,7 @@ void InstructionStream::process_next_instruction()
     ScopeGuard after = [=, this]() mutable {
         m_handler.after_operation(stream, opcode);
     };
+    // The PUSH instructions are handled specially as they take their values from the instruction stream.
     switch (opcode) {
     case Opcode::NPUSHB: {
         auto n = next_byte();
