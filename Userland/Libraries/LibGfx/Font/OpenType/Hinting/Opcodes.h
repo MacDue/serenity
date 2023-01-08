@@ -219,6 +219,8 @@ struct InstructionHandler {
     using Context = InstructionStream::Context;
 
     virtual void before_instruction(Context) { }
+    virtual void after_instruction(Context) { }
+
     virtual void default_handler(Context) = 0;
 
     virtual void npush_bytes(Context context, ReadonlyBytes) { default_handler(context); }

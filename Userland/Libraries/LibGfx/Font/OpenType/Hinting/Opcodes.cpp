@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <AK/ScopeGuard.h>
 #include <LibGfx/Font/OpenType/Hinting/Opcodes.h>
 
 namespace OpenType::Hinting {
@@ -73,6 +74,9 @@ void InstructionStream::process_next_instruction()
     auto opcode = next_opcode();
     Context context { opcode, *this };
     m_handler.before_instruction(context);
+    ScopeGuard after = [=, this] {
+        m_handler.after_instruction(context);
+    };
     switch (opcode) {
     case Opcode::NPUSHB: {
         auto n = next_byte();

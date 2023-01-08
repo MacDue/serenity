@@ -38,12 +38,23 @@ public:
     virtual u8 slope() const override;
     virtual bool is_fixed_width() const override;
 
-    Optional<ReadonlyBytes> font_program_data() const
+    // TODO: Remove these program accessors once the need for ttfhintdump is gone!
+
+    Optional<ReadonlyBytes> font_program() const
     {
         if (m_fpgm.has_value())
             return m_fpgm->program_data();
         return {};
     }
+
+    Optional<ReadonlyBytes> control_value_program() const
+    {
+        if (m_prep.has_value())
+            return m_prep->program_data();
+        return {};
+    }
+
+    Optional<ReadonlyBytes> glyph_program(u32) const { return {}; }
 
 private:
     enum class Offsets {
@@ -59,7 +70,7 @@ private:
 
     static ErrorOr<NonnullRefPtr<Font>> try_load_from_offset(ReadonlyBytes, unsigned index = 0);
 
-    Font(ReadonlyBytes bytes, Head&& head, Name&& name, Hhea&& hhea, Maxp&& maxp, Hmtx&& hmtx, Cmap&& cmap, Loca&& loca, Glyf&& glyf, Optional<OS2> os2, Optional<Kern>&& kern, Optional<Fpgm> fpgm)
+    Font(ReadonlyBytes bytes, Head&& head, Name&& name, Hhea&& hhea, Maxp&& maxp, Hmtx&& hmtx, Cmap&& cmap, Loca&& loca, Glyf&& glyf, Optional<OS2> os2, Optional<Kern>&& kern, Optional<Fpgm> fpgm, Optional<Prep> prep)
         : m_buffer(move(bytes))
         , m_head(move(head))
         , m_name(move(name))
@@ -72,6 +83,7 @@ private:
         , m_os2(move(os2))
         , m_kern(move(kern))
         , m_fpgm(move(fpgm))
+        , m_prep(move(prep))
     {
     }
 
@@ -91,6 +103,7 @@ private:
     Optional<OS2> m_os2;
     Optional<Kern> m_kern;
     Optional<Fpgm> m_fpgm;
+    Optional<Prep> m_prep;
 };
 
 }

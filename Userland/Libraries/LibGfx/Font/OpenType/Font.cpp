@@ -397,6 +397,7 @@ ErrorOr<NonnullRefPtr<Font>> Font::try_load_from_offset(ReadonlyBytes buffer, u3
     Optional<ReadonlyBytes> opt_os2_slice = {};
     Optional<ReadonlyBytes> opt_kern_slice = {};
     Optional<ReadonlyBytes> opt_fpgm_slice = {};
+    Optional<ReadonlyBytes> opt_prep_slice = {};
 
     Optional<Head> opt_head = {};
     Optional<Name> opt_name = {};
@@ -408,6 +409,7 @@ ErrorOr<NonnullRefPtr<Font>> Font::try_load_from_offset(ReadonlyBytes buffer, u3
     Optional<OS2> opt_os2 = {};
     Optional<Kern> opt_kern = {};
     Optional<Fpgm> opt_fpgm = {};
+    Optional<Prep> opt_prep = {};
 
     auto num_tables = be_u16(buffer.offset_pointer(offset + (u32)Offsets::NumTables));
     if (buffer.size() < offset + (u32)Sizes::OffsetTable + num_tables * (u32)Sizes::TableRecord)
@@ -450,6 +452,8 @@ ErrorOr<NonnullRefPtr<Font>> Font::try_load_from_offset(ReadonlyBytes buffer, u3
             opt_kern_slice = buffer_here;
         } else if (tag == tag_from_str("fpgm")) {
             opt_fpgm_slice = buffer_here;
+        } else if (tag == tag_from_str("prep")) {
+            opt_prep_slice = buffer_here;
         }
     }
 
@@ -497,6 +501,10 @@ ErrorOr<NonnullRefPtr<Font>> Font::try_load_from_offset(ReadonlyBytes buffer, u3
     if (opt_fpgm_slice.has_value())
         fpgm = Fpgm(opt_fpgm_slice.value());
 
+    Optional<Prep> prep;
+    if (opt_prep_slice.has_value())
+        prep = Prep(opt_prep_slice.value());
+
     // Select cmap table. FIXME: Do this better. Right now, just looks for platform "Windows"
     // and corresponding encoding "Unicode full repertoire", or failing that, "Unicode BMP"
     for (u32 i = 0; i < cmap.num_subtables(); i++) {
@@ -521,7 +529,7 @@ ErrorOr<NonnullRefPtr<Font>> Font::try_load_from_offset(ReadonlyBytes buffer, u3
         }
     }
 
-    return adopt_ref(*new Font(move(buffer), move(head), move(name), move(hhea), move(maxp), move(hmtx), move(cmap), move(loca), move(glyf), move(os2), move(kern), move(fpgm)));
+    return adopt_ref(*new Font(move(buffer), move(head), move(name), move(hhea), move(maxp), move(hmtx), move(cmap), move(loca), move(glyf), move(os2), move(kern), move(fpgm), move(prep)));
 }
 
 Gfx::ScaledFontMetrics Font::metrics([[maybe_unused]] float x_scale, float y_scale) const

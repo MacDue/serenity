@@ -186,6 +186,21 @@ private:
     ReadonlyBytes m_slice;
 };
 
+// https://learn.microsoft.com/en-us/typography/opentype/spec/prep
+// prep: Control Value Program
+struct Prep {
+public:
+    explicit Prep(ReadonlyBytes slice)
+        : m_slice(slice)
+    {
+    }
+
+    ReadonlyBytes program_data() const { return m_slice; }
+
+private:
+    ReadonlyBytes m_slice;
+};
+
 // https://learn.microsoft.com/en-us/typography/opentype/spec/hmtx
 // hmtx: Horizontal Metrics Table
 class Hmtx {
