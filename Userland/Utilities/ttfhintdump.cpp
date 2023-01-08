@@ -26,14 +26,14 @@ static void print_words(ReadonlyBytes bytes)
         out(", \e[92m{}\e[0m", word);
     }
 }
-
-#define INSTRUCTION_FMT(tag) \
-    "\e[33m{}\e[36m[\e[95m" tag "\e[36m]\e[0m"
+#define BASE_INSTRUCTION_FMT(tag_fmt) "\e[33m{}\e[36m[\e[95m" tag_fmt "\e[36m]\e[0m"
+#define WITH_TAG_INSTRUCTION_FMT BASE_INSTRUCTION_FMT("{:0{}b}")
+#define INSTRUCTION_FMT BASE_INSTRUCTION_FMT("")
 
 struct InstructionPrinter : InstructionHandler {
-    void before_instruction(Context context) override
+    void before_operation(InstructionStream& stream, Opcode opcode) override
     {
-        switch (context.opcode) {
+        switch (opcode) {
         case Opcode::EIF:
         case Opcode::ELSE:
         case Opcode::ENDF:
@@ -41,13 +41,13 @@ struct InstructionPrinter : InstructionHandler {
         default:
             break;
         }
-        auto digits = int(AK::log10(float(context.stream.length()))) + 1;
-        out("\e[90m{:0{}}:\e[0m{:{}}", context.stream.current_position() - 1, digits, ""sv, m_indent_level * 2);
+        auto digits = int(AK::log10(float(stream.length()))) + 1;
+        out("\e[90m{:0{}}:\e[0m{:{}}", stream.current_position() - 1, digits, ""sv, m_indent_level * 2);
     }
 
-    void after_instruction(Context context) override
+    void after_operation(InstructionStream&, Opcode opcode) override
     {
-        switch (context.opcode) {
+        switch (opcode) {
         case Opcode::IF:
         case Opcode::FDEF:
         case Opcode::ELSE:
@@ -55,75 +55,41 @@ struct InstructionPrinter : InstructionHandler {
         default:
             break;
         }
-    }
-
-    void print_instruction(Context context)
-    {
-        outln(INSTRUCTION_FMT(""), opcode_name(context.opcode));
-    }
-
-    void print_instruction(Context context, bool a)
-    {
-        outln(INSTRUCTION_FMT("{:01b}"), opcode_name(context.opcode), a);
-    }
-
-    void print_instruction(Context context, bool a, bool b)
-    {
-        outln(INSTRUCTION_FMT("{:02b}"), opcode_name(context.opcode), (a << 1) | b);
-    }
-
-    void print_instruction(Context context, bool a, bool b, bool c, u8 de)
-    {
-        outln(INSTRUCTION_FMT("{:05b}"), opcode_name(context.opcode), (a << 4) | (b << 3) | (c << 2) | de);
-    }
-
-    void npush_bytes(Context context, ReadonlyBytes values) override
-    {
-        out(INSTRUCTION_FMT("") " \e[92m{}\e[0m", opcode_name(context.opcode), values.size());
-        print_bytes(values);
         outln();
     }
 
-    void npush_words(Context context, ReadonlyBytes values) override
+    void default_handler(Context context) override
     {
-        out(INSTRUCTION_FMT("") " \e[92m{}\e[0m", opcode_name(context.opcode), values.size() / 2);
-        print_words(values);
-        outln();
+        auto instruction = context.instruction();
+        auto name = opcode_name(instruction.opcode());
+        if (instruction.flag_bits() > 0)
+            return out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1));
+        out(INSTRUCTION_FMT, name);
     }
 
-    void push_bytes(Context context, ReadonlyBytes values) override
+    void handle_NPUSHB(Context context) override
     {
-        out(INSTRUCTION_FMT("{:03b}"), opcode_name(context.opcode), values.size() - 1);
-        print_bytes(values);
-        outln();
+        default_handler(context);
+        print_bytes(context.instruction().values());
     }
 
-    void push_words(Context context, ReadonlyBytes values) override
+    void npush_NPUSHW(Context context, ReadonlyBytes values) override
     {
-        out(INSTRUCTION_FMT("{:03b}"), opcode_name(context.opcode), values.size() / 2 - 1);
-        print_words(values);
-        outln();
+        default_handler(context);
+        print_words(context.instruction().values());
     }
 
-    void default_handler(Context context) override { print_instruction(context); }
-    void set_freedom_and_projection_vectors_to_coordinate_axis(Context context, bool a) override { print_instruction(context, a); }
-    void set_projection_vector_to_coordinate_axis(Context context, bool a) override { print_instruction(context, a); }
-    void set_freedom_vector_to_coordinate_axis(Context context, bool a) override { print_instruction(context, a); }
-    void set_projection_vector_to_line(Context context, bool a) override { print_instruction(context, a); }
-    void set_freedom_vector_vector_to_line(Context context, bool a) override { print_instruction(context, a); }
-    void set_dual_projection_vector_to_line(Context context, bool a) override { print_instruction(context, a); }
-    void measure_distance(Context context, bool a) override { print_instruction(context, a); }
-    void shift_point_by_last_point(Context context, bool a) override { print_instruction(context, a); }
-    void shift_contour_by_last_point(Context context, bool a) override { print_instruction(context, a); }
-    void shift_zone_by_last_point(Context context, bool a) override { print_instruction(context, a); }
-    void move_stack_indirect_relative_point(Context context, bool a) override { print_instruction(context, a); }
-    void move_direct_absolute_point(Context context, bool a) override { print_instruction(context, a); }
-    void move_indirect_absolute_point(Context context, bool a) override { print_instruction(context, a); }
-    void move_direct_relative_point(Context context, bool a, bool b, bool c, u8 de) override { print_instruction(context, a, b, c, de); }
-    void move_indirect_relative_point(Context context, bool a, bool b, bool c, u8 de) override { print_instruction(context, a, b, c, de); }
-    void interpolate_untouched_points_through_outline(Context context, bool a) override { print_instruction(context, a); };
-    void round(Context context, bool a, bool b) override { print_instruction(context, a, b); }
-    void no_round(Context context, bool a, bool b) override { print_instruction(context, a, b); }
+    void push_PUSHB(Context context, ReadonlyBytes values) override
+    {
+        default_handler(context);
+        print_bytes(context.instruction().values());
+    }
+
+    void push_PUSHW(Context context, ReadonlyBytes values) override
+    {
+        default_handler(context);
+        print_words(context.instruction().values());
+    }
 
 private:
     u32 m_indent_level { 1 };
