@@ -155,7 +155,7 @@ namespace OpenType::Hinting {
 enum class Opcode : u8 {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
     mnemonic = range_start,                                            \
-    mnemonic##_MAX = range_end,                                        \
+    mnemonic##_MAX = range_end,
     ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
 };
@@ -232,6 +232,7 @@ struct InstructionHandler {
     {                                                 \
         default_handler(context);                     \
     }
+    ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
 
     virtual ~InstructionHandler() = default;

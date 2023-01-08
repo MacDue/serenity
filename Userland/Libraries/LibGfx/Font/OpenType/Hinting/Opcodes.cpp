@@ -22,7 +22,7 @@ StringView opcode_name(Opcode opcode)
     VERIFY_NOT_REACHED();
 }
 
-static u8 flag_bits(Opcode opcode)
+static u8 flag_bit_count(Opcode opcode)
 {
     switch (to_underlying(opcode)) {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
@@ -36,8 +36,8 @@ static u8 flag_bits(Opcode opcode)
 
 Instruction::Instruction(Opcode opcode, ReadonlyBytes values)
     : m_opcode(opcode)
-    , m_values(m_values)
-    , m_flag_bits(flag_bits(opcode))
+    , m_values(values)
+    , m_flag_bits(flag_bit_count(opcode))
 {
 }
 
@@ -71,7 +71,7 @@ void InstructionStream::process_next_instruction()
     auto opcode = static_cast<Opcode>(next_byte());
     auto& stream = *this;
     m_handler.before_operation(stream, opcode);
-    ScopeGuard after = [=, this] {
+    ScopeGuard after = [=, this]() mutable {
         m_handler.after_operation(stream, opcode);
     };
     switch (opcode) {
@@ -95,6 +95,8 @@ void InstructionStream::process_next_instruction()
         auto values = take_n_bytes(n * 2);
         return m_handler.handle_PUSHB({ { opcode, values }, stream });
     }
+    default:
+        break;
     }
     switch (to_underlying(opcode)) {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
