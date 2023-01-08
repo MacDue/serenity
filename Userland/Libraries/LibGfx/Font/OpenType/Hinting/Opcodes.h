@@ -169,7 +169,7 @@ struct Instruction {
 
     u8 flag_bits() const { return m_flag_bits; };
     Opcode opcode() const { return m_opcode; }
-    ReadonlyBytes values() const { m_values; };
+    ReadonlyBytes values() const { return m_values; };
 
     Instruction(Opcode opcode, ReadonlyBytes values = {});
 
@@ -198,6 +198,11 @@ struct InstructionStream {
     size_t length() const { return m_bytes.size(); }
 
     struct Context {
+        Context(Instruction instruction, InstructionStream& stream)
+            : m_instruction(instruction)
+            , m_stream(stream)
+        {
+        }
         Instruction instruction() { return m_instruction; }
         InstructionStream& stream() { return m_stream; }
 
@@ -219,8 +224,8 @@ struct InstructionHandler {
     using Context = InstructionStream::Context;
 
     virtual void default_handler(Context) = 0;
-    virtual void before_operation(InstructionStream&, Opcode opcode) { }
-    virtual void after_operation(InstructionStream&, Opcode opcode) { }
+    virtual void before_operation(InstructionStream&, Opcode) { }
+    virtual void after_operation(InstructionStream&, Opcode) { }
 
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, _, __) \
     virtual void handle_##mnemonic(Context context)   \

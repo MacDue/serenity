@@ -31,6 +31,7 @@ static u8 flag_bits(Opcode opcode)
         ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
     }
+    VERIFY_NOT_REACHED();
 }
 
 Instruction::Instruction(Opcode opcode, ReadonlyBytes values)
