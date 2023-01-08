@@ -39,11 +39,12 @@ struct InstructionPrinter : InstructionHandler {
             break;
         }
         auto digits = int(AK::log10(float(stream.length()))) + 1;
-#define output_line_prefix(format) \
-    out(format, stream.current_position() - 1, digits, ""sv, m_indent_level * 2);
         if (m_enable_highlighting)
-            return output_line_prefix(GRAY "{:0{}}:" RESET "{:{}}");
-        return output_line_prefix("{:0{}}:{:{}}");
+            out(GRAY);
+        out("{:0{}}:", stream.current_position() - 1, digits);
+        if (m_enable_highlighting)
+            out(RESET);
+        out("{:{}}", ""sv, m_indent_level * 2);
     }
 
     void after_operation(InstructionStream&, Opcode opcode) override
@@ -81,16 +82,21 @@ struct InstructionPrinter : InstructionHandler {
     {
         auto instruction = context.instruction();
         auto name = opcode_mnemonic(instruction.opcode());
-#define print_instruction(with_tag_fmt, without_tag_fmt) ({                                                                           \
-    if (instruction.flag_bits() > 0)                                                                                                  \
-        out(with_tag_fmt, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits()); \
-    else                                                                                                                              \
-        out(without_tag_fmt, name);                                                                                                   \
-})
         if (m_enable_highlighting)
-            print_instruction(YELLOW "{}" CYAN "[" PURPLE "{:0{}b}" CYAN "]" RESET, YELLOW "{}" CYAN "[]" RESET);
-        else
-            print_instruction("{}[{:0{}b}]", "{}[]");
+            out(YELLOW);
+        out(name);
+        if (m_enable_highlighting)
+            out(CYAN);
+        out("[");
+        if (m_enable_highlighting)
+            out(PURPLE);
+        if (instruction.flag_bits() > 0)
+            out("{:0{}b}", to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits());
+        if (m_enable_highlighting)
+            out(CYAN);
+        out("]");
+        if (m_enable_highlighting)
+            out(RESET);
         switch (instruction.opcode()) {
         case Opcode::PUSHB... Opcode::PUSHB_MAX:
         case Opcode::NPUSHB... Opcode::NPUSHB_MAX:
