@@ -33,6 +33,8 @@ static void print_words(ReadonlyBytes bytes)
 struct InstructionPrinter : InstructionHandler {
     void before_operation(InstructionStream& stream, Opcode opcode) override
     {
+        if (opcode == Opcode::FDEF && stream.current_position() > 1)
+            outln();
         switch (opcode) {
         case Opcode::EIF:
         case Opcode::ELSE:
@@ -49,13 +51,12 @@ struct InstructionPrinter : InstructionHandler {
     {
         switch (opcode) {
         case Opcode::IF:
-        case Opcode::FDEF:
         case Opcode::ELSE:
+        case Opcode::FDEF:
             m_indent_level++;
         default:
             break;
         }
-        outln();
     }
 
     void default_handler(Context context) override
@@ -63,32 +64,21 @@ struct InstructionPrinter : InstructionHandler {
         auto instruction = context.instruction();
         auto name = opcode_mnemonic(instruction.opcode());
         if (instruction.flag_bits() > 0)
-            return out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits());
-        out(INSTRUCTION_FMT, name);
-    }
-
-    void handle_NPUSHB(Context context) override
-    {
-        default_handler(context);
-        print_bytes(context.instruction().values());
-    }
-
-    void handle_NPUSHW(Context context) override
-    {
-        default_handler(context);
-        print_words(context.instruction().values());
-    }
-
-    void handle_PUSHB(Context context) override
-    {
-        default_handler(context);
-        print_bytes(context.instruction().values());
-    }
-
-    void handle_PUSHW(Context context) override
-    {
-        default_handler(context);
-        print_words(context.instruction().values());
+            out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits());
+        else
+            out(INSTRUCTION_FMT, name);
+        switch (instruction.opcode()) {
+        case Opcode::PUSHB... Opcode::PUSHB_MAX:
+        case Opcode::NPUSHB... Opcode::NPUSHB_MAX:
+            print_bytes(instruction.values());
+            break;
+        case Opcode::PUSHW... Opcode::PUSHW_MAX:
+        case Opcode::NPUSHW... Opcode::NPUSHW_MAX:
+            print_words(instruction.values());
+        default:
+            break;
+        }
+        outln();
     }
 
 private:
@@ -140,7 +130,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
             if (!first)
                 outln();
             auto glyph_id = font->glyph_id_for_code_point(code_point);
-            print_disassembly("Glyph program codepoint {}"sv, font->glyph_program(glyph_id), code_point);
+            print_disassembly("Glyph program for codepoint {}"sv, font->glyph_program(glyph_id), code_point);
             first = false;
         }
     }

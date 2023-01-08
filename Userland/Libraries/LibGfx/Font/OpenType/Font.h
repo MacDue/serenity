@@ -38,23 +38,9 @@ public:
     virtual u8 slope() const override;
     virtual bool is_fixed_width() const override;
 
-    // TODO: Remove these program accessors once the need for ttfhintdump is gone!
-
-    Optional<ReadonlyBytes> font_program() const
-    {
-        if (m_fpgm.has_value())
-            return m_fpgm->program_data();
-        return {};
-    }
-
-    Optional<ReadonlyBytes> control_value_program() const
-    {
-        if (m_prep.has_value())
-            return m_prep->program_data();
-        return {};
-    }
-
-    Optional<ReadonlyBytes> glyph_program(u32) const { return {}; }
+    Optional<ReadonlyBytes> font_program() const;
+    Optional<ReadonlyBytes> control_value_program() const;
+    Optional<ReadonlyBytes> glyph_program(u32 glyph_id) const;
 
 private:
     enum class Offsets {

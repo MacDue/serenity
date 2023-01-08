@@ -136,7 +136,6 @@ namespace OpenType::Hinting {
     __ENUMERATE_OPENTYPE_OPCODES(MAX, 0x8B, 0x8B)       \
     __ENUMERATE_OPENTYPE_OPCODES(MIN, 0x8C, 0x8C)       \
     /* Compensating for the engine characteristics */   \
-    /* TODO: Are these opcodes? */                      \
     __ENUMERATE_OPENTYPE_OPCODES(ROUND, 0x68, 0x6B)     \
     __ENUMERATE_OPENTYPE_OPCODES(NROUND, 0x6C, 0x6F)    \
     /* Defining and using functions and instructions */ \
