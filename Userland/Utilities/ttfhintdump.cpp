@@ -13,24 +13,19 @@
 
 using namespace OpenType::Hinting;
 
-static void print_bytes(ReadonlyBytes bytes)
-{
-    for (auto value : bytes)
-        out(", \e[92m{}\e[0m", value);
-}
-
-static void print_words(ReadonlyBytes bytes)
-{
-    for (size_t i = 0; i < bytes.size(); i += 2) {
-        u16 word = bytes[i] << 8 | bytes[i + 1];
-        out(", \e[92m{}\e[0m", word);
-    }
-}
-#define BASE_INSTRUCTION_FMT(tag_fmt) "\e[33m{}\e[36m[\e[95m" tag_fmt "\e[36m]\e[0m"
-#define WITH_TAG_INSTRUCTION_FMT BASE_INSTRUCTION_FMT("{:0{}b}")
-#define INSTRUCTION_FMT BASE_INSTRUCTION_FMT("")
+#define YELLOW "\e[33m"
+#define CYAN "\e[36m"
+#define PURPLE "\e[95m"
+#define GREEN "\e[92m"
+#define RESET "\e[0m"
+#define GRAY "\e[90m"
 
 struct InstructionPrinter : InstructionHandler {
+    InstructionPrinter(bool enable_highlighting)
+        : m_enable_highlighting(enable_highlighting)
+    {
+    }
+
     void before_operation(InstructionStream& stream, Opcode opcode) override
     {
         if (opcode == Opcode::FDEF && stream.current_position() > 1)
@@ -44,7 +39,11 @@ struct InstructionPrinter : InstructionHandler {
             break;
         }
         auto digits = int(AK::log10(float(stream.length()))) + 1;
-        out("\e[90m{:0{}}:\e[0m{:{}}", stream.current_position() - 1, digits, ""sv, m_indent_level * 2);
+#define output_line_prefix(format) \
+    out(format, stream.current_position() - 1, digits, ""sv, m_indent_level * 2);
+        if (m_enable_highlighting)
+            return output_line_prefix(GRAY "{:0{}}:" RESET "{:{}}");
+        return output_line_prefix("{:0{}}:{:{}}");
     }
 
     void after_operation(InstructionStream&, Opcode opcode) override
@@ -59,14 +58,39 @@ struct InstructionPrinter : InstructionHandler {
         }
     }
 
+    void print_number(u16 value)
+    {
+        if (m_enable_highlighting)
+            return out(", " GREEN "{}" RESET, value);
+        return out(", {}", value);
+    }
+
+    void print_bytes(ReadonlyBytes bytes)
+    {
+        for (auto value : bytes)
+            print_number(value);
+    }
+
+    void print_words(ReadonlyBytes bytes)
+    {
+        for (size_t i = 0; i < bytes.size(); i += 2)
+            print_number(bytes[i] << 8 | bytes[i + 1]);
+    }
+
     void default_handler(Context context) override
     {
         auto instruction = context.instruction();
         auto name = opcode_mnemonic(instruction.opcode());
-        if (instruction.flag_bits() > 0)
-            out(WITH_TAG_INSTRUCTION_FMT, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits());
+#define print_instruction(with_tag_fmt, without_tag_fmt) ({                                                                           \
+    if (instruction.flag_bits() > 0)                                                                                                  \
+        out(with_tag_fmt, name, to_underlying(instruction.opcode()) & ((1 << instruction.flag_bits()) - 1), instruction.flag_bits()); \
+    else                                                                                                                              \
+        out(without_tag_fmt, name);                                                                                                   \
+})
+        if (m_enable_highlighting)
+            print_instruction(YELLOW "{}" CYAN "[" PURPLE "{:0{}b}" CYAN "]" RESET, YELLOW "{}" CYAN "[]" RESET);
         else
-            out(INSTRUCTION_FMT, name);
+            print_instruction("{}[{:0{}b}]", "{}[]");
         switch (instruction.opcode()) {
         case Opcode::PUSHB... Opcode::PUSHB_MAX:
         case Opcode::NPUSHB... Opcode::NPUSHB_MAX:
@@ -82,19 +106,20 @@ struct InstructionPrinter : InstructionHandler {
     }
 
 private:
+    bool m_enable_highlighting;
     u32 m_indent_level { 1 };
 };
 
-static void print_disassembly(StringView name_format, Optional<ReadonlyBytes> program, u32 code_point = 0)
+static void print_disassembly(StringView name, Optional<ReadonlyBytes> program, bool enable_highlighting, u32 code_point = 0)
 {
     if (!program.has_value()) {
-        out(name_format, code_point);
+        out(name, code_point);
         outln(": not found");
         return;
     }
-    out(name_format, code_point);
+    out(name, code_point);
     outln(":    ({} bytes)\n", program->size());
-    InstructionPrinter printer {};
+    InstructionPrinter printer { enable_highlighting };
     InstructionStream stream { printer, *program };
     while (!stream.at_end())
         stream.process_next_instruction();
@@ -105,6 +130,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     Core::ArgsParser args_parser;
 
     StringView font_path;
+    bool no_color = false;
     bool dump_font_program = false;
     bool dump_prep_program = false;
     StringView text;
@@ -112,16 +138,17 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     args_parser.add_option(dump_font_program, "Disassemble font program (fpgm table)", "disasm-fpgm", 'f');
     args_parser.add_option(dump_prep_program, "Disassemble CVT program (prep table)", "disasm-prep", 'p');
     args_parser.add_option(text, "Disassemble glyph programs", "disasm-glyphs", 'g', "text");
+    args_parser.add_option(no_color, "Disable syntax highlighting", "no-color", 'n');
     args_parser.parse(arguments);
 
     auto font = TRY(OpenType::Font::try_load_from_file(font_path));
 
     if (dump_font_program)
-        print_disassembly("Font program"sv, font->font_program());
+        print_disassembly("Font program"sv, font->font_program(), !no_color);
     if (dump_prep_program) {
         if (dump_font_program)
             outln();
-        print_disassembly("CVT program"sv, font->control_value_program());
+        print_disassembly("CVT program"sv, font->control_value_program(), !no_color);
     }
     if (!text.is_empty()) {
         Utf8View utf8_view { text };
@@ -130,7 +157,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
             if (!first)
                 outln();
             auto glyph_id = font->glyph_id_for_code_point(code_point);
-            print_disassembly("Glyph program for codepoint {}"sv, font->glyph_program(glyph_id), code_point);
+            print_disassembly("Glyph program for codepoint {}"sv, font->glyph_program(glyph_id), !no_color, code_point);
             first = false;
         }
     }
