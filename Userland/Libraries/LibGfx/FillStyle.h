@@ -82,9 +82,9 @@ struct LinearGradientFillStyle : GradientFillStyle {
         return adopt_ref(*new LinearGradientFillStyle(angle));
     }
 
+private:
     virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
 
-private:
     LinearGradientFillStyle(float angle)
         : m_angle(angle)
     {
@@ -99,9 +99,9 @@ struct ConicGradientFillStyle : GradientFillStyle {
         return adopt_ref(*new ConicGradientFillStyle(center, start_angle));
     }
 
+private:
     virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
 
-private:
     ConicGradientFillStyle(IntPoint center, float start_angle)
         : m_center(center)
         , m_start_angle(start_angle)
@@ -118,9 +118,9 @@ struct RadialGradientFillStyle : GradientFillStyle {
         return adopt_ref(*new RadialGradientFillStyle(center, size));
     }
 
+private:
     virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
 
-private:
     RadialGradientFillStyle(IntPoint center, IntSize size)
         : m_center(center)
         , m_size(size)
