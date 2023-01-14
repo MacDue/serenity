@@ -151,9 +151,10 @@ static auto create_linear_gradient(IntRect const& physical_rect, Span<ColorStop 
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
 
     GradientLine gradient_line(gradient_length, color_stops, repeat_length);
-    return Gradient { gradient_line, [&](int x, int y) {
-                         return (x * cos_angle - (physical_rect.height() - y) * -sin_angle) - rotated_start_point_x;
-                     } };
+    return Gradient { gradient_line,
+        [&](int x, int y) {
+            return (x * cos_angle - (physical_rect.height() - y) * -sin_angle) - rotated_start_point_x;
+        } };
 }
 
 static auto create_conic_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
@@ -172,12 +173,13 @@ static auto create_conic_gradient(IntRect const& physical_rect, Span<ColorStop c
             break;
         }
     }
-    return Gradient { gradient_line, [&](int x, int y) {
-                         auto point = FloatPoint { x, y } - center_point;
-                         // FIXME: We could probably get away with some approximation here:
-                         auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + normalized_start_angle), 360.0f);
-                         return should_floor_angles ? floor(loc) : loc;
-                     } };
+    return Gradient { gradient_line,
+        [&](int x, int y) {
+            auto point = FloatPoint { x, y } - center_point;
+            // FIXME: We could probably get away with some approximation here:
+            auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + normalized_start_angle), 360.0f);
+            return should_floor_angles ? floor(loc) : loc;
+        } };
 }
 
 static auto create_radial_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, IntSize size, Optional<float> repeat_length)
