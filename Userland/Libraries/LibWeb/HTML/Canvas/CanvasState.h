@@ -22,11 +22,32 @@ public:
     void reset();
     bool is_context_lost();
 
+    using FillVariant = Variant<Gfx::Color, JS::Handle<CanvasGradient>>;
+
+    struct FillStyle {
+        FillStyle(FillVariant fill_style)
+            : m_fill_style(fill_style)
+        {
+        }
+
+        RefPtr<Gfx::FillStyle> to_gfx_fill_style();
+
+        Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style()
+        {
+            if (m_fill_style.has<JS::Handle<CanvasGradient>>())
+                return m_fill_style.get<JS::Handle<CanvasGradient>>();
+            return m_fill_style.get<Gfx::Color>().to_deprecated_string();
+        }
+
+    private:
+        FillVariant m_fill_style;
+    };
+
     // https://html.spec.whatwg.org/multipage/canvas.html#drawing-state
     struct DrawingState {
         Gfx::AffineTransform transform;
-        Gfx::Color fill_style { Gfx::Color::Black };
-        Gfx::Color stroke_style { Gfx::Color::Black };
+        FillStyle fill_style { Gfx::Color::Black };
+        FillStyle stroke_style { Gfx::Color::Black };
         float line_width { 1 };
     };
     DrawingState& drawing_state() { return m_drawing_state; }

@@ -19,27 +19,33 @@ template<typename IncludingClass>
 class CanvasFillStrokeStyles {
 public:
     ~CanvasFillStrokeStyles() = default;
+    using FillStyleVariant = Variant<DeprecatedString, JS::Handle<CanvasGradient>>;
 
-    void set_fill_style(DeprecatedString style)
+    static CanvasState::FillStyle to_canvas_state_fill_style(auto const& style)
+    {
+        return style.visit([&](DeprecatedString const& string) -> CanvasState::FillStyle { return Gfx::Color::from_string(style).value_or(Color::Black); }, [&](JS::Handle<CanvasGradient> gradient) -> CanvasState::FillStyle { return gradient; });
+    }
+
+    void set_fill_style(FillStyleVariant style)
     {
         // FIXME: 2. If the given value is a CanvasPattern object that is marked as not origin-clean, then set this's origin-clean flag to false.
-        my_drawing_state().fill_style = Gfx::Color::from_string(style).value_or(Color::Black);
+        my_drawing_state().fill_style = to_canvas_state_fill_style(style);
     }
 
-    DeprecatedString fill_style() const
+    FillStyleVariant fill_style() const
     {
-        return my_drawing_state().fill_style.to_deprecated_string();
+        return my_drawing_state().fill_style.to_js_fill_style();
     }
 
-    void set_stroke_style(DeprecatedString style)
+    void set_stroke_style(FillStyleVariant style)
     {
         // FIXME: 2. If the given value is a CanvasPattern object that is marked as not origin-clean, then set this's origin-clean flag to false.
-        my_drawing_state().stroke_style = Gfx::Color::from_string(style).value_or(Color::Black);
+        my_drawing_state().stroke_style = to_canvas_state_fill_style(style);
     }
 
-    DeprecatedString stroke_style() const
+    FillStyleVariant stroke_style() const
     {
-        return my_drawing_state().stroke_style.to_deprecated_string();
+        return my_drawing_state().stroke_style.to_js_fill_style();
     }
 
     JS::NonnullGCPtr<CanvasGradient> create_radial_gradient(double x0, double y0, double r0, double x1, double y1, double r1)
