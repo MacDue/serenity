@@ -11,15 +11,19 @@
 #include <AK/RefPtr.h>
 #include <AK/Vector.h>
 #include <LibGfx/Color.h>
+#include <LibGfx/Forward.h>
 #include <LibGfx/Gradients.h>
 #include <LibGfx/Rect.h>
 
 namespace Gfx {
 
 struct FillStyle : RefCounted<FillStyle> {
+    virtual ~FillStyle() = default;
     using SamplerFunction = Function<Color(IntPoint)>;
     using FillImplementation = Function<void(SamplerFunction)>;
+    friend Painter;
 
+private:
     // Simple fill styles can simply override sample_color() if they can easily generate a color from a coordinate.
     virtual Color sample_color(IntPoint) { return Color(); };
 
@@ -29,8 +33,6 @@ struct FillStyle : RefCounted<FillStyle> {
     {
         fill([this](IntPoint point) { return sample_color(point); });
     }
-
-    virtual ~FillStyle() = default;
 };
 
 struct SolidFillStyle : FillStyle {
