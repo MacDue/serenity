@@ -153,13 +153,13 @@ void Painter::fill_rect(IntRect const& a_rect, Color color)
 
 void Painter::fill_rect(IntRect const& rect, FillStyle& fill_style)
 {
-    auto rect = rect.translated(translation()).intersected(clip_rect());
+    auto a_rect = rect.translated(translation()).intersected(clip_rect());
     if (rect.is_empty())
         return;
-    auto a_rect = rect * scale();
+    a_rect *= scale();
     fill_style.fill(a_rect, [&](FillStyle::SamplerFunction sample) {
-        for (int y = 0; y < rect.height(); ++y) {
-            for (int x = 0; x < rect.width(); ++x) {
+        for (int y = 0; y < a_rect.height(); ++y) {
+            for (int x = 0; x < a_rect.width(); ++x) {
                 IntPoint point(x, y);
                 set_physical_pixel(point + a_rect.location(), sample(point), true);
             }
