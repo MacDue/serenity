@@ -31,8 +31,9 @@ private:
 
     // Fill styles that have paint time dependent state (e.g. based on the fill size) may find it easier to override fill().
     // If fill() is overridden sample_color() is unused.
-    virtual void fill(IntRect, FillImplementation fill)
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill)
     {
+        (void)physical_bounding_box;
         fill([this](IntPoint point) { return sample_color(point); });
     }
 };
