@@ -5,6 +5,7 @@
  */
 
 #include <AK/Math.h>
+#include <LibGfx/FillStyle.h>
 #include <LibGfx/Gradients.h>
 #include <LibGfx/Painter.h>
 
@@ -117,41 +118,51 @@ private:
     bool m_requires_blending = false;
 };
 
-void Painter::fill_rect_with_linear_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, float angle, Optional<float> repeat_length)
-{
-    auto a_rect = to_physical(rect);
-    if (a_rect.intersected(clip_rect() * scale()).is_empty())
-        return;
+template<typename TSampleFunction>
+struct Gradient {
+    GradientLine gradient_line;
+    TSampleFunction transform_function;
 
+    void paint(Painter& painter, IntRect rect)
+    {
+        gradient_line.paint_into_physical_rect(painter, rect, transform_function);
+    }
+
+    FillStyle::SamplerFunction sample_function()
+    {
+        return [this](IntPoint point) {
+            return gradient_line.sample_color(transform_function(point.x(), point.y()));
+        };
+    }
+};
+
+static auto create_linear_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, float angle, Optional<float> repeat_length)
+{
     float normalized_angle = normalized_gradient_angle_radians(angle);
     float sin_angle, cos_angle;
     AK::sincos(normalized_angle, sin_angle, cos_angle);
 
     // Full length of the gradient
-    auto gradient_length = calculate_gradient_length(a_rect.size(), sin_angle, cos_angle);
+    auto gradient_length = calculate_gradient_length(physical_rect.size(), sin_angle, cos_angle);
     IntPoint offset { cos_angle * (gradient_length / 2), sin_angle * (gradient_length / 2) };
-    auto center = a_rect.translated(-a_rect.location()).center();
+    auto center = physical_rect.translated(-physical_rect.location()).center();
     auto start_point = center - offset;
     // Rotate gradient line to be horizontal
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
 
     GradientLine gradient_line(gradient_length, color_stops, repeat_length);
-    gradient_line.paint_into_physical_rect(*this, a_rect, [&](int x, int y) {
-        return (x * cos_angle - (a_rect.height() - y) * -sin_angle) - rotated_start_point_x;
-    });
+    return Gradient { gradient_line, [&](int x, int y) {
+                         return (x * cos_angle - (physical_rect.height() - y) * -sin_angle) - rotated_start_point_x;
+                     } };
 }
 
-void Painter::fill_rect_with_conic_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
+static auto create_conic_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
 {
-    auto a_rect = to_physical(rect);
-    if (a_rect.intersected(clip_rect() * scale()).is_empty())
-        return;
-
     // FIXME: Do we need/want sub-degree accuracy for the gradient line?
     GradientLine gradient_line(360, color_stops, repeat_length);
     float normalized_start_angle = (360.0f - start_angle) + 90.0f;
     // Translate position/center to the center of the pixel (avoids some funky painting)
-    auto center_point = FloatPoint { center * scale() }.translated(0.5, 0.5);
+    auto center_point = FloatPoint { center }.translated(0.5, 0.5);
     // The flooring can make gradients that want soft edges look worse, so only floor if we have hard edges.
     // Which makes sure the hard edge stay hard edges :^)
     bool should_floor_angles = false;
@@ -161,12 +172,49 @@ void Painter::fill_rect_with_conic_gradient(IntRect const& rect, Span<ColorStop 
             break;
         }
     }
-    gradient_line.paint_into_physical_rect(*this, a_rect, [&](int x, int y) {
-        auto point = FloatPoint { x, y } - center_point;
-        // FIXME: We could probably get away with some approximation here:
-        auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + normalized_start_angle), 360.0f);
-        return should_floor_angles ? floor(loc) : loc;
-    });
+    return Gradient { gradient_line, [&](int x, int y) {
+                         auto point = FloatPoint { x, y } - center_point;
+                         // FIXME: We could probably get away with some approximation here:
+                         auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + normalized_start_angle), 360.0f);
+                         return should_floor_angles ? floor(loc) : loc;
+                     } };
+}
+
+static auto create_radial_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, IntSize size, Optional<float> repeat_length)
+{
+    // A conservative guesstimate on how many colors we need to generate:
+    auto max_dimension = max(physical_rect.width(), physical_rect.height());
+    auto max_visible_gradient = max(max_dimension / 2, min(size.width(), max_dimension));
+    GradientLine gradient_line(max_visible_gradient, color_stops, repeat_length);
+    auto center_point = FloatPoint { center }.translated(0.5, 0.5);
+    return Gradient {
+        gradient_line,
+        [&](int x, int y) {
+            // FIXME: See if there's a more efficient calculation we do there :^)
+            auto point = FloatPoint(x, y) - center_point;
+            auto gradient_x = point.x() / size.width();
+            auto gradient_y = point.y() / size.height();
+            return AK::sqrt(gradient_x * gradient_x + gradient_y * gradient_y) * max_visible_gradient;
+        }
+    };
+}
+
+void Painter::fill_rect_with_linear_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, float angle, Optional<float> repeat_length)
+{
+    auto a_rect = to_physical(rect);
+    if (a_rect.intersected(clip_rect() * scale()).is_empty())
+        return;
+    auto linear_gradient = create_linear_gradient(a_rect, color_stops, angle, repeat_length);
+    linear_gradient.paint(*this, a_rect);
+}
+
+void Painter::fill_rect_with_conic_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
+{
+    auto a_rect = to_physical(rect);
+    if (a_rect.intersected(clip_rect() * scale()).is_empty())
+        return;
+    auto conic_gradient = create_conic_gradient(a_rect, color_stops, center * scale(), start_angle, repeat_length);
+    conic_gradient.paint(*this, a_rect);
 }
 
 void Painter::fill_rect_with_radial_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, IntPoint center, IntSize size, Optional<float> repeat_length)
@@ -174,19 +222,31 @@ void Painter::fill_rect_with_radial_gradient(IntRect const& rect, Span<ColorStop
     auto a_rect = to_physical(rect);
     if (a_rect.intersected(clip_rect() * scale()).is_empty())
         return;
+    auto radial_gradient = create_radial_gradient(a_rect, color_stops, center * scale(), size * scale(), repeat_length);
+    radial_gradient.paint(*this, a_rect);
+}
 
-    // A conservative guesstimate on how many colors we need to generate:
-    auto max_dimension = max(a_rect.width(), a_rect.height());
-    auto max_visible_gradient = max(max_dimension / 2, min(size.width(), max_dimension));
-    GradientLine gradient_line(max_visible_gradient, color_stops, repeat_length);
-    auto center_point = FloatPoint { center * scale() }.translated(0.5, 0.5);
-    gradient_line.paint_into_physical_rect(*this, a_rect, [&](int x, int y) {
-        // FIXME: See if there's a more efficient calculation we do there :^)
-        auto point = FloatPoint(x, y) - center_point;
-        auto gradient_x = point.x() / size.width();
-        auto gradient_y = point.y() / size.height();
-        return AK::sqrt(gradient_x * gradient_x + gradient_y * gradient_y) * max_visible_gradient;
-    });
+// TODO: Figure out how to handle scale() here... Not important while not supported by fill_path()
+
+void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    VERIFY(color_stops().size() > 2);
+    auto linear_gradient = create_linear_gradient(physical_bounding_box, color_stops(), m_angle, repeat_length());
+    fill(linear_gradient.sample_function());
+}
+
+void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    VERIFY(color_stops().size() > 2);
+    auto conic_gradient = create_conic_gradient(physical_bounding_box, color_stops(), m_center, m_start_angle, repeat_length());
+    fill(conic_gradient.sample_function());
+}
+
+void RadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    VERIFY(color_stops().size() > 2);
+    auto radial_gradient = create_radial_gradient(physical_bounding_box, color_stops(), m_center, m_size, repeat_length());
+    fill(radial_gradient.sample_function());
 }
 
 }
