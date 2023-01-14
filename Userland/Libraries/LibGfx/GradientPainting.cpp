@@ -12,6 +12,7 @@
 #if defined(AK_COMPILER_GCC)
 #    pragma GCC optimize("O3")
 #endif
+
 namespace Gfx {
 
 // Note: This file implements the CSS gradients for LibWeb according to the spec.
@@ -118,22 +119,29 @@ private:
     bool m_requires_blending = false;
 };
 
-template<typename TSampleFunction>
+template<typename TransformFunction>
 struct Gradient {
-    GradientLine gradient_line;
-    TSampleFunction transform_function;
+    Gradient(GradientLine gradient_line, TransformFunction transform_function)
+        : m_gradient_line(move(gradient_line))
+        , m_transform_function(move(transform_function))
+    {
+    }
 
     void paint(Painter& painter, IntRect rect)
     {
-        gradient_line.paint_into_physical_rect(painter, rect, transform_function);
+        m_gradient_line.paint_into_physical_rect(painter, rect, m_transform_function);
     }
 
     FillStyle::SamplerFunction sample_function()
     {
         return [this](IntPoint point) {
-            return gradient_line.sample_color(transform_function(point.x(), point.y()));
+            return m_gradient_line.sample_color(m_transform_function(point.x(), point.y()));
         };
     }
+
+private:
+    GradientLine m_gradient_line;
+    TransformFunction m_transform_function;
 };
 
 static auto create_linear_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, float angle, Optional<float> repeat_length)
@@ -151,13 +159,15 @@ static auto create_linear_gradient(IntRect const& physical_rect, Span<ColorStop 
     auto rotated_start_point_x = start_point.x() * cos_angle - start_point.y() * -sin_angle;
 
     GradientLine gradient_line(gradient_length, color_stops, repeat_length);
-    return Gradient { gradient_line,
+    return Gradient {
+        move(gradient_line),
         [&](int x, int y) {
             return (x * cos_angle - (physical_rect.height() - y) * -sin_angle) - rotated_start_point_x;
-        } };
+        }
+    };
 }
 
-static auto create_conic_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
+static auto create_conic_gradient(Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
 {
     // FIXME: Do we need/want sub-degree accuracy for the gradient line?
     GradientLine gradient_line(360, color_stops, repeat_length);
@@ -173,13 +183,15 @@ static auto create_conic_gradient(IntRect const& physical_rect, Span<ColorStop c
             break;
         }
     }
-    return Gradient { gradient_line,
+    return Gradient {
+        move(gradient_line),
         [&](int x, int y) {
             auto point = FloatPoint { x, y } - center_point;
             // FIXME: We could probably get away with some approximation here:
             auto loc = fmod((AK::atan2(point.y(), point.x()) * 180.0f / AK::Pi<float> + 360.0f + normalized_start_angle), 360.0f);
             return should_floor_angles ? floor(loc) : loc;
-        } };
+        }
+    };
 }
 
 static auto create_radial_gradient(IntRect const& physical_rect, Span<ColorStop const> const& color_stops, IntPoint center, IntSize size, Optional<float> repeat_length)
@@ -190,7 +202,7 @@ static auto create_radial_gradient(IntRect const& physical_rect, Span<ColorStop 
     GradientLine gradient_line(max_visible_gradient, color_stops, repeat_length);
     auto center_point = FloatPoint { center }.translated(0.5, 0.5);
     return Gradient {
-        gradient_line,
+        move(gradient_line),
         [&](int x, int y) {
             // FIXME: See if there's a more efficient calculation we do there :^)
             auto point = FloatPoint(x, y) - center_point;
@@ -215,7 +227,7 @@ void Painter::fill_rect_with_conic_gradient(IntRect const& rect, Span<ColorStop 
     auto a_rect = to_physical(rect);
     if (a_rect.intersected(clip_rect() * scale()).is_empty())
         return;
-    auto conic_gradient = create_conic_gradient(a_rect, color_stops, center * scale(), start_angle, repeat_length);
+    auto conic_gradient = create_conic_gradient(color_stops, center * scale(), start_angle, repeat_length);
     conic_gradient.paint(*this, a_rect);
 }
 
@@ -237,10 +249,10 @@ void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementa
     fill(linear_gradient.sample_function());
 }
 
-void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void ConicGradientFillStyle::fill(IntRect, FillImplementation fill)
 {
     VERIFY(color_stops().size() > 2);
-    auto conic_gradient = create_conic_gradient(physical_bounding_box, color_stops(), m_center, m_start_angle, repeat_length());
+    auto conic_gradient = create_conic_gradient(color_stops(), m_center, m_start_angle, repeat_length());
     fill(conic_gradient.sample_function());
 }
 

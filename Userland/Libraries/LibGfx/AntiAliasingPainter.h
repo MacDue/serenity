@@ -29,10 +29,6 @@ public:
     void draw_line(IntPoint, IntPoint, Color, float thickness = 1, Painter::LineStyle style = Painter::LineStyle::Solid, Color alternate_color = Color::Transparent, LineLengthMode line_length_mode = LineLengthMode::PointToPoint);
     void draw_line(FloatPoint, FloatPoint, Color, float thickness = 1, Painter::LineStyle style = Painter::LineStyle::Solid, Color alternate_color = Color::Transparent, LineLengthMode line_length_mode = LineLengthMode::PointToPoint);
     void draw_line_for_path(FloatPoint, FloatPoint, Color, float thickness = 1, Painter::LineStyle style = Painter::LineStyle::Solid, Color alternate_color = Color::Transparent, LineLengthMode line_length_mode = LineLengthMode::PointToPoint);
-    void draw_line_for_fill_path(FloatPoint from, FloatPoint to, Color color, float thickness = 1)
-    {
-        draw_line_for_path(from, to, color, thickness, Painter::LineStyle::Solid, Color {}, LineLengthMode::Distance);
-    }
 
     void fill_path(Path&, Color, Painter::WindingRule rule = Painter::WindingRule::Nonzero);
     void stroke_path(Path const&, Color, float thickness);

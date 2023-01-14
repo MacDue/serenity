@@ -11,6 +11,7 @@
 #include <AK/Utf8View.h>
 #include <AK/Vector.h>
 #include <LibGfx/Color.h>
+#include <LibGfx/FillStyle.h>
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/Forward.h>
 #include <LibGfx/Gradients.h>
@@ -21,6 +22,7 @@
 #include <LibGfx/TextDirection.h>
 #include <LibGfx/TextElision.h>
 #include <LibGfx/TextWrapping.h>
+
 namespace Gfx {
 
 class Painter {
@@ -138,6 +140,7 @@ public:
         EvenOdd,
     };
     void fill_path(Path const&, Color, WindingRule rule = WindingRule::Nonzero);
+    void fill_path(Path const&, FillStyle& fill_style, WindingRule rule = WindingRule::Nonzero);
 
     Font const& font() const
     {
