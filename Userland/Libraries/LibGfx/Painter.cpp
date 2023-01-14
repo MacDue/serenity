@@ -2364,6 +2364,13 @@ void Painter::fill_path(Path const& path, Color color, WindingRule winding_rule)
         *this, path, [=](IntPoint) { return color; }, winding_rule);
 }
 
+void Painter::fill_path(Path const& path, FillStyle fill_style, Painter::WindingRule rule)
+{
+    fill_style.fill(enclosing_int_rect(path.bounding_box()), [&](FillStyle::SamplerFunction sampler) {
+        Detail::fill_path<Detail::FillPathMode::PlaceOnIntGrid>(*this, path, move(sampler), rule);
+    });
+}
+
 void Painter::blit_disabled(IntPoint location, Gfx::Bitmap const& bitmap, IntRect const& rect, Palette const& palette)
 {
     auto bright_color = palette.threed_highlight();
