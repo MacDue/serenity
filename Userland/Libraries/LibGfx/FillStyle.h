@@ -21,7 +21,9 @@ struct FillStyle : RefCounted<FillStyle> {
     virtual ~FillStyle() = default;
     using SamplerFunction = Function<Color(IntPoint)>;
     using FillImplementation = Function<void(SamplerFunction)>;
+
     friend Painter;
+    friend AntiAliasingPainter;
 
 private:
     // Simple fill styles can simply override sample_color() if they can easily generate a color from a coordinate.
