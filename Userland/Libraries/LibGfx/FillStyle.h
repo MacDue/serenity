@@ -44,7 +44,7 @@ struct SolidFillStyle : FillStyle {
         return adopt_ref(*new SolidFillStyle(color));
     }
 
-    virtual Color sample_color(IntPoint) { return m_color; }
+    virtual Color sample_color(IntPoint) override { return m_color; }
 
 private:
     SolidFillStyle(Color color)
