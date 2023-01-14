@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/Function.h>
+#include <AK/NonnullRefPtr.h>
 #include <AK/RefCounted.h>
 #include <AK/RefPtr.h>
 #include <AK/Vector.h>
@@ -39,7 +40,7 @@ private:
 };
 
 struct SolidFillStyle : FillStyle {
-    static RefPtr<SolidFillStyle> create(Color color)
+    static NonnullRefPtr<SolidFillStyle> create(Color color)
     {
         return adopt_ref(*new SolidFillStyle(color));
     }
@@ -80,7 +81,7 @@ private:
 };
 
 struct LinearGradientFillStyle : GradientFillStyle {
-    static RefPtr<LinearGradientFillStyle> create(float angle = 0.0f)
+    static NonnullRefPtr<LinearGradientFillStyle> create(float angle = 0.0f)
     {
         return adopt_ref(*new LinearGradientFillStyle(angle));
     }
@@ -97,7 +98,7 @@ private:
 };
 
 struct ConicGradientFillStyle : GradientFillStyle {
-    static RefPtr<ConicGradientFillStyle> create(IntPoint center, float start_angle = 0.0f)
+    static NonnullRefPtr<ConicGradientFillStyle> create(IntPoint center, float start_angle = 0.0f)
     {
         return adopt_ref(*new ConicGradientFillStyle(center, start_angle));
     }
@@ -116,7 +117,7 @@ private:
 };
 
 struct RadialGradientFillStyle : GradientFillStyle {
-    static RefPtr<RadialGradientFillStyle> create(IntPoint center, IntSize size)
+    static NonnullRefPtr<RadialGradientFillStyle> create(IntPoint center, IntSize size)
     {
         return adopt_ref(*new RadialGradientFillStyle(center, size));
     }

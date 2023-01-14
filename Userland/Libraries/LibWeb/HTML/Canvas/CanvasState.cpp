@@ -39,4 +39,14 @@ bool CanvasState::is_context_lost()
     return m_context_lost;
 }
 
+// RefPtr<Gfx::FillStyle> CanvasState::FillSyle::to_gfx_fill_style()
+// {
+
+// }
+
+// Gfx::Color CanvasState::FillSyle::to_color_fill_but_fixme_should_accept_any_fill_style()
+// {
+
+// }
+
 }

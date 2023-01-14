@@ -6,9 +6,12 @@
 
 #pragma once
 
+#include <AK/Variant.h>
 #include <AK/Vector.h>
 #include <LibGfx/AffineTransform.h>
 #include <LibGfx/Color.h>
+#include <LibGfx/FillStyle.h>
+#include <LibWeb/HTML/CanvasGradient.h>
 
 namespace Web::HTML {
 
@@ -25,12 +28,18 @@ public:
     using FillVariant = Variant<Gfx::Color, JS::Handle<CanvasGradient>>;
 
     struct FillStyle {
-        FillStyle(FillVariant fill_style)
+        FillStyle(Gfx::Color fill_style)
             : m_fill_style(fill_style)
         {
         }
 
-        RefPtr<Gfx::FillStyle> to_gfx_fill_style();
+        FillStyle(JS::Handle<CanvasGradient> fill_style)
+            : m_fill_style(fill_style)
+        {
+        }
+
+        NonnullRefPtr<Gfx::FillStyle> to_gfx_fill_style();
+        Gfx::Color to_color_fill_but_fixme_should_accept_any_fill_style();
 
         Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style()
         {

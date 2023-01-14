@@ -23,7 +23,7 @@ public:
 
     static CanvasState::FillStyle to_canvas_state_fill_style(auto const& style)
     {
-        return style.visit([&](DeprecatedString const& string) -> CanvasState::FillStyle { return Gfx::Color::from_string(style).value_or(Color::Black); }, [&](JS::Handle<CanvasGradient> gradient) -> CanvasState::FillStyle { return gradient; });
+        return style.visit([&](DeprecatedString const& string) -> CanvasState::FillStyle { return Gfx::Color::from_string(string).value_or(Color::Black); }, [&](JS::Handle<CanvasGradient> gradient) -> CanvasState::FillStyle { return gradient; });
     }
 
     void set_fill_style(FillStyleVariant style)
