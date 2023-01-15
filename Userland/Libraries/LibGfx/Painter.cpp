@@ -2382,6 +2382,7 @@ void Painter::fill_path(Path const& path, Color color, WindingRule winding_rule)
 
 void Painter::fill_path(Path const& path, FillStyle& fill_style, Painter::WindingRule rule)
 {
+    VERIFY(scale() == 1); // FIXME: Add scaling support.
     fill_style.fill(enclosing_int_rect(path.bounding_box()), [&](FillStyle::SamplerFunction sampler) {
         Detail::fill_path<Detail::FillPathMode::PlaceOnIntGrid>(*this, path, move(sampler), rule);
     });

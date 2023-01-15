@@ -58,17 +58,16 @@ private:
 };
 
 struct GradientFillStyle : FillStyle {
-    ErrorOr<void> add_color_stop(float position, Color color, Optional<float> transition_hint = {})
+    void add_color_stop(float position, Color color, Optional<float> transition_hint = {})
     {
-        return TRY(add_color_stop(ColorStop { color, position, transition_hint }));
+        add_color_stop(ColorStop { color, position, transition_hint });
     }
 
-    ErrorOr<void> add_color_stop(ColorStop stop, bool sort = true)
+    void add_color_stop(ColorStop stop, bool sort = true)
     {
-        TRY(m_color_stops.try_append(stop));
+        m_color_stops.append(stop);
         if (sort)
             quick_sort(m_color_stops, [](auto& a, auto& b) { return a.position < b.position; });
-        return {};
     }
 
     void set_repeat_length(float repeat_length)
@@ -184,6 +183,7 @@ private:
     float m_start_angle;
 };
 
+// Note: Don't use this outside of the HTML canvas, it exists only for spec compliance, but is horrible and slow.
 struct CanvasRadialGradientFillStyle : GradientFillStyle {
     static NonnullRefPtr<CanvasRadialGradientFillStyle> create(FloatPoint start_center, float start_radius, FloatPoint end_center, float end_radius)
     {

@@ -19,7 +19,7 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_radial(JS::Realm& realm,
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm, double x0, double y0, double x1, double y1)
 {
-    auto linear_gradient = Gfx::CanvasLinearGradientFillStyle::create(Gfx::FloatPoint { x0, y0 }, Gfx::FloatLine { x1, y1 });
+    auto linear_gradient = Gfx::CanvasLinearGradientFillStyle::create(Gfx::FloatPoint { x0, y0 }, Gfx::FloatPoint { x1, y1 });
     return realm.heap().allocate<CanvasGradient>(realm, realm, *linear_gradient);
 }
 
@@ -60,7 +60,7 @@ WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, Deprecat
         return WebIDL::SyntaxError::create(realm(), "Could not parse color for CanvasGradient");
 
     // 4. Place a new stop on the gradient, at offset offset relative to the whole gradient, and with the color parsed color.
-    MUST(m_gradient_fill->add_color_stop(offset, parsed_color.value()));
+    m_gradient_fill->add_color_stop(offset, parsed_color.value());
 
     // FIXME: If multiple stops are added at the same offset on a gradient, then they must be placed in the order added,
     //        with the first one closest to the start of the gradient, and each subsequent one infinitesimally further along
