@@ -8,6 +8,7 @@
 
 #include <AK/Function.h>
 #include <AK/NonnullRefPtr.h>
+#include <AK/QuickSort.h>
 #include <AK/RefCounted.h>
 #include <AK/RefPtr.h>
 #include <AK/Vector.h>
