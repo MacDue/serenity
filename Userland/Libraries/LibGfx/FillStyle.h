@@ -183,7 +183,6 @@ private:
     float m_start_angle;
 };
 
-// Note: Don't use this outside of the HTML canvas, it exists only for spec compliance, but is horrible and slow.
 struct CanvasRadialGradientFillStyle : GradientFillStyle {
     static NonnullRefPtr<CanvasRadialGradientFillStyle> create(FloatPoint start_center, float start_radius, FloatPoint end_center, float end_radius)
     {

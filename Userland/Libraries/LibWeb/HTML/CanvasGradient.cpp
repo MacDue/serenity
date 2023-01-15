@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2022, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2023, MacDue <macdue@dueutil.tech>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -46,8 +47,6 @@ void CanvasGradient::initialize(JS::Realm& realm)
 // https://html.spec.whatwg.org/multipage/canvas.html#dom-canvasgradient-addcolorstop
 WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, DeprecatedString const& color)
 {
-    // TODO: Remove once all gradient types are supported and placeholder fills can be removed.
-
     // 1. If the offset is less than 0 or greater than 1, then throw an "IndexSizeError" DOMException.
     if (offset < 0 || offset > 1)
         return WebIDL::IndexSizeError::create(realm(), "CanvasGradient color stop offset out of bounds");
