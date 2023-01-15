@@ -50,11 +50,6 @@ void AntiAliasingPainter::draw_anti_aliased_line(FloatPoint actual_from, FloatPo
     // Axis-aligned lines:
     if (mapped_from.y() == mapped_to.y()) {
         auto start_point = (mapped_from.x() < mapped_to.x() ? mapped_from : mapped_to).translated(0, -int_thickness / 2);
-        if constexpr (path_hacks == FixmeEnableHacksForBetterPathPainting::Yes) {
-            // FIXME: SVG fill_path() hack:
-            // SVG asks for 1px scanlines at floating point y values, if they're not snapped to a pixel they look faint.
-            start_point.set_y(floorf(start_point.y()));
-        }
         return fill_rect(Gfx::FloatRect(start_point, { length, thickness }), color);
     }
     if (mapped_from.x() == mapped_to.x()) {
@@ -213,9 +208,17 @@ void AntiAliasingPainter::draw_line(FloatPoint actual_from, FloatPoint actual_to
     draw_anti_aliased_line<FixmeEnableHacksForBetterPathPainting::No>(actual_from, actual_to, color, thickness, style, alternate_color, line_length_mode);
 }
 
-void AntiAliasingPainter::fill_path(Path& path, Color color, Painter::WindingRule rule)
+void AntiAliasingPainter::fill_path(Path const& path, Color color, Painter::WindingRule rule)
 {
-    Detail::fill_path<Detail::FillPathMode::AllowFloatingPoints>(*this, path, color, rule);
+    Detail::fill_path<Detail::FillPathMode::AllowFloatingPoints>(
+        m_underlying_painter, path, [=](IntPoint) { return color; }, rule);
+}
+
+void AntiAliasingPainter::fill_path(Path const& path, FillStyle& fill_style, Painter::WindingRule rule)
+{
+    fill_style.fill(enclosing_int_rect(path.bounding_box()), [&](FillStyle::SamplerFunction sampler) {
+        Detail::fill_path<Detail::FillPathMode::AllowFloatingPoints>(m_underlying_painter, path, move(sampler), rule);
+    });
 }
 
 void AntiAliasingPainter::stroke_path(Path const& path, Color color, float thickness)
