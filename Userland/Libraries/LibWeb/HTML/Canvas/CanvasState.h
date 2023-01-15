@@ -45,13 +45,14 @@ public:
 
         Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style()
         {
-            if (m_fill_style.has<JS::Handle<CanvasGradient>>())
-                return m_fill_style.get<JS::Handle<CanvasGradient>>();
+            if (auto* handle = m_fill_style.get_pointer<JS::Handle<CanvasGradient>>())
+                return *handle;
             return m_fill_style.get<Gfx::Color>().to_deprecated_string();
         }
 
     private:
         FillVariant m_fill_style;
+        RefPtr<Gfx::FillStyle> m_color_fill_style { nullptr };
     };
 
     // https://html.spec.whatwg.org/multipage/canvas.html#drawing-state

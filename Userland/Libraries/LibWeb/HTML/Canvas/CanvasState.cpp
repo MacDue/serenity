@@ -39,14 +39,28 @@ bool CanvasState::is_context_lost()
     return m_context_lost;
 }
 
-// RefPtr<Gfx::FillStyle> CanvasState::FillSyle::to_gfx_fill_style()
-// {
+RefPtr<Gfx::FillStyle> CanvasState::FillSyle::to_gfx_fill_style()
+{
+    return m_color_fill_style.visit([&](Gfx::Color color) {
+        if (m_color_fill_style)
+            return m_color_fill_style;
+        m_color_fill_style = Gfx::SolidFillStyle::create(color);
+        return m_color_fill_style; },
+        [&](auto& gradient) {
+            return gradient->to_gfx_fill_style();
+        });
+}
 
-// }
+Gfx::Color CanvasState::FillSyle::to_color_fill_but_fixme_should_accept_any_fill_style() const
+{
+    return as_color().value_or(Gfx::Color::Black);
+}
 
-// Gfx::Color CanvasState::FillSyle::to_color_fill_but_fixme_should_accept_any_fill_style()
-// {
-
-// }
+Optional<Gfx::Color> CanvasState::FillSyle::as_color() const
+{
+    if (auto* color = m_fill_style.get_pointer<Gfx::Color>())
+        return *color;
+    return {};
+}
 
 }
