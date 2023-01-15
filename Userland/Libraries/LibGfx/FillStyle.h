@@ -68,6 +68,7 @@ struct GradientFillStyle : FillStyle {
         TRY(m_color_stops.try_append(stop));
         if (sort)
             quick_sort(m_color_stops, [](auto& a, auto& b) { return a.position < b.position; });
+        return {};
     }
 
     void set_repeat_length(float repeat_length)
