@@ -39,7 +39,8 @@ WebIDL::ExceptionOr<void> CanvasPath::arc(float x, float y, float radius, float 
 {
     if (radius < 0)
         return WebIDL::IndexSizeError::create(m_self.realm(), DeprecatedString::formatted("The radius provided ({}) is negative.", radius));
-    return ellipse(x, y, radius, radius, 0, start_angle, end_angle, counter_clockwise);
+    // FIXME: The "- radius * 2" is a hack to work around some issues with arc positioning.
+    return ellipse(x - radius * 2, y, radius, radius, 0, start_angle, end_angle, counter_clockwise);
 }
 
 WebIDL::ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radius_x, float radius_y, float rotation, float start_angle, float end_angle, bool counter_clockwise)
