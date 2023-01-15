@@ -20,7 +20,7 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_radial(JS::Realm& realm,
     (void)y1;
     (void)r1;
     // TODO: Implement this one
-    return realm.heap().allocate<CanvasGradient>(realm, realm, nullptr);
+    return realm.heap().allocate<CanvasGradient>(realm, realm);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm, double x0, double y0, double x1, double y1)
@@ -29,7 +29,7 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm,
     (void)y0;
     (void)x1;
     (void)y1;
-    return realm.heap().allocate<CanvasGradient>(realm, realm, nullptr);
+    return realm.heap().allocate<CanvasGradient>(realm, realm);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
@@ -38,9 +38,16 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, 
     return realm.heap().allocate<CanvasGradient>(realm, realm, conic_gradient);
 }
 
-CanvasGradient::CanvasGradient(JS::Realm& realm, RefPtr<Gfx::GradientFillStyle> gradient_fill)
+CanvasGradient::CanvasGradient(JS::Realm& realm, NonnullRefPtr<Gfx::GradientFillStyle> gradient_fill)
     : PlatformObject(realm)
     , m_gradient_fill(gradient_fill)
+{
+}
+
+// TODO: Remove exists only for unimplemented gradients
+CanvasGradient::CanvasGradient(JS::Realm& realm)
+    : PlatformObject(realm)
+    , m_gradient_fill(nullptr)
 {
 }
 

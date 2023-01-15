@@ -27,6 +27,7 @@ public:
 
 private:
     CanvasGradient(JS::Realm&, NonnullRefPtr<Gfx::GradientFillStyle> gradient_fill);
+    CanvasGradient(JS::Realm&);
 
     virtual void initialize(JS::Realm&) override;
 
