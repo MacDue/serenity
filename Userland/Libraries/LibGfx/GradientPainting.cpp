@@ -339,14 +339,14 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     if (color_stops().size() < 2)
         return fill([this](IntPoint) { return color_stops().first().color; });
 
-    // (Spec steps: Useless for writing an actual implementation)
-
+    // Spec steps: Useless for writing an actual implementation:
+    //
     // 2. Let x(ω) = (x1-x0)ω + x0
     //    Let y(ω) = (y1-y0)ω + y0
     //    Let r(ω) = (r1-r0)ω + r0
     // Let the color at ω be the color at that position on the gradient
     // (with the colors coming from the interpolation and extrapolation described above).
-
+    //
     // 3. For all values of ω where r(ω) > 0, starting with the value of ω nearest to positive infinity and
     // ending with the value of ω nearest to negative infinity, draw the circumference of the circle with
     // radius r(ω) at position (x(ω), y(ω)), with the color at ω, but only painting on the parts of the
@@ -355,31 +355,30 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
     GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
 
-    // Note: The way canvas gradients are specified is pointlessly complex to paint.
-    // The only reason this seems to have been done is because that's the API Cario added and the spec just Ctrl+C Ctrl+V
-    // because they used Cario.
-
     auto radius2 = m_end_radius * m_end_radius;
+    auto center_delta = m_end_center - m_start_center;
+    auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
+    auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
 
+    // FIXME: This can correctly paint the sane cases of canvas gradients, that is where the
+    // inner circle is inside the outer circle. The insane cases where the inner circle is not
+    // inside the outer circle are don't match other browsers. These cases look horrible, but for
+    // completeness it'd be nice if they matched.
     Gradient radial_gradient {
         move(gradient_line),
         [=](int x, int y) {
             FloatPoint point { x, y };
             auto dist = point.distance_from(m_start_center);
             auto vec = (point - m_start_center) / dist;
-            auto delta = m_end_center - point;
             auto dx2 = vec.x() * vec.x();
             auto dy2 = vec.y() * vec.y();
-            // clang-format off
-            auto t = (
-                sqrt(
-                    dx2 * (radius2 - delta.y() * delta.y())
-                  + dy2 * (radius2 - delta.x() * delta.x())
-                  + 2   * vec.x() * vec.y() * delta.x() *delta.y()
-                ) + vec.x() * delta.x() + vec.y() * delta.y()
-            ) / (dx2 + dy2);
-            // clang-format on
-            auto egde_dist = (point + vec * t).distance_from(m_start_center);
+            // This works out the distance to the nearest point on the end circle in the direction of the "vec" vector.
+            // The "vec" vector points from the center of the start circle to the current point.
+            auto egde_dist = fabs(
+                (sqrt(dx2 * dx2_factor + dy2 * dy2_factor
+                     + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y())
+                    + vec.x() * center_delta.x() + vec.y() * center_delta.y())
+                / (dx2 + dy2));
             return ((dist - m_start_radius) / (egde_dist - m_start_radius)) * approx_gradient_max_length;
         }
     };
