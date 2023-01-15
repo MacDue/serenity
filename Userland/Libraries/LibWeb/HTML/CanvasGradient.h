@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <LibGfx/Color.h>
+#include <LibGfx/FillStyle.h>
 #include <LibWeb/Bindings/PlatformObject.h>
 
 namespace Web::HTML {
@@ -15,12 +15,6 @@ class CanvasGradient final : public Bindings::PlatformObject {
     WEB_PLATFORM_OBJECT(CanvasGradient, Bindings::PlatformObject);
 
 public:
-    enum class Type {
-        Linear,
-        Radial,
-        Conic,
-    };
-
     static JS::NonnullGCPtr<CanvasGradient> create_radial(JS::Realm&, double x0, double y0, double r0, double x1, double y1, double r1);
     static JS::NonnullGCPtr<CanvasGradient> create_linear(JS::Realm&, double x0, double y0, double x1, double y1);
     static JS::NonnullGCPtr<CanvasGradient> create_conic(JS::Realm&, double start_angle, double x, double y);
@@ -29,19 +23,14 @@ public:
 
     ~CanvasGradient();
 
+    RefPtr<Gfx::FillStyle> to_gfx_fill_style() { return m_gradient_fill; }
+
 private:
-    CanvasGradient(JS::Realm&, Type);
+    CanvasGradient(JS::Realm&, NonnullRefPtr<Gfx::GradientFillStyle> gradient_fill);
 
     virtual void initialize(JS::Realm&) override;
 
-    Type m_type {};
-
-    struct ColorStop {
-        double offset { 0 };
-        Gfx::Color color;
-    };
-
-    Vector<ColorStop> m_color_stops;
+    RefPtr<Gfx::GradientFillStyle> m_gradient_fill;
 };
 
 }

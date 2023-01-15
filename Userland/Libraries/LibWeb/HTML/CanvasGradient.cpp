@@ -19,7 +19,8 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_radial(JS::Realm& realm,
     (void)x1;
     (void)y1;
     (void)r1;
-    return realm.heap().allocate<CanvasGradient>(realm, realm, Type::Radial);
+    // TODO: Implement this one
+    return realm.heap().allocate<CanvasGradient>(realm, realm, nullptr);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm, double x0, double y0, double x1, double y1)
@@ -28,15 +29,13 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm,
     (void)y0;
     (void)x1;
     (void)y1;
-    return realm.heap().allocate<CanvasGradient>(realm, realm, Type::Linear);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, nullptr);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
 {
-    (void)start_angle;
-    (void)x;
-    (void)y;
-    return realm.heap().allocate<CanvasGradient>(realm, realm, Type::Conic);
+    auto conic_gradient = Gfx::ConicGradientFillStyle::create(Gfx::FloatPoint { x, y }.to_rounded<int>(), start_angle);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, conic_gradient);
 }
 
 CanvasGradient::CanvasGradient(JS::Realm& realm, Type type)
@@ -56,6 +55,9 @@ void CanvasGradient::initialize(JS::Realm& realm)
 // https://html.spec.whatwg.org/multipage/canvas.html#dom-canvasgradient-addcolorstop
 WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, DeprecatedString const& color)
 {
+    if (!m_gradient_fill)
+        return {};
+
     // 1. If the offset is less than 0 or greater than 1, then throw an "IndexSizeError" DOMException.
     if (offset < 0 || offset > 1)
         return WebIDL::IndexSizeError::create(realm(), "CanvasGradient color stop offset out of bounds");
@@ -68,12 +70,11 @@ WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, Deprecat
         return WebIDL::SyntaxError::create(realm(), "Could not parse color for CanvasGradient");
 
     // 4. Place a new stop on the gradient, at offset offset relative to the whole gradient, and with the color parsed color.
-    m_color_stops.append(ColorStop { offset, parsed_color.value() });
+    MUST(m_gradient_fill->add_color_stop(offset, parsed_color.value()));
 
     // FIXME: If multiple stops are added at the same offset on a gradient, then they must be placed in the order added,
     //        with the first one closest to the start of the gradient, and each subsequent one infinitesimally further along
     //        towards the end point (in effect causing all but the first and last stop added at each point to be ignored).
-    quick_sort(m_color_stops, [](auto& a, auto& b) { return a.offset < b.offset; });
 
     return {};
 }
