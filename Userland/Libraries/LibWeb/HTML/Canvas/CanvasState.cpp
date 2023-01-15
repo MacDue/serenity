@@ -41,14 +41,13 @@ bool CanvasState::is_context_lost()
 
 NonnullRefPtr<Gfx::FillStyle> CanvasState::FillStyle::to_gfx_fill_style()
 {
-    return m_color_fill_style.visit(
-        [&](Gfx::Color color) {
-            if (m_color_fill_style)
-                return m_color_fill_style;
-            m_color_fill_style = Gfx::SolidFillStyle::create(color);
-            return m_color_fill_style;
+    return m_fill_style.visit(
+        [&](Gfx::Color color) -> NonnullRefPtr<Gfx::FillStyle> {
+            if (!m_color_fill_style)
+                m_color_fill_style = Gfx::SolidFillStyle::create(color);
+            return m_color_fill_style.release_nonnull();
         },
-        [&](auto& gradient) {
+        [&](JS::Handle<CanvasGradient> gradient) {
             return gradient->to_gfx_fill_style();
         });
 }

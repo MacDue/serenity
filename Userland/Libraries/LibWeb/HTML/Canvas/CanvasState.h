@@ -43,7 +43,7 @@ public:
         Optional<Gfx::Color> as_color() const;
         Gfx::Color to_color_fill_but_fixme_should_accept_any_fill_style() const;
 
-        Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style()
+        Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style() const
         {
             if (auto* handle = m_fill_style.get_pointer<JS::Handle<CanvasGradient>>())
                 return *handle;
