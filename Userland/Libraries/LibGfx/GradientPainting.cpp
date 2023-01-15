@@ -15,7 +15,7 @@
 
 namespace Gfx {
 
-// Note: This file implements the CSS gradients for LibWeb according to the spec.
+// Note: This file implements the CSS/Canvas gradients for LibWeb according to the spec.
 // Please do not make ad-hoc changes that may break spec compliance!
 
 static float color_stop_step(ColorStop const& previous_stop, ColorStop const& next_stop, float position)
@@ -277,6 +277,114 @@ void RadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementa
     VERIFY(color_stops().size() > 2);
     auto radial_gradient = create_radial_gradient(physical_bounding_box, color_stops(), m_center, m_size, repeat_length());
     fill(radial_gradient.sample_function());
+}
+
+// The following implements the gradient fill/stoke styles for the HTML canvas: https://html.spec.whatwg.org/multipage/canvas.html#fill-and-stroke-styles
+// (P.s. I [MacDue] <hot take> do not like these... They all seem like worse versions of the CSS gradients)
+
+static auto make_sample_non_relative(IntPoint draw_location, auto sample)
+{
+    return [=, sample = move(sample)](IntPoint point) { return sample(point.translated(draw_location)); };
+}
+
+void CanvasLinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    // If x0 = x1 and y0 = y1, then the linear gradient must paint nothing.
+    if (m_p0 == m_p1)
+        return;
+    if (color_stops().is_empty())
+        return;
+    if (color_stops().size() < 2)
+        return fill([this](IntPoint) { return color_stops().first().color; });
+
+    auto delta = m_p1 - m_p0;
+    auto angle = AK::atan2(delta.y(), delta.x());
+    float sin_angle, cos_angle;
+    AK::sincos(angle, sin_angle, cos_angle);
+    int gradient_length = ceilf(m_p1.distance_from(m_p0));
+    auto rotated_start_point_x = m_p0.x() * cos_angle - m_p0.y() * -sin_angle;
+
+    Gradient linear_gradient {
+        GradientLine(gradient_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No),
+        [=](int x, int y) {
+            return (x * cos_angle - y * -sin_angle) - rotated_start_point_x;
+        }
+    };
+
+    fill(make_sample_non_relative(physical_bounding_box.location(), linear_gradient.sample_function()));
+}
+
+void CanvasConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    if (color_stops().is_empty())
+        return;
+    if (color_stops().size() < 2)
+        return fill([this](IntPoint) { return color_stops().first().color; });
+
+    // Follows the same rendering rule as CSS 'conic-gradient' and it is equivalent to CSS
+    // 'conic-gradient(from adjustedStartAnglerad at xpx ypx, angularColorStopList)'.
+    //  Here:
+    //      adjustedStartAngle is given by startAngle + π/2;
+    auto conic_gradient = create_conic_gradient(color_stops(), m_center, m_start_angle + 90.0f, repeat_length(), UsePremultipliedAlpha::No);
+    fill(make_sample_non_relative(physical_bounding_box.location(), conic_gradient.sample_function()));
+}
+
+void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    // 1. If x0 = x1 and y0 = y1 and r0 = r1, then the radial gradient must paint nothing. Return.
+    if (m_start_center == m_end_center && m_start_radius == m_end_radius)
+        return;
+    if (color_stops().is_empty())
+        return;
+    if (color_stops().size() < 2)
+        return fill([this](IntPoint) { return color_stops().first().color; });
+
+    // Spec steps: Useless for writing an actual implementation:
+    //
+    // 2. Let x(ω) = (x1-x0)ω + x0
+    //    Let y(ω) = (y1-y0)ω + y0
+    //    Let r(ω) = (r1-r0)ω + r0
+    // Let the color at ω be the color at that position on the gradient
+    // (with the colors coming from the interpolation and extrapolation described above).
+    //
+    // 3. For all values of ω where r(ω) > 0, starting with the value of ω nearest to positive infinity and
+    // ending with the value of ω nearest to negative infinity, draw the circumference of the circle with
+    // radius r(ω) at position (x(ω), y(ω)), with the color at ω, but only painting on the parts of the
+    // bitmap that have not yet been painted on by earlier circles in this step for this rendering of the gradient.
+
+    // FIXME: Make this better than a upper bound:
+    int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
+    GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
+
+    auto radius2 = m_end_radius * m_end_radius;
+    auto center_delta = m_end_center - m_start_center;
+    auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
+    auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
+
+    // FIXME: This can correctly paint the sane cases of canvas gradients, that is where the
+    // inner circle is inside the outer circle. The insane cases where the inner circle is not
+    // inside the outer circle are don't match other browsers. These cases look horrible, but for
+    // completeness it'd be nice if they matched.
+    Gradient radial_gradient {
+        move(gradient_line),
+        [=](int x, int y) {
+            FloatPoint point { x, y };
+            auto dist = point.distance_from(m_start_center);
+            auto vec = (point - m_start_center) / dist;
+            auto dx2 = vec.x() * vec.x();
+            auto dy2 = vec.y() * vec.y();
+            // This works out the distance to the nearest point on the end circle in the direction of the "vec" vector.
+            // The "vec" vector points from the center of the start circle to the current point.
+            auto egde_dist = fabs(
+                (sqrt(dx2 * dx2_factor + dy2 * dy2_factor
+                     + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y())
+                    + vec.x() * center_delta.x() + vec.y() * center_delta.y())
+                / (dx2 + dy2));
+            return ((dist - m_start_radius) / (egde_dist - m_start_radius)) * approx_gradient_max_length;
+        }
+    };
+
+    fill(make_sample_non_relative(physical_bounding_box.location(), radial_gradient.sample_function()));
 }
 
 }
