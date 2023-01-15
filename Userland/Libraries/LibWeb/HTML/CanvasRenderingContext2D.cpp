@@ -73,7 +73,13 @@ void CanvasRenderingContext2D::fill_rect(float x, float y, float width, float he
     auto& drawing_state = this->drawing_state();
 
     auto rect = drawing_state.transform.map(Gfx::FloatRect(x, y, width, height));
-    painter->fill_rect(rect, *drawing_state.fill_style.to_gfx_fill_style());
+    auto color_fill = drawing_state.fill_style.as_color();
+    if (color_fill.has_value()) {
+        painter->fill_path(rect, *color_fill);
+    } else {
+        // FIXME: This should use AntiAliasingPainter::fill_rect() too but that does not support FillPath yet.
+        painter->underlying_painter().fill_rect(rect.to_rounded<int>(), *drawing_state.fill_style.to_gfx_fill_style());
+    }
     did_draw(rect);
 }
 

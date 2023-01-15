@@ -39,7 +39,9 @@ public:
         }
 
         NonnullRefPtr<Gfx::FillStyle> to_gfx_fill_style();
-        Gfx::Color to_color_fill_but_fixme_should_accept_any_fill_style();
+
+        Optional<Gfx::Color> as_color() const;
+        Gfx::Color to_color_fill_but_fixme_should_accept_any_fill_style() const;
 
         Variant<DeprecatedString, JS::Handle<CanvasGradient>> to_js_fill_style()
         {
