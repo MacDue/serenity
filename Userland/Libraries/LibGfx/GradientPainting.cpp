@@ -45,9 +45,14 @@ static float color_stop_step(ColorStop const& previous_stop, ColorStop const& ne
     return c;
 }
 
+enum class UsePremultipliedAlpha {
+    Yes,
+    No
+};
+
 class GradientLine {
 public:
-    GradientLine(int gradient_length, Span<ColorStop const> color_stops, Optional<float> repeat_length)
+    GradientLine(int gradient_length, Span<ColorStop const> color_stops, Optional<float> repeat_length, UsePremultipliedAlpha use_premultiplied_alpha = UsePremultipliedAlpha::Yes)
         : m_repeating { repeat_length.has_value() }
         , m_start_offset { round_to<int>((m_repeating ? color_stops.first().position : 0.0f) * gradient_length) }
     {
@@ -57,16 +62,21 @@ public:
         // Note: color_count will be < gradient_length for repeating gradients.
         auto color_count = round_to<int>(repeat_length.value_or(1.0f) * necessary_length);
         m_gradient_line_colors.resize(color_count);
-        // Note: color.mixed_with() performs premultiplied alpha mixing when necessary as defined in:
-        // https://drafts.csswg.org/css-images/#coloring-gradient-line
+
+        auto color_blend = [&](Color a, Color b, float amount) {
+            // Note: color.mixed_with() performs premultiplied alpha mixing when necessary as defined in:
+            // https://drafts.csswg.org/css-images/#coloring-gradient-line
+            if (use_premultiplied_alpha == UsePremultipliedAlpha::Yes)
+                return a.mixed_with(b, amount);
+            return a.interpolate(b, amount);
+        };
+
         for (int loc = 0; loc < color_count; loc++) {
             auto relative_loc = float(loc + m_start_offset) / necessary_length;
-            Color gradient_color = color_stops[0].color.mixed_with(
-                color_stops[1].color,
+            Color gradient_color = color_blend(color_stops[0].color, color_stops[1].color,
                 color_stop_step(color_stops[0], color_stops[1], relative_loc));
             for (size_t i = 1; i < color_stops.size() - 1; i++) {
-                gradient_color = gradient_color.mixed_with(
-                    color_stops[i + 1].color,
+                gradient_color = color_blend(gradient_color, color_stops[i + 1].color,
                     color_stop_step(color_stops[i], color_stops[i + 1], relative_loc));
             }
             m_gradient_line_colors[loc] = gradient_color;
@@ -167,13 +177,11 @@ static auto create_linear_gradient(IntRect const& physical_rect, Span<ColorStop 
     };
 }
 
-static auto create_conic_gradient(Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
+static auto create_conic_gradient(Span<ColorStop const> const& color_stops, FloatPoint center_point, float start_angle, Optional<float> repeat_length, UsePremultipliedAlpha use_premultiplied_alpha = UsePremultipliedAlpha::Yes)
 {
     // FIXME: Do we need/want sub-degree accuracy for the gradient line?
-    GradientLine gradient_line(360, color_stops, repeat_length);
+    GradientLine gradient_line(360, color_stops, repeat_length, use_premultiplied_alpha);
     float normalized_start_angle = (360.0f - start_angle) + 90.0f;
-    // Translate position/center to the center of the pixel (avoids some funky painting)
-    auto center_point = FloatPoint { center }.translated(0.5, 0.5);
     // The flooring can make gradients that want soft edges look worse, so only floor if we have hard edges.
     // Which makes sure the hard edge stay hard edges :^)
     bool should_floor_angles = false;
@@ -222,12 +230,19 @@ void Painter::fill_rect_with_linear_gradient(IntRect const& rect, Span<ColorStop
     linear_gradient.paint(*this, a_rect);
 }
 
+static FloatPoint pixel_center(IntPoint point)
+{
+    return point.to_type<float>().translated(0.5f, 0.5f);
+}
+
 void Painter::fill_rect_with_conic_gradient(IntRect const& rect, Span<ColorStop const> const& color_stops, IntPoint center, float start_angle, Optional<float> repeat_length)
 {
     auto a_rect = to_physical(rect);
     if (a_rect.intersected(clip_rect() * scale()).is_empty())
         return;
-    auto conic_gradient = create_conic_gradient(color_stops, center * scale(), start_angle, repeat_length);
+    // Translate position/center to the center of the pixel (avoids some funky painting)
+    auto center_point = pixel_center(center * scale());
+    auto conic_gradient = create_conic_gradient(color_stops, center_point, start_angle, repeat_length);
     conic_gradient.paint(*this, a_rect);
 }
 
@@ -252,7 +267,7 @@ void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementa
 void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
 {
     VERIFY(color_stops().size() > 2);
-    auto conic_gradient = create_conic_gradient(color_stops(), m_center - physical_bounding_box.location(), m_start_angle, repeat_length());
+    auto conic_gradient = create_conic_gradient(color_stops(), pixel_center(m_center), m_start_angle, repeat_length());
     fill(conic_gradient.sample_function());
 }
 
@@ -261,6 +276,57 @@ void RadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementa
     VERIFY(color_stops().size() > 2);
     auto radial_gradient = create_radial_gradient(physical_bounding_box, color_stops(), m_center, m_size, repeat_length());
     fill(radial_gradient.sample_function());
+}
+
+// The following implements the gradient fill styles for the HTML canvas:
+
+static auto make_sample_non_relative(IntPoint draw_location, auto sample)
+{
+    return [move(sample)](IntPoint point) { return sample(point.translated(draw_location)) };
+}
+
+void CanvasLinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    auto delta = m_p1 - m_p0;
+    auto angle = AK::atan2(delta.y(), delta.x());
+    float sin_angle, cos_angle;
+    AK::sincos(angle, sin_angle, cos_angle);
+
+    int gradient_length = ceilf(m_p1.distance_from(m_p0));
+    auto rotated_start_point_x = m_p0.x() * cos_angle - m_p0.y() * -sin_angle;
+
+    Gradient linear_gradient {
+        GradientLine(gradient_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No),
+        [=](int x, int y) {
+            return (x * cos_angle - y * -sin_angle) - rotated_start_point_x;
+        }
+    };
+
+    fill(make_sample_non_relative(physical_bounding_box.location(), linear_gradient.sample_function()));
+}
+
+void CanvasConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    // Follows the same rendering rule as CSS 'conic-gradient' and it is equivalent to CSS
+    // 'conic-gradient(from adjustedStartAnglerad at xpx ypx, angularColorStopList)'.
+    //  Here:
+    //      adjustedStartAngle is given by startAngle + π/2;
+    auto conic_gradient = create_conic_gradient(color_stops(), m_center, m_start_angle + 90.0f, repeat_length(), UsePremultipliedAlpha::No);
+    fill(make_sample_non_relative(physical_bounding_box.location(), conic_gradient.sample_function()));
+}
+
+void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+{
+    (void)physical_bounding_box;
+    (void)fill;
+    // This one is not even really a gradient...
+    // auto delta = m_end_center - m_start_center;
+    // auto radius_delta = m_end_radius - m_start_radius;
+
+    // 3. FIMXE: For all values of ω where r(ω) > 0, starting with the value of ω nearest to positive infinity and
+    // ending with the value of ω nearest to negative infinity, draw the circumference of the circle with
+    // radius r(ω) at position (x(ω), y(ω)), with the color at ω, but only painting on the parts of the
+    // bitmap that have not yet been painted on by earlier circles in this step for this rendering of the gradient.
 }
 
 }

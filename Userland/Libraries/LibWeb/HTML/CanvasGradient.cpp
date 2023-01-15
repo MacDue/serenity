@@ -13,33 +13,23 @@ namespace Web::HTML {
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_radial(JS::Realm& realm, double x0, double y0, double r0, double x1, double y1, double r1)
 {
-    (void)x0;
-    (void)y0;
-    (void)r0;
-    (void)x1;
-    (void)y1;
-    (void)r1;
-    auto placeholder = Gfx::SolidFillStyle::create(Gfx::Color::Red);
-    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholder);
+    auto radial_gradient = Gfx::CanvasRadialGradientFillStyle::create(Gfx::FloatPoint { x0, y0 }, r0, Gfx::FloatPoint { x1, y1 }, r1);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, *radial_gradient);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm, double x0, double y0, double x1, double y1)
 {
-    (void)x0;
-    (void)y0;
-    (void)x1;
-    (void)y1;
-    auto placeholder = Gfx::SolidFillStyle::create(Gfx::Color::Red);
-    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholder);
+    auto linear_gradient = Gfx::CanvasLinearGradientFillStyle::create(Gfx::FloatPoint { x0, y0 }, Gfx::FloatLine { x1, y1 });
+    return realm.heap().allocate<CanvasGradient>(realm, realm, *linear_gradient);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
 {
-    auto conic_gradient = Gfx::ConicGradientFillStyle::create(Gfx::FloatPoint { x, y }.to_rounded<int>(), start_angle + 90.0);
-    return realm.heap().allocate<CanvasGradient>(realm, realm, conic_gradient);
+    auto conic_gradient = Gfx::CanvasConicGradientFillStyle::create(Gfx::FloatPoint { x, y }, start_angle);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, *conic_gradient);
 }
 
-CanvasGradient::CanvasGradient(JS::Realm& realm, NonnullRefPtr<Gfx::FillStyle> gradient_fill)
+CanvasGradient::CanvasGradient(JS::Realm& realm, Gfx::GradientFillStyle& gradient_fill)
     : PlatformObject(realm)
     , m_gradient_fill(gradient_fill)
 {
@@ -57,9 +47,6 @@ void CanvasGradient::initialize(JS::Realm& realm)
 WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, DeprecatedString const& color)
 {
     // TODO: Remove once all gradient types are supported and placeholder fills can be removed.
-    auto gradient_fill = dynamic_cast<Gfx::GradientFillStyle*>(m_gradient_fill.ptr());
-    if (!gradient_fill)
-        return {};
 
     // 1. If the offset is less than 0 or greater than 1, then throw an "IndexSizeError" DOMException.
     if (offset < 0 || offset > 1)
@@ -73,7 +60,7 @@ WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, Deprecat
         return WebIDL::SyntaxError::create(realm(), "Could not parse color for CanvasGradient");
 
     // 4. Place a new stop on the gradient, at offset offset relative to the whole gradient, and with the color parsed color.
-    MUST(gradient_fill->add_color_stop(offset, parsed_color.value()));
+    MUST(m_gradient_fill->add_color_stop(offset, parsed_color.value()));
 
     // FIXME: If multiple stops are added at the same offset on a gradient, then they must be placed in the order added,
     //        with the first one closest to the start of the gradient, and each subsequent one infinitesimally further along
