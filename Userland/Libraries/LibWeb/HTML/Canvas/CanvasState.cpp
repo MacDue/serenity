@@ -39,7 +39,7 @@ bool CanvasState::is_context_lost()
     return m_context_lost;
 }
 
-RefPtr<Gfx::FillStyle> CanvasState::FillStyle::to_gfx_fill_style()
+NonnullRefPtr<Gfx::FillStyle> CanvasState::FillStyle::to_gfx_fill_style()
 {
     return m_color_fill_style.visit(
         [&](Gfx::Color color) {

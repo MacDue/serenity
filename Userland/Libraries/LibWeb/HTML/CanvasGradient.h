@@ -23,16 +23,15 @@ public:
 
     ~CanvasGradient();
 
-    RefPtr<Gfx::FillStyle> to_gfx_fill_style() { return m_gradient_fill; }
+    NonnullRefPtr<Gfx::FillStyle> to_gfx_fill_style() { return m_gradient_fill; }
 
 private:
     CanvasGradient(JS::Realm&, NonnullRefPtr<Gfx::GradientFillStyle> gradient_fill);
-    CanvasGradient(JS::Realm&);
 
     virtual void initialize(JS::Realm&) override;
 
-    // TODO: Make NonnullRefPtr<GradientFillStyle> once all gradient types are implemented.
-    RefPtr<Gfx::GradientFillStyle> m_gradient_fill;
+    // FIMXE: Make a NonnullRefPtr<Gfx::GradientFillStyle> once all gradient types supported.
+    NonnullRefPtr<Gfx::FillStyle> m_gradient_fill;
 };
 
 }

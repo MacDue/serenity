@@ -19,8 +19,8 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_radial(JS::Realm& realm,
     (void)x1;
     (void)y1;
     (void)r1;
-    // TODO: Implement this one
-    return realm.heap().allocate<CanvasGradient>(realm, realm);
+    auto placeholder = Gfx::SolidFillStyle::create(Gfx::Color::Red);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholder);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm, double x0, double y0, double x1, double y1)
@@ -29,7 +29,8 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm,
     (void)y0;
     (void)x1;
     (void)y1;
-    return realm.heap().allocate<CanvasGradient>(realm, realm);
+    auto placeholder = Gfx::SolidFillStyle::create(Gfx::Color::Red);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholdeer);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
@@ -44,13 +45,6 @@ CanvasGradient::CanvasGradient(JS::Realm& realm, NonnullRefPtr<Gfx::GradientFill
 {
 }
 
-// TODO: Remove exists only for unimplemented gradients
-CanvasGradient::CanvasGradient(JS::Realm& realm)
-    : PlatformObject(realm)
-    , m_gradient_fill(nullptr)
-{
-}
-
 CanvasGradient::~CanvasGradient() = default;
 
 void CanvasGradient::initialize(JS::Realm& realm)
@@ -62,7 +56,9 @@ void CanvasGradient::initialize(JS::Realm& realm)
 // https://html.spec.whatwg.org/multipage/canvas.html#dom-canvasgradient-addcolorstop
 WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, DeprecatedString const& color)
 {
-    if (!m_gradient_fill)
+    // TODO: Remove once all gradient types are supported and placeholder fills can be removed.
+    auto gradient_fill = dynamic_cast<Gfx::GradientFillStyle*>(m_gradient_fill.ptr());
+    if (!gradient_fill)
         return {};
 
     // 1. If the offset is less than 0 or greater than 1, then throw an "IndexSizeError" DOMException.
@@ -77,7 +73,7 @@ WebIDL::ExceptionOr<void> CanvasGradient::add_color_stop(double offset, Deprecat
         return WebIDL::SyntaxError::create(realm(), "Could not parse color for CanvasGradient");
 
     // 4. Place a new stop on the gradient, at offset offset relative to the whole gradient, and with the color parsed color.
-    MUST(m_gradient_fill->add_color_stop(offset, parsed_color.value()));
+    MUST(gradient_fill->add_color_stop(offset, parsed_color.value()));
 
     // FIXME: If multiple stops are added at the same offset on a gradient, then they must be placed in the order added,
     //        with the first one closest to the start of the gradient, and each subsequent one infinitesimally further along
