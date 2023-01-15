@@ -352,6 +352,7 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     // radius r(ω) at position (x(ω), y(ω)), with the color at ω, but only painting on the parts of the
     // bitmap that have not yet been painted on by earlier circles in this step for this rendering of the gradient.
 
+    // FIXME: Make this better than a upper bound:
     int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
     GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
 
