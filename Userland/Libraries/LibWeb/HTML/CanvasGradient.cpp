@@ -30,7 +30,7 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm,
     (void)x1;
     (void)y1;
     auto placeholder = Gfx::SolidFillStyle::create(Gfx::Color::Red);
-    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholdeer);
+    return realm.heap().allocate<CanvasGradient>(realm, realm, placeholder);
 }
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
