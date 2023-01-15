@@ -35,7 +35,7 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_linear(JS::Realm& realm,
 
 JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, double start_angle, double x, double y)
 {
-    auto conic_gradient = Gfx::ConicGradientFillStyle::create(Gfx::FloatPoint { x, y }.to_rounded<int>(), start_angle);
+    auto conic_gradient = Gfx::ConicGradientFillStyle::create(Gfx::FloatPoint { x, y }.to_rounded<int>(), start_angle + 90.0);
     return realm.heap().allocate<CanvasGradient>(realm, realm, conic_gradient);
 }
 

@@ -249,10 +249,10 @@ void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementa
     fill(linear_gradient.sample_function());
 }
 
-void ConicGradientFillStyle::fill(IntRect, FillImplementation fill)
+void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
 {
     VERIFY(color_stops().size() > 2);
-    auto conic_gradient = create_conic_gradient(color_stops(), m_center, m_start_angle, repeat_length());
+    auto conic_gradient = create_conic_gradient(color_stops(), m_center - physical_bounding_box.location(), m_start_angle, repeat_length());
     fill(conic_gradient.sample_function());
 }
 

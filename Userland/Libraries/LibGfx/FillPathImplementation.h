@@ -60,9 +60,9 @@ void fill_path(Painter& painter, Path const& path, ColorFunction color_function,
             auto left_color = color_function(IntPoint(int_x1 - 1, y) - origin);
             auto right_color = color_function(IntPoint(int_x2 + 1, y) - origin);
             painter.set_pixel(int_x1 - 1, y, left_color.with_alpha(left_color.alpha() * left_subpixel));
-            painter.set_pixel(int_x2 + 1, y, left_color.with_alpha(right_color.alpha() * right_subpixel));
+            painter.set_pixel(int_x2 + 1, y, right_color.with_alpha(right_color.alpha() * right_subpixel));
         }
-        for (int x = int_x1; x < int_x2; x++)
+        for (int x = int_x1; x <= int_x2; x++)
             painter.set_pixel(x, y, color_function(IntPoint(x, y) - origin), true);
     };
 
