@@ -38,9 +38,9 @@ JS::NonnullGCPtr<CanvasGradient> CanvasGradient::create_conic(JS::Realm& realm, 
     return realm.heap().allocate<CanvasGradient>(realm, realm, conic_gradient);
 }
 
-CanvasGradient::CanvasGradient(JS::Realm& realm, Type type)
+CanvasGradient::CanvasGradient(JS::Realm& realm, RefPtr<Gfx::GradientFillStyle> gradient_fill)
     : PlatformObject(realm)
-    , m_type(type)
+    , m_gradient_fill(gradient_fill)
 {
 }
 

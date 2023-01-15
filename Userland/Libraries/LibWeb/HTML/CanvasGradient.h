@@ -30,6 +30,7 @@ private:
 
     virtual void initialize(JS::Realm&) override;
 
+    // TODO: Make NonnullRefPtr<GradientFillStyle> once all gradient types are implemented.
     RefPtr<Gfx::GradientFillStyle> m_gradient_fill;
 };
 
