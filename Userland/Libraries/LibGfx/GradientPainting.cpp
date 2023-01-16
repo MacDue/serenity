@@ -341,7 +341,7 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     if (color_stops().size() < 2)
         return fill([this](IntPoint) { return color_stops().first().color; });
 
-    // Spec steps: Useless for writing an actual implementation:
+    // Spec steps: Useless for writing an actual implementation (give it a go :P):
     //
     // 2. Let x(ω) = (x1-x0)ω + x0
     //    Let y(ω) = (y1-y0)ω + y0
@@ -353,6 +353,7 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     // ending with the value of ω nearest to negative infinity, draw the circumference of the circle with
     // radius r(ω) at position (x(ω), y(ω)), with the color at ω, but only painting on the parts of the
     // bitmap that have not yet been painted on by earlier circles in this step for this rendering of the gradient.
+    // ^ Bruh what?
 
     // FIXME: Make this better than a upper bound:
     int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
@@ -361,26 +362,30 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     auto center_delta = m_end_center - m_start_center;
     auto center_dist = m_end_center.distance_from(m_start_center);
     bool inner_contained = ((center_dist + m_start_radius) < m_end_radius);
+
     auto start_point = m_start_center;
     float distance_offset = m_start_radius;
     if (!inner_contained) {
-        start_point -= (center_delta / center_dist) * m_start_radius;
+        // The intersection point of the direct common tangents of the start/end circles.
+        start_point = FloatPoint {
+            (m_start_radius * m_end_center.x() - m_end_radius * m_start_center.x()) / (m_start_radius - m_end_radius),
+            (m_start_radius * m_end_center.y() - m_end_radius * m_start_center.y()) / (m_start_radius - m_end_radius)
+        };
         distance_offset = 0.0f;
     }
+
     auto radius2 = m_end_radius * m_end_radius;
     center_delta = m_end_center - start_point;
     auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
     auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
 
-    // FIXME: This can correctly paint the sane cases of canvas gradients, that is where the
-    // inner circle is inside the outer circle. The insane cases where the inner circle is not
-    // inside the outer circle are don't match other browsers. These cases look horrible, but for
-    // completeness it'd be nice if they matched.
     Gradient radial_gradient {
         move(gradient_line),
         [=](int x, int y) {
             FloatPoint point { x, y };
             auto dist = point.distance_from(start_point);
+            if (dist == 0)
+                return 0.0f;
             auto vec = (point - start_point) / dist;
             auto dx2 = vec.x() * vec.x();
             auto dy2 = vec.y() * vec.y();
