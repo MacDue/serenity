@@ -92,6 +92,8 @@ public:
 
     Color sample_color(float loc) const
     {
+        if (!isfinite(loc))
+            return Color();
         if (m_sample_scale != 1.0f)
             loc *= m_sample_scale;
         auto repeat_wrap_if_required = [&](i64 loc) {
@@ -356,8 +358,17 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
     GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
 
-    auto radius2 = m_end_radius * m_end_radius;
     auto center_delta = m_end_center - m_start_center;
+    auto center_dist = m_end_center.distance_from(m_start_center);
+    bool inner_contained = ((center_dist + m_start_radius) < m_end_radius);
+    auto start_point = m_start_center;
+    float distance_offset = m_start_radius;
+    if (!inner_contained) {
+        start_point -= (center_delta / center_dist) * m_start_radius;
+        distance_offset = 0.0f;
+    }
+    auto radius2 = m_end_radius * m_end_radius;
+    center_delta = m_end_center - start_point;
     auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
     auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
 
@@ -369,18 +380,22 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
         move(gradient_line),
         [=](int x, int y) {
             FloatPoint point { x, y };
-            auto dist = point.distance_from(m_start_center);
-            auto vec = (point - m_start_center) / dist;
+            auto dist = point.distance_from(start_point);
+            auto vec = (point - start_point) / dist;
             auto dx2 = vec.x() * vec.x();
             auto dy2 = vec.y() * vec.y();
             // This works out the distance to the nearest point on the end circle in the direction of the "vec" vector.
             // The "vec" vector points from the center of the start circle to the current point.
-            auto egde_dist = fabs(
-                (sqrt(dx2 * dx2_factor + dy2 * dy2_factor
-                     + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y())
-                    + vec.x() * center_delta.x() + vec.y() * center_delta.y())
-                / (dx2 + dy2));
-            return ((dist - m_start_radius) / (egde_dist - m_start_radius)) * approx_gradient_max_length;
+            auto root = sqrtf(dx2 * dx2_factor + dy2 * dy2_factor
+                + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y());
+            auto dot = vec.x() * center_delta.x() + vec.y() * center_delta.y();
+            auto edge_dist = (((inner_contained ? root : -root) + dot) / (dx2 + dy2));
+            // FIXME: Returning nan is a hack for "Don't paint me!"
+            if (edge_dist < 0)
+                return AK::NaN<float>;
+            if (edge_dist - distance_offset < 0)
+                return float(approx_gradient_max_length);
+            return ((dist - distance_offset) / (edge_dist - distance_offset)) * approx_gradient_max_length;
         }
     };
 
