@@ -394,6 +394,14 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
     auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
 
+    // If you can simplify this please do, this is "best guess" implementation due to lack of specification.
+    // It was implemented to visually match chrome in all cases:
+    //      - Start circle inside end circle
+    //      - Start circle outside end circle
+    //      - Start circle radius == end circle radius
+    //      - Start circle larger than end circle (inside end circle)
+    //      - Start circle larger than end circle (outside end circle)
+
     Gradient radial_gradient {
         move(gradient_line),
         [=](int x, int y) {
