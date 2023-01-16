@@ -341,6 +341,12 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     if (color_stops().size() < 2)
         return fill([this](IntPoint) { return color_stops().first().color; });
 
+    // bool reverse_gradient = m_end_radius < m_start_radius;
+    // if (reverse_gradient) {
+    //     swap(m_end_radius, m_start_radius);
+    //     swap(m_end_center, m_start_center);
+    // }
+
     // Spec steps: Useless for writing an actual implementation (give it a go :P):
     //
     // 2. Let x(ω) = (x1-x0)ω + x0
@@ -355,6 +361,8 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     // bitmap that have not yet been painted on by earlier circles in this step for this rendering of the gradient.
     // ^ Bruh what?
 
+    // Note: There's a lot of guesswork in this implementation due to a severely lacking specification.
+
     // FIXME: Make this better than a upper bound:
     int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
     GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
@@ -364,16 +372,13 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     bool inner_contained = ((center_dist + m_start_radius) < m_end_radius);
 
     auto start_point = m_start_center;
-    float distance_offset = m_start_radius;
     if (!inner_contained) {
         // The intersection point of the direct common tangents of the start/end circles.
         start_point = FloatPoint {
             (m_start_radius * m_end_center.x() - m_end_radius * m_start_center.x()) / (m_start_radius - m_end_radius),
             (m_start_radius * m_end_center.y() - m_end_radius * m_start_center.y()) / (m_start_radius - m_end_radius)
         };
-        distance_offset = 0.0f;
     }
-
     auto radius2 = m_end_radius * m_end_radius;
     center_delta = m_end_center - start_point;
     auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
@@ -395,12 +400,14 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
                 + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y());
             auto dot = vec.x() * center_delta.x() + vec.y() * center_delta.y();
             auto edge_dist = (((inner_contained ? root : -root) + dot) / (dx2 + dy2));
+            auto start_offset = inner_contained ? m_start_radius : (edge_dist / m_end_radius) * m_start_radius;
             // FIXME: Returning nan is a hack for "Don't paint me!"
             if (edge_dist < 0)
                 return AK::NaN<float>;
-            if (edge_dist - distance_offset < 0)
+            if (edge_dist - start_offset < 0)
                 return float(approx_gradient_max_length);
-            return ((dist - distance_offset) / (edge_dist - distance_offset)) * approx_gradient_max_length;
+            float loc = ((dist - start_offset) / (edge_dist - start_offset));
+            return loc * approx_gradient_max_length;
         }
     };
 
