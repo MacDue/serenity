@@ -214,7 +214,7 @@ void AntiAliasingPainter::fill_path(Path const& path, Color color, Painter::Wind
         m_underlying_painter, path, [=](IntPoint) { return color; }, rule);
 }
 
-void AntiAliasingPainter::fill_path(Path const& path, FillStyle& fill_style, Painter::WindingRule rule)
+void AntiAliasingPainter::fill_path(Path const& path, FillStyle const& fill_style, Painter::WindingRule rule)
 {
     fill_style.fill(enclosing_int_rect(path.bounding_box()), [&](FillStyle::SamplerFunction sampler) {
         Detail::fill_path<Detail::FillPathMode::AllowFloatingPoints>(m_underlying_painter, path, move(sampler), rule);

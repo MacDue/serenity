@@ -259,14 +259,14 @@ void Painter::fill_rect_with_radial_gradient(IntRect const& rect, Span<ColorStop
 
 // TODO: Figure out how to handle scale() here... Not important while not supported by fill_path()
 
-void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void LinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     VERIFY(color_stops().size() > 2);
     auto linear_gradient = create_linear_gradient(physical_bounding_box, color_stops(), m_angle, repeat_length());
     fill(linear_gradient.sample_function());
 }
 
-void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     VERIFY(color_stops().size() > 2);
     (void)physical_bounding_box;
@@ -274,7 +274,7 @@ void ConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementat
     fill(conic_gradient.sample_function());
 }
 
-void RadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void RadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     VERIFY(color_stops().size() > 2);
     auto radial_gradient = create_radial_gradient(physical_bounding_box, color_stops(), m_center, m_size, repeat_length());
@@ -289,7 +289,7 @@ static auto make_sample_non_relative(IntPoint draw_location, auto sample)
     return [=, sample = move(sample)](IntPoint point) { return sample(point.translated(draw_location)); };
 }
 
-void CanvasLinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void CanvasLinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     // If x0 = x1 and y0 = y1, then the linear gradient must paint nothing.
     if (m_p0 == m_p1)
@@ -316,7 +316,7 @@ void CanvasLinearGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     fill(make_sample_non_relative(physical_bounding_box.location(), linear_gradient.sample_function()));
 }
 
-void CanvasConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void CanvasConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     if (color_stops().is_empty())
         return;
@@ -331,7 +331,7 @@ void CanvasConicGradientFillStyle::fill(IntRect physical_bounding_box, FillImple
     fill(make_sample_non_relative(physical_bounding_box.location(), conic_gradient.sample_function()));
 }
 
-void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill)
+void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImplementation fill) const
 {
     // 1. If x0 = x1 and y0 = y1 and r0 = r1, then the radial gradient must paint nothing. Return.
     if (m_start_center == m_end_center && m_start_radius == m_end_radius)
@@ -341,11 +341,20 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     if (color_stops().size() < 2)
         return fill([this](IntPoint) { return color_stops().first().color; });
 
-    // bool reverse_gradient = m_end_radius < m_start_radius;
-    // if (reverse_gradient) {
-    //     swap(m_end_radius, m_start_radius);
-    //     swap(m_end_center, m_start_center);
-    // }
+    auto start_radius = m_start_radius;
+    auto start_center = m_start_center;
+    auto end_radius = m_end_radius;
+    auto end_center = m_end_center;
+
+    if (fabs(start_radius - end_radius) < 1) {
+        start_radius += 1;
+    }
+
+    bool reverse_gradient = end_radius < start_radius;
+    if (reverse_gradient) {
+        swap(end_radius, start_radius);
+        swap(end_center, start_center);
+    }
 
     // Spec steps: Useless for writing an actual implementation (give it a go :P):
     //
@@ -364,23 +373,24 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
     // Note: There's a lot of guesswork in this implementation due to a severely lacking specification.
 
     // FIXME: Make this better than a upper bound:
-    int approx_gradient_max_length = max(m_start_radius, m_end_radius) * 2;
+    int approx_gradient_max_length = max(start_radius, end_radius) * 2;
     GradientLine gradient_line(approx_gradient_max_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
 
-    auto center_delta = m_end_center - m_start_center;
-    auto center_dist = m_end_center.distance_from(m_start_center);
-    bool inner_contained = ((center_dist + m_start_radius) < m_end_radius);
+    auto center_delta = end_center - start_center;
+    auto center_dist = end_center.distance_from(start_center);
+    bool inner_contained = ((center_dist + start_radius) < end_radius);
 
-    auto start_point = m_start_center;
+    auto start_point = start_center;
     if (!inner_contained) {
         // The intersection point of the direct common tangents of the start/end circles.
         start_point = FloatPoint {
-            (m_start_radius * m_end_center.x() - m_end_radius * m_start_center.x()) / (m_start_radius - m_end_radius),
-            (m_start_radius * m_end_center.y() - m_end_radius * m_start_center.y()) / (m_start_radius - m_end_radius)
+            (start_radius * end_center.x() - end_radius * start_center.x()) / (start_radius - end_radius),
+            (start_radius * end_center.y() - end_radius * start_center.y()) / (start_radius - end_radius)
         };
     }
-    auto radius2 = m_end_radius * m_end_radius;
-    center_delta = m_end_center - start_point;
+
+    auto radius2 = end_radius * end_radius;
+    center_delta = end_center - start_point;
     auto dx2_factor = (radius2 - center_delta.y() * center_delta.y());
     auto dy2_factor = (radius2 - center_delta.x() * center_delta.x());
 
@@ -399,14 +409,16 @@ void CanvasRadialGradientFillStyle::fill(IntRect physical_bounding_box, FillImpl
             auto root = sqrtf(dx2 * dx2_factor + dy2 * dy2_factor
                 + 2 * vec.x() * vec.y() * center_delta.x() * center_delta.y());
             auto dot = vec.x() * center_delta.x() + vec.y() * center_delta.y();
-            auto edge_dist = (((inner_contained ? root : -root) + dot) / (dx2 + dy2));
-            auto start_offset = inner_contained ? m_start_radius : (edge_dist / m_end_radius) * m_start_radius;
+            auto edge_dist = (((inner_contained || reverse_gradient ? root : -root) + dot) / (dx2 + dy2));
+            auto start_offset = inner_contained ? start_radius : (edge_dist / end_radius) * start_radius;
             // FIXME: Returning nan is a hack for "Don't paint me!"
             if (edge_dist < 0)
                 return AK::NaN<float>;
             if (edge_dist - start_offset < 0)
                 return float(approx_gradient_max_length);
             float loc = ((dist - start_offset) / (edge_dist - start_offset));
+            if (reverse_gradient)
+                loc = 1 - loc;
             return loc * approx_gradient_max_length;
         }
     };

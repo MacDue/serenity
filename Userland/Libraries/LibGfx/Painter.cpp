@@ -151,7 +151,7 @@ void Painter::fill_rect(IntRect const& a_rect, Color color)
     fill_physical_rect(rect * scale(), color);
 }
 
-void Painter::fill_rect(IntRect const& rect, FillStyle& fill_style)
+void Painter::fill_rect(IntRect const& rect, FillStyle const& fill_style)
 {
     auto a_rect = rect.translated(translation()).intersected(clip_rect());
     if (rect.is_empty())
@@ -2380,7 +2380,7 @@ void Painter::fill_path(Path const& path, Color color, WindingRule winding_rule)
         *this, path, [=](IntPoint) { return color; }, winding_rule);
 }
 
-void Painter::fill_path(Path const& path, FillStyle& fill_style, Painter::WindingRule rule)
+void Painter::fill_path(Path const& path, FillStyle const& fill_style, Painter::WindingRule rule)
 {
     VERIFY(scale() == 1); // FIXME: Add scaling support.
     fill_style.fill(enclosing_int_rect(path.bounding_box()), [&](FillStyle::SamplerFunction sampler) {

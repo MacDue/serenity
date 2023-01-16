@@ -29,11 +29,11 @@ struct FillStyle : RefCounted<FillStyle> {
 
 private:
     // Simple fill styles can simply override sample_color() if they can easily generate a color from a coordinate.
-    virtual Color sample_color(IntPoint) { return Color(); };
+    virtual Color sample_color(IntPoint) const { return Color(); };
 
     // Fill styles that have paint time dependent state (e.g. based on the fill size) may find it easier to override fill().
     // If fill() is overridden sample_color() is unused.
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill)
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const
     {
         (void)physical_bounding_box;
         fill([this](IntPoint point) { return sample_color(point); });
@@ -46,7 +46,7 @@ struct SolidFillStyle : FillStyle {
         return adopt_ref(*new SolidFillStyle(color));
     }
 
-    virtual Color sample_color(IntPoint) override { return m_color; }
+    virtual Color sample_color(IntPoint) const override { return m_color; }
 
 private:
     SolidFillStyle(Color color)
@@ -93,7 +93,7 @@ struct LinearGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     LinearGradientFillStyle(float angle)
         : m_angle(angle)
@@ -110,7 +110,7 @@ struct ConicGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     ConicGradientFillStyle(IntPoint center, float start_angle)
         : m_center(center)
@@ -129,7 +129,7 @@ struct RadialGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     RadialGradientFillStyle(IntPoint center, IntSize size)
         : m_center(center)
@@ -152,7 +152,7 @@ struct CanvasLinearGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     CanvasLinearGradientFillStyle(FloatPoint p0, FloatPoint p1)
         : m_p0(p0)
@@ -171,7 +171,7 @@ struct CanvasConicGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     CanvasConicGradientFillStyle(FloatPoint center, float start_angle)
         : m_center(center)
@@ -190,7 +190,7 @@ struct CanvasRadialGradientFillStyle : GradientFillStyle {
     }
 
 private:
-    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) override;
+    virtual void fill(IntRect physical_bounding_box, FillImplementation fill) const override;
 
     CanvasRadialGradientFillStyle(FloatPoint start_center, float start_radius, FloatPoint end_center, float end_radius)
         : m_start_center(start_center)

@@ -31,7 +31,7 @@ public:
     void draw_line_for_path(FloatPoint, FloatPoint, Color, float thickness = 1, Painter::LineStyle style = Painter::LineStyle::Solid, Color alternate_color = Color::Transparent, LineLengthMode line_length_mode = LineLengthMode::PointToPoint);
 
     void fill_path(Path const&, Color, Painter::WindingRule rule = Painter::WindingRule::Nonzero);
-    void fill_path(Path const&, FillStyle& fill_style, Painter::WindingRule rule = Painter::WindingRule::Nonzero);
+    void fill_path(Path const&, FillStyle const& fill_style, Painter::WindingRule rule = Painter::WindingRule::Nonzero);
 
     void stroke_path(Path const&, Color, float thickness);
     void draw_quadratic_bezier_curve(FloatPoint control_point, FloatPoint, FloatPoint, Color, float thickness = 1, Painter::LineStyle style = Painter::LineStyle::Solid);
