@@ -12,23 +12,49 @@
 
 namespace Web::HTML {
 
+class CanvasPatternPaintStyle final : public Gfx::PaintStyle {
+public:
+    enum class Repetition {
+        Repeat,
+        RepeatX,
+        RepeatY,
+        NoRepeat
+    };
+
+    static NonnullRefPtr<CanvasPatternPaintStyle> create(Gfx::Bitmap const& bitmap, Repetition repetition)
+    {
+        return adopt_ref(*new CanvasPatternPaintStyle(bitmap, repetition));
+    }
+
+    virtual Gfx::Color sample_color(Gfx::IntPoint) const override;
+
+private:
+    CanvasPatternPaintStyle(Gfx::Bitmap const& bitmap, Repetition repetition)
+        : m_bitmap(bitmap)
+        , m_repetition(repetition)
+    {
+    }
+
+    NonnullRefPtr<Gfx::Bitmap const> m_bitmap;
+    Repetition m_repetition { Repetition::Repeat };
+};
+
 class CanvasPattern final : public Bindings::PlatformObject {
     WEB_PLATFORM_OBJECT(CanvasPattern, Bindings::PlatformObject);
 
 public:
-    static WebIDL::ExceptionOr<JS::GCPtr<CanvasPattern>> create(JS::Realm&, CanvasImageSource const& image, StringView repetition)
-    {
-        (void)image;
-        (void)repetition;
-        VERIFY_NOT_REACHED();
-    }
+    static WebIDL::ExceptionOr<JS::GCPtr<CanvasPattern>> create(JS::Realm&, CanvasImageSource const& image, StringView repetition);
 
     ~CanvasPattern();
 
     NonnullRefPtr<Gfx::PaintStyle> to_gfx_paint_style() { VERIFY_NOT_REACHED(); }
 
 private:
+    CanvasPattern(JS::Realm&, CanvasPatternPaintStyle&);
+
     virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
+
+    NonnullRefPtr<CanvasPatternPaintStyle> m_pattern;
 };
 
 }
