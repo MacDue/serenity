@@ -23,12 +23,12 @@ public:
         VERIFY_NOT_REACHED();
     }
 
-    ~CanvasPattern() = default;
+    ~CanvasPattern();
 
     NonnullRefPtr<Gfx::PaintStyle> to_gfx_paint_style() { VERIFY_NOT_REACHED(); }
 
 private:
-    virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override { VERIFY_NOT_REACHED(); }
+    virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
 };
 
 }
