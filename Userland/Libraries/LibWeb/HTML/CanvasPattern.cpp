@@ -11,9 +11,71 @@
 
 namespace Web::HTML {
 
-Gfx::Color CanvasPatternPaintStyle::sample_color(Gfx::IntPoint) const
+void CanvasPatternPaintStyle::paint(Gfx::IntRect physical_bounding_box, PaintFunction paint) const
 {
-    return Gfx::Color {};
+    // 1. Create an infinite transparent black bitmap.
+    // *waves magic wand 🪄*
+    // Done!
+
+    // 2. Place a copy of the image on the bitmap, anchored such that its top left corner
+    // is at the origin of the coordinate space, with one coordinate space unit per CSS pixel of the image,
+    // then place repeated copies of this image horizontally to the left and right, if the repetition behavior
+    // is "repeat-x", or vertically up and down, if the repetition behavior is "repeat-y", or in all four directions
+    // all over the bitmap, if the repetition behavior is "repeat".
+
+    // FIMXE: If the original image data is a bitmap image, then the value painted at a point in the area of
+    // the repetitions is computed by filtering the original image data. When scaling up, if the imageSmoothingEnabled
+    // attribute is set to false, then the image must be rendered using nearest-neighbor interpolation.
+    // Otherwise, the user agent may use any filtering algorithm (for example bilinear interpolation or nearest-neighbor).
+    // User agents which support multiple filtering algorithms may use the value of the imageSmoothingQuality attribute
+    // to guide the choice of filtering algorithm. When such a filtering algorithm requires a pixel value from outside
+    // the original image data, it must instead use the value from wrapping the pixel's coordinates to the original
+    // image's dimensions. (That is, the filter uses 'repeat' behavior, regardless of the value of the pattern's repetition behavior.)
+
+    // FIXME: 3. Transform the resulting bitmap according to the pattern's transformation matrix.
+
+    // FIXME: 4. Transform the resulting bitmap again, this time according to the current transformation matrix.
+
+    // 5. Replace any part of the image outside the area in which the pattern is to be rendered with transparent black.
+
+    // 6. The resulting bitmap is what is to be rendered, with the same origin and same scale.
+
+    auto const bitmap_width = m_bitmap->width();
+    auto const bitmap_height = m_bitmap->height();
+
+    paint([=, this](auto point) {
+        point.translate_by(physical_bounding_box.location());
+        point = [&]() -> Gfx::IntPoint {
+            switch (m_repetition) {
+            case Repetition::NoRepeat: {
+                return point;
+            }
+            case Repetition::Repeat: {
+                return {
+                    point.x() % bitmap_width,
+                    point.y() % bitmap_height
+                };
+            }
+            case Repetition::RepeatX: {
+                return {
+                    point.x() % bitmap_width,
+                    point.y()
+                };
+            }
+            case Repetition::RepeatY: {
+                return {
+                    point.x(),
+                    point.y() % bitmap_height
+                };
+            }
+            default:
+                VERIFY_NOT_REACHED();
+            }
+        }();
+        if (m_bitmap->rect().contains(point))
+            return m_bitmap->get_pixel(point);
+        return Gfx::Color();
+    });
 }
 
 CanvasPattern::CanvasPattern(JS::Realm& realm, CanvasPatternPaintStyle& pattern)

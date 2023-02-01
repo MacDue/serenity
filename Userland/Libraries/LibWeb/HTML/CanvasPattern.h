@@ -26,7 +26,7 @@ public:
         return adopt_ref(*new CanvasPatternPaintStyle(bitmap, repetition));
     }
 
-    virtual Gfx::Color sample_color(Gfx::IntPoint) const override;
+    virtual void paint(Gfx::IntRect physical_bounding_box, PaintFunction paint) const override;
 
 private:
     CanvasPatternPaintStyle(Gfx::Bitmap const& bitmap, Repetition repetition)
@@ -47,7 +47,7 @@ public:
 
     ~CanvasPattern();
 
-    NonnullRefPtr<Gfx::PaintStyle> to_gfx_paint_style() { VERIFY_NOT_REACHED(); }
+    NonnullRefPtr<Gfx::PaintStyle> to_gfx_paint_style() { return m_pattern; }
 
 private:
     CanvasPattern(JS::Realm&, CanvasPatternPaintStyle&);
