@@ -20,6 +20,10 @@
 
 namespace OpenType {
 
+namespace Hinting {
+struct Interpreter;
+}
+
 class Font : public Gfx::VectorFont {
     AK_MAKE_NONCOPYABLE(Font);
 
@@ -44,6 +48,8 @@ public:
     Optional<ReadonlyBytes> font_program() const;
     Optional<ReadonlyBytes> control_value_program() const;
     Optional<ReadonlyBytes> glyph_program(u32 glyph_id) const;
+
+    friend struct Hinting::Interpreter;
 
 private:
     enum class Offsets {

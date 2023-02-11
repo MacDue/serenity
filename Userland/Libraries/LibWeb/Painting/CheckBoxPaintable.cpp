@@ -34,16 +34,4 @@ Layout::CheckBox& CheckBoxPaintable::layout_box()
     return static_cast<Layout::CheckBox&>(layout_node());
 }
 
-void CheckBoxPaintable::paint(PaintContext& context, PaintPhase phase) const
-{
-    if (!is_visible())
-        return;
-
-    PaintableBox::paint(context, phase);
-
-    auto const& checkbox = static_cast<HTML::HTMLInputElement const&>(layout_box().dom_node());
-    if (phase == PaintPhase::Foreground)
-        Gfx::StylePainter::paint_check_box(context.painter(), context.enclosing_device_rect(absolute_rect()).to_type<int>(), context.palette(), layout_box().dom_node().enabled(), checkbox.checked(), being_pressed());
-}
-
 }
