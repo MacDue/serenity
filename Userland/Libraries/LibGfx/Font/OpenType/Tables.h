@@ -135,6 +135,7 @@ public:
     u16 max_function_defs() const;
     u16 max_instruction_defs() const;
     u16 max_stack_elements() const;
+    u16 max_storage() const;
 
 private:
     struct MaximumProfileVersion0_5 {

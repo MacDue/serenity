@@ -94,7 +94,7 @@ void InstructionStream::process_next_instruction(InstructionHandler& handler)
     case Opcode::PUSHW... Opcode::PUSHW_MAX: {
         auto n = (to_underlying(opcode) & 0b111) + 1;
         auto values = take_n_bytes(n * 2);
-        return handler.handle_PUSHB({ { opcode, values }, stream });
+        return handler.handle_PUSHW({ { opcode, values }, stream });
     }
     default:
         break;
@@ -141,18 +141,6 @@ void InstructionStream::skip_instruction()
         virtual void default_handler(Context) override {};
     } noop {};
     process_next_instruction(noop);
-}
-
-void InstructionStream::jump_to_next(Opcode opcode)
-{
-    while (static_cast<Opcode>(peek_byte()) != opcode)
-        skip_instruction();
-}
-
-void InstructionStream::jump_passed_next(Opcode opcode)
-{
-    jump_to_next(opcode);
-    skip_instruction();
 }
 
 }

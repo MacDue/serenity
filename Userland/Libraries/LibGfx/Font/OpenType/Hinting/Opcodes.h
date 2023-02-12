@@ -192,8 +192,27 @@ struct InstructionStream {
     void process_next_instruction(InstructionHandler& handler);
     void skip_instruction();
 
-    void jump_to_next(Opcode);
-    void jump_passed_next(Opcode);
+    void jump_to(auto is_end_marker)
+    {
+        while (!is_end_marker(static_cast<Opcode>(peek_byte())))
+            skip_instruction();
+    }
+
+    void jump_passed(auto is_end_marker)
+    {
+        jump_to(is_end_marker);
+        skip_instruction();
+    }
+
+    void jump_to_next(Opcode end_opcode)
+    {
+        jump_to([=](Opcode opcode) { return opcode == end_opcode; });
+    }
+
+    void jump_passed_next(Opcode end_opcode)
+    {
+        jump_passed([=](Opcode opcode) { return opcode == end_opcode; });
+    }
 
     size_t current_position() const { return m_byte_index; }
     size_t length() const { return m_bytes.size(); }
@@ -216,6 +235,8 @@ struct InstructionStream {
     {
         return m_bytes.slice(start, end - start);
     }
+
+    Opcode peek() { return static_cast<Opcode>(peek_byte()); }
 
 private:
     u8 next_byte();

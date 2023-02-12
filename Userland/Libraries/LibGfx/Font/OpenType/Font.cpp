@@ -167,6 +167,11 @@ u16 Maxp::max_stack_elements() const
     return header_1_0().map([](auto& header) { return header.max_stack_elements; }).value_or(0);
 }
 
+u16 Maxp::max_storage() const
+{
+    return header_1_0().map([](auto& header) { return header.max_storage; }).value_or(0);
+}
+
 Optional<Hmtx> Hmtx::from_slice(ReadonlyBytes slice, u32 num_glyphs, u32 number_of_h_metrics)
 {
     if (slice.size() < number_of_h_metrics * sizeof(LongHorMetric) + (num_glyphs - number_of_h_metrics) * sizeof(u16)) {
@@ -763,6 +768,11 @@ u32 Font::max_hinting_function_definitions() const
 u32 Font::max_hinting_stack_depth() const
 {
     return m_maxp.max_stack_elements();
+}
+
+u32 Font::max_hinting_storage() const
+{
+    return m_maxp.max_storage();
 }
 
 u32 Font::glyph_id_for_code_point(u32 code_point) const

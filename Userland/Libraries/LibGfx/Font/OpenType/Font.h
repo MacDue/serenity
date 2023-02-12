@@ -54,6 +54,7 @@ public:
 private:
     u32 max_hinting_function_definitions() const;
     u32 max_hinting_stack_depth() const;
+    u32 max_hinting_storage() const;
 
     enum class Offsets {
         NumTables = 4,

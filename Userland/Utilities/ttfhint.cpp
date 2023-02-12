@@ -9,6 +9,8 @@
 #include <LibGfx/Font/OpenType/Font.h>
 #include <LibGfx/Font/OpenType/Hinting/Interpreter.h>
 
+using namespace OpenType::Hinting;
+
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     Core::ArgsParser args_parser;
@@ -18,9 +20,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     args_parser.parse(arguments);
 
     auto font = TRY(OpenType::Font::try_load_from_file(font_path));
-    OpenType::Hinting::InstructionStream font_program { *font->font_program() };
-    auto interpreter = TRY(OpenType::Hinting::Interpreter::create(font));
-    interpreter.execute_program(font_program);
+    auto interpreter = TRY(Interpreter::create(font));
+    auto instance = TRY(interpreter->create_font_instance_data(18));
 
+    interpreter->execute_program(*font->font_program(), {});
+    interpreter->execute_program(*font->control_value_program(), { *instance });
     return 0;
 }
