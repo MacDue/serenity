@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <AK/FixedArray.h>
 #include <AK/FixedPoint.h>
 #include <AK/Span.h>
-#include <AK/Vector.h>
 #include <LibGfx/Font/Font.h>
 #include <LibGfx/Font/OpenType/Font.h>
 #include <LibGfx/Font/OpenType/Hinting/Opcodes.h>
@@ -20,11 +20,20 @@ using F2Dot14 = FixedPoint<30, u16>;
 using F2Dot30 = FixedPoint<30, u32>;
 using F26Dot6 = FixedPoint<6, u32>;
 
-struct Interpreter : InstructionHandler {
-
-    static ErrorOr<Interpreter> create(Font& font);
+class Interpreter final : public InstructionHandler {
+public:
+    // TODO: Figure out what data this needs to mutate
+    static ErrorOr<Interpreter> create(size_t max_stack_depth, size_t max_function_defs);
 
 private:
+    virtual void default_handler(Context) override { TODO(); }
+
+    virtual void handle_NPUSHB(Context) override;
+    virtual void handle_NPUSHW(Context) override;
+    virtual void handle_PUSHB(Context) override;
+    virtual void handle_PUSHW(Context) override;
+    virtual void handle_FDEF(Context) override;
+
     // TODO:
     struct Zone { };
     struct Curves { };
@@ -53,24 +62,33 @@ private:
     };
 
     struct Stack {
-        Stack(size_t max_stack_depth);
+        Stack(FixedArray<u32> stack)
+            : m_stack(move(stack))
+        {
+        }
 
         uint32_t pop();
         void push(u32);
         void push_byte(u8);
-        void push_word(u16);
+        void push_word(i16);
 
     private:
-        Vector<u32> m_stack;
+        size_t m_top { 0 };
+        FixedArray<u32> m_stack;
     };
 
     struct HintingData {
         Curves curves;
         Zone zone1;
         Stack stack;
-        Vector<ReadonlyBytes> functions;
+        FixedArray<ReadonlyBytes> functions;
         GraphicsState graphics_state;
     };
+
+    Interpreter(HintingData hinting_data)
+        : m_hinting_data(move(hinting_data))
+    {
+    }
 
     HintingData m_hinting_data;
 };

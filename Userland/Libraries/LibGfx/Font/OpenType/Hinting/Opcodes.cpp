@@ -66,35 +66,35 @@ bool Instruction::e() const
     return (to_underlying(m_opcode) >> (m_flag_bits - 5)) & 1;
 }
 
-void InstructionStream::process_next_instruction()
+void InstructionStream::process_next_instruction(InstructionHandler& handler)
 {
     auto opcode = static_cast<Opcode>(next_byte());
     auto& stream = *this;
-    m_handler.before_operation(stream, opcode);
+    handler.before_operation(stream, opcode);
     ScopeGuard after = [&, this]() mutable {
-        m_handler.after_operation(stream, opcode);
+        handler.after_operation(stream, opcode);
     };
     // The PUSH instructions are handled specially as they take their values from the instruction stream.
     switch (opcode) {
     case Opcode::NPUSHB: {
         auto n = next_byte();
         auto values = take_n_bytes(n);
-        return m_handler.handle_NPUSHB({ { opcode, values }, stream });
+        return handler.handle_NPUSHB({ { opcode, values }, stream });
     }
     case Opcode::NPUSHW: {
         auto n = next_byte();
         auto values = take_n_bytes(n * 2);
-        return m_handler.handle_NPUSHW({ { opcode, values }, stream });
+        return handler.handle_NPUSHW({ { opcode, values }, stream });
     }
     case Opcode::PUSHB... Opcode::PUSHB_MAX: {
         auto n = (to_underlying(opcode) & 0b111) + 1;
         auto values = take_n_bytes(n);
-        return m_handler.handle_PUSHB({ { opcode, values }, stream });
+        return handler.handle_PUSHB({ { opcode, values }, stream });
     }
     case Opcode::PUSHW... Opcode::PUSHW_MAX: {
         auto n = (to_underlying(opcode) & 0b111) + 1;
         auto values = take_n_bytes(n * 2);
-        return m_handler.handle_PUSHB({ { opcode, values }, stream });
+        return handler.handle_PUSHB({ { opcode, values }, stream });
     }
     default:
         break;
@@ -102,7 +102,7 @@ void InstructionStream::process_next_instruction()
     switch (to_underlying(opcode)) {
 #define __ENUMERATE_OPENTYPE_OPCODES(mnemonic, range_start, range_end) \
     case range_start ... range_end:                                    \
-        return m_handler.handle_##mnemonic({ { opcode }, stream });
+        return handler.handle_##mnemonic({ { opcode }, stream });
         ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
     }
@@ -113,6 +113,12 @@ u8 InstructionStream::next_byte()
 {
     VERIFY(!at_end());
     return m_bytes[m_byte_index++];
+}
+
+u8 InstructionStream::peek_byte()
+{
+    VERIFY(!at_end());
+    return m_bytes[m_byte_index];
 }
 
 ReadonlyBytes InstructionStream::take_n_bytes(size_t n)
@@ -128,9 +134,11 @@ bool InstructionStream::at_end() const
     return m_byte_index >= m_bytes.size();
 }
 
-void InstructionStream::jump_to_next(Opcode)
+void InstructionStream::jump_to_next(Opcode opcode)
 {
-    TODO();
+    NoopHandler noop {};
+    while (static_cast<Opcode>(peek_byte()) != opcode)
+        process_next_instruction(noop);
 }
 
 }

@@ -21,7 +21,7 @@
 namespace OpenType {
 
 namespace Hinting {
-struct Interpreter;
+class Interpreter;
 }
 
 class Font : public Gfx::VectorFont {
@@ -49,7 +49,7 @@ public:
     Optional<ReadonlyBytes> control_value_program() const;
     Optional<ReadonlyBytes> glyph_program(u32 glyph_id) const;
 
-    friend struct Hinting::Interpreter;
+    friend class Hinting::Interpreter;
 
 private:
     enum class Offsets {

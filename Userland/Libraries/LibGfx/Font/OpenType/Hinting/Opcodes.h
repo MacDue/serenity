@@ -183,14 +183,18 @@ StringView opcode_mnemonic(Opcode);
 struct InstructionHandler;
 
 struct InstructionStream {
-    InstructionStream(InstructionHandler& handler, ReadonlyBytes bytes)
-        : m_handler { handler }
-        , m_bytes(bytes)
+    InstructionStream(ReadonlyBytes bytes)
+        : m_bytes(bytes)
     {
     }
 
+    struct NoopHandler : InstructionHandler {
+    private:
+        virtual void default_handler(Context) override {};
+    };
+
     bool at_end() const;
-    void process_next_instruction();
+    void process_next_instruction(InstructionHandler& handler);
     void jump_to_next(Opcode);
 
     size_t current_position() const { return m_byte_index; }
@@ -210,18 +214,26 @@ struct InstructionStream {
         InstructionStream& m_stream;
     };
 
+    ReadonlyBytes take_span(size_t start, size_t end) const
+    {
+        return m_bytes.slice(start, end - start);
+    }
+
 private:
     u8 next_byte();
+    u8 peek_byte();
     ReadonlyBytes take_n_bytes(size_t n);
-
-    InstructionHandler& m_handler;
     ReadonlyBytes m_bytes;
     size_t m_byte_index { 0 };
 };
 
-struct InstructionHandler {
+class InstructionHandler {
+public:
+    virtual ~InstructionHandler() = default;
     using Context = InstructionStream::Context;
+    friend struct InstructionStream;
 
+private:
     virtual void default_handler(Context) = 0;
     virtual void before_operation(InstructionStream&, Opcode) { }
     virtual void after_operation(InstructionStream&, Opcode) { }
@@ -233,8 +245,6 @@ struct InstructionHandler {
     }
     ENUMERATE_OPENTYPE_OPCODES
 #undef __ENUMERATE_OPENTYPE_OPCODES
-
-    virtual ~InstructionHandler() = default;
 };
 
 }

@@ -20,12 +20,14 @@ using namespace OpenType::Hinting;
 #define RESET "\e[0m"
 #define GRAY "\e[90m"
 
-struct InstructionPrinter : InstructionHandler {
+class InstructionPrinter final : public InstructionHandler {
+public:
     InstructionPrinter(bool enable_highlighting)
         : m_enable_highlighting(enable_highlighting)
     {
     }
 
+private:
     void before_operation(InstructionStream& stream, Opcode opcode) override
     {
         if (opcode == Opcode::FDEF && stream.current_position() > 1 && m_indent_level == 1)
@@ -147,9 +149,9 @@ static void print_disassembly(StringView name, Optional<ReadonlyBytes> program, 
     out(name, code_point);
     outln(":    ({} bytes)\n", program->size());
     InstructionPrinter printer { enable_highlighting };
-    InstructionStream stream { printer, *program };
+    InstructionStream stream { *program };
     while (!stream.at_end())
-        stream.process_next_instruction();
+        stream.process_next_instruction(printer);
 }
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
