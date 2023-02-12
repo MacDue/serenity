@@ -71,7 +71,7 @@ void InstructionStream::process_next_instruction(InstructionHandler& handler)
     auto opcode = static_cast<Opcode>(next_byte());
     auto& stream = *this;
     handler.before_operation(stream, opcode);
-    ScopeGuard after = [&, this]() mutable {
+    ScopeGuard after = [&]() mutable {
         handler.after_operation(stream, opcode);
     };
     // The PUSH instructions are handled specially as they take their values from the instruction stream.
@@ -136,7 +136,10 @@ bool InstructionStream::at_end() const
 
 void InstructionStream::jump_to_next(Opcode opcode)
 {
-    NoopHandler noop {};
+    struct NoopHandler : InstructionHandler {
+    private:
+        virtual void default_handler(Context) override {};
+    } noop {};
     while (static_cast<Opcode>(peek_byte()) != opcode)
         process_next_instruction(noop);
 }

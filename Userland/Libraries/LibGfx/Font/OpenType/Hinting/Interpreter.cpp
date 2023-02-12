@@ -53,7 +53,7 @@ void Interpreter::handle_NPUSHB(Context context)
 
 void Interpreter::handle_NPUSHW(Context context)
 {
-    handle_NPUSHW(context);
+    handle_PUSHW(context);
 }
 
 void Interpreter::handle_PUSHB(Context context)
@@ -79,7 +79,6 @@ void Interpreter::handle_FDEF(Context context)
     stream.jump_to_next(Opcode::ENDF);
     // ENDF marker
     auto fdef_end = stream.current_position();
-    auto size = fdef_end - fdef_start;
     auto instructions = stream.take_span(fdef_start, fdef_end);
     m_hinting_data.functions[function_id] = instructions;
 }

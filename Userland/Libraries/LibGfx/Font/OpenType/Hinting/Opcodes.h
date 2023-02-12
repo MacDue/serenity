@@ -180,18 +180,13 @@ private:
 
 StringView opcode_mnemonic(Opcode);
 
-struct InstructionHandler;
+class InstructionHandler;
 
 struct InstructionStream {
     InstructionStream(ReadonlyBytes bytes)
         : m_bytes(bytes)
     {
     }
-
-    struct NoopHandler : InstructionHandler {
-    private:
-        virtual void default_handler(Context) override {};
-    };
 
     bool at_end() const;
     void process_next_instruction(InstructionHandler& handler);
