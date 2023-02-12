@@ -50,13 +50,13 @@ uint32_t Interpreter::Stack::pop()
 {
     VERIFY(m_top > 0);
     auto value = m_stack[--m_top];
-    dbgln_if(TTF_HINT_DEBUG, "Stack: pop {}", value);
+    dbgln_if(TTF_HINT_DEBUG, "Stack: pop {} (top now {})", value, m_top);
     return value;
 }
 
 void Interpreter::Stack::push(u32 value)
 {
-    dbgln_if(TTF_HINT_DEBUG, "Stack: push {}", value);
+    dbgln_if(TTF_HINT_DEBUG, "Stack: push {} (top now {})", value, m_top);
     m_stack[m_top++] = value;
 }
 
@@ -182,20 +182,24 @@ void Interpreter::handle_GETINFO(Context context)
     auto selector = m_hinting_data.stack.pop();
 
     // Version
-    if (selector & 0x00000001)
+    if (selector & 0x00000001) {
         result = 40; // v40
+    }
 
     // Glyph rotation
-    if (selector & 0x00000002)
+    if (selector & 0x00000002) {
         // <Always false>
+    }
 
-        // Glyph stretched
-        if (selector & 0x00000004)
-            // <Always false>
+    // Glyph stretched
+    if (selector & 0x00000004) {
+        // <Always false>
+    }
 
-            // ClearType enabled (always true in FreeType)
-            if (selector & 0x00000040)
-                result |= (1 << 13);
+    // ClearType enabled (always true in FreeType)
+    if (selector & 0x00000040) {
+        result |= (1 << 13);
+    }
 
     m_hinting_data.stack.push(result);
 }
