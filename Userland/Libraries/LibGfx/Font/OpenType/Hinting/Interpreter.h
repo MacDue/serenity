@@ -23,7 +23,9 @@ using F26Dot6 = FixedPoint<6, u32>;
 class Interpreter final : public InstructionHandler {
 public:
     // TODO: Figure out what data this needs to mutate
-    static ErrorOr<Interpreter> create(size_t max_stack_depth, size_t max_function_defs);
+    static ErrorOr<Interpreter> create(Font& font);
+
+    void execute_program(InstructionStream);
 
 private:
     virtual void default_handler(Context) override { TODO(); }
@@ -85,11 +87,13 @@ private:
         GraphicsState graphics_state;
     };
 
-    Interpreter(HintingData hinting_data)
-        : m_hinting_data(move(hinting_data))
+    Interpreter(Font& font, HintingData hinting_data)
+        : m_font(font)
+        , m_hinting_data(move(hinting_data))
     {
     }
 
+    NonnullRefPtr<Font> m_font;
     HintingData m_hinting_data;
 };
 

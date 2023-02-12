@@ -152,6 +152,21 @@ u16 Maxp::num_glyphs() const
     return header().num_glyphs;
 }
 
+u16 Maxp::max_function_defs() const
+{
+    return header_1_0().map([](auto& header) { return header.max_function_defs; }).value_or(0);
+}
+
+u16 Maxp::max_instruction_defs() const
+{
+    return header_1_0().map([](auto& header) { return header.max_instruction_defs; }).value_or(0);
+}
+
+u16 Maxp::max_stack_elements() const
+{
+    return header_1_0().map([](auto& header) { return header.max_stack_elements; }).value_or(0);
+}
+
 Optional<Hmtx> Hmtx::from_slice(ReadonlyBytes slice, u32 num_glyphs, u32 number_of_h_metrics)
 {
     if (slice.size() < number_of_h_metrics * sizeof(LongHorMetric) + (num_glyphs - number_of_h_metrics) * sizeof(u16)) {
@@ -738,6 +753,16 @@ Optional<ReadonlyBytes> Font::glyph_program(u32 glyph_id) const
     auto glyph_offset = m_loca.get_glyph_offset(glyph_id);
     auto glyph = m_glyf.glyph(glyph_offset);
     return glyph.program();
+}
+
+u32 Font::max_hinting_function_definitions() const
+{
+    return m_maxp.max_function_defs();
+}
+
+u32 Font::max_hinting_stack_depth() const
+{
+    return m_maxp.max_stack_elements();
 }
 
 u32 Font::glyph_id_for_code_point(u32 code_point) const

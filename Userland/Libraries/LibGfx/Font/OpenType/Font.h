@@ -52,6 +52,9 @@ public:
     friend class Hinting::Interpreter;
 
 private:
+    u32 max_hinting_function_definitions() const;
+    u32 max_hinting_stack_depth() const;
+
     enum class Offsets {
         NumTables = 4,
         TableRecord_Offset = 8,

@@ -132,6 +132,10 @@ public:
 
     u16 num_glyphs() const;
 
+    u16 max_function_defs() const;
+    u16 max_instruction_defs() const;
+    u16 max_stack_elements() const;
+
 private:
     struct MaximumProfileVersion0_5 {
         Version16Dot16 version;
@@ -157,6 +161,14 @@ private:
     };
 
     MaximumProfileVersion0_5 const& header() const { return *bit_cast<MaximumProfileVersion0_5 const*>(m_slice.data()); }
+
+    Optional<MaximumProfileVersion1_0 const&> header_1_0() const
+    {
+        auto& maxp_0_5 = header();
+        if (maxp_0_5.version.major >= 1)
+            return *bit_cast<MaximumProfileVersion1_0 const*>(m_slice.data());
+        return {};
+    }
 
     Maxp(ReadonlyBytes slice)
         : m_slice(slice)

@@ -6,12 +6,14 @@
 
 #include <LibGfx/Font/OpenType/Hinting/Interpreter.h>
 
+#define TTF_HINT_DEBUG 1
+
 namespace OpenType::Hinting {
 
-ErrorOr<Interpreter> Interpreter::create(size_t max_stack_depth, size_t max_function_defs)
+ErrorOr<Interpreter> Interpreter::create(Font& font)
 {
-    auto stack = TRY(FixedArray<u32>::create(max_stack_depth));
-    auto functions = TRY(FixedArray<ReadonlyBytes>::create(max_function_defs));
+    auto stack = TRY(FixedArray<u32>::create(font.max_hinting_stack_depth()));
+    auto functions = TRY(FixedArray<ReadonlyBytes>::create(font.max_hinting_function_definitions()));
     HintingData hinting_data {
         .curves = {},
         .zone1 = {},
@@ -19,17 +21,26 @@ ErrorOr<Interpreter> Interpreter::create(size_t max_stack_depth, size_t max_func
         .functions = move(functions),
         .graphics_state = {}
     };
-    return Interpreter(move(hinting_data));
+    return Interpreter(font, move(hinting_data));
+}
+
+void Interpreter::execute_program(InstructionStream instructions)
+{
+    while (!instructions.at_end())
+        instructions.process_next_instruction(*this);
 }
 
 uint32_t Interpreter::Stack::pop()
 {
     VERIFY(m_top > 0);
-    return m_stack[--m_top];
+    auto value = m_stack[--m_top];
+    dbgln_if(TTF_HINT_DEBUG, "Stack: pop {}", value);
+    return value;
 }
 
 void Interpreter::Stack::push(u32 value)
 {
+    dbgln_if(TTF_HINT_DEBUG, "Stack: push {}", value);
     m_stack[m_top++] = value;
 }
 
@@ -81,6 +92,7 @@ void Interpreter::handle_FDEF(Context context)
     auto fdef_end = stream.current_position();
     auto instructions = stream.take_span(fdef_start, fdef_end);
     m_hinting_data.functions[function_id] = instructions;
+    dbgln_if(TTF_HINT_DEBUG, "Added function definition: {} ({} bytes)", function_id, instructions.size());
 }
 
 }
