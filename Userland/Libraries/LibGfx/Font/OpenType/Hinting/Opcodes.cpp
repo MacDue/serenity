@@ -134,14 +134,25 @@ bool InstructionStream::at_end() const
     return m_byte_index >= m_bytes.size();
 }
 
-void InstructionStream::jump_to_next(Opcode opcode)
+void InstructionStream::skip_instruction()
 {
     struct NoopHandler : InstructionHandler {
     private:
         virtual void default_handler(Context) override {};
     } noop {};
+    process_next_instruction(noop);
+}
+
+void InstructionStream::jump_to_next(Opcode opcode)
+{
     while (static_cast<Opcode>(peek_byte()) != opcode)
-        process_next_instruction(noop);
+        skip_instruction();
+}
+
+void InstructionStream::jump_passed_next(Opcode opcode)
+{
+    jump_to_next(opcode);
+    skip_instruction();
 }
 
 }

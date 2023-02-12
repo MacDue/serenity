@@ -24,6 +24,12 @@ ErrorOr<Interpreter> Interpreter::create(Font& font)
     return Interpreter(font, move(hinting_data));
 }
 
+void Interpreter::default_handler(Context context)
+{
+    dbgln("Unimplemented opcode: {}", opcode_mnemonic(context.instruction().opcode()));
+    TODO();
+}
+
 void Interpreter::execute_program(InstructionStream instructions)
 {
     while (!instructions.at_end())
@@ -87,7 +93,7 @@ void Interpreter::handle_FDEF(Context context)
     // First instruction in function:
     auto function_id = m_hinting_data.stack.pop();
     auto fdef_start = stream.current_position();
-    stream.jump_to_next(Opcode::ENDF);
+    stream.jump_passed_next(Opcode::ENDF);
     // ENDF marker
     auto fdef_end = stream.current_position();
     auto instructions = stream.take_span(fdef_start, fdef_end);

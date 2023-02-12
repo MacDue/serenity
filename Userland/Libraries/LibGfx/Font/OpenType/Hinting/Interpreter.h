@@ -28,7 +28,7 @@ public:
     void execute_program(InstructionStream);
 
 private:
-    virtual void default_handler(Context) override { TODO(); }
+    virtual void default_handler(Context) override;
 
     virtual void handle_NPUSHB(Context) override;
     virtual void handle_NPUSHW(Context) override;

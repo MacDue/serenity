@@ -190,7 +190,10 @@ struct InstructionStream {
 
     bool at_end() const;
     void process_next_instruction(InstructionHandler& handler);
+    void skip_instruction();
+
     void jump_to_next(Opcode);
+    void jump_passed_next(Opcode);
 
     size_t current_position() const { return m_byte_index; }
     size_t length() const { return m_bytes.size(); }
