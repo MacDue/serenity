@@ -4,14 +4,16 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <LibGfx/AreoWindowTheme.h>
 #include <LibGfx/ClassicWindowTheme.h>
+#include <LibGfx/LunaWindowTheme.h>
 #include <LibGfx/WindowTheme.h>
 
 namespace Gfx {
 
 WindowTheme& WindowTheme::current()
 {
-    static ClassicWindowTheme theme;
+    static LunaWindowTheme theme;
     return theme;
 }
 

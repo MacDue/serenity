@@ -94,6 +94,8 @@ set(SOURCES
     Triangle.cpp
     VectorGraphic.cpp
     WindowTheme.cpp
+    LunaWindowTheme.cpp
+    AreoWindowTheme.cpp
 )
 
 serenity_lib(LibGfx gfx)

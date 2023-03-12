@@ -30,6 +30,7 @@
 #include <LibGUI/Window.h>
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibGfx/Palette.h>
+#include <LibGfx/WindowTheme.h>
 #include <serenity.h>
 #include <stdio.h>
 
@@ -60,8 +61,7 @@ private:
     {
         GUI::Painter painter(*this);
         painter.add_clip_rect(event.rect());
-        painter.fill_rect(rect(), palette().button());
-        painter.draw_line({ 0, 1 }, { width() - 1, 1 }, palette().threed_highlight());
+        Gfx::WindowTheme::current().paint_taskbar(painter, rect(), palette());
     }
 
     virtual void did_layout() override
@@ -121,6 +121,7 @@ TaskbarWindow::TaskbarWindow()
 {
     set_window_type(GUI::WindowType::Taskbar);
     set_title("Taskbar");
+    set_has_alpha_channel(true);
 
     on_screen_rects_change(GUI::Desktop::the().rects(), GUI::Desktop::the().main_screen_index());
 }
