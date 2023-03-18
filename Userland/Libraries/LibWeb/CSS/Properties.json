@@ -1,4 +1,11 @@
 {
+  "accent-color": {
+    "inherited": true,
+    "initial": "auto",
+    "valid-types": [
+      "color"
+    ]
+  },
   "align-content": {
     "inherited": false,
     "initial": "stretch",
