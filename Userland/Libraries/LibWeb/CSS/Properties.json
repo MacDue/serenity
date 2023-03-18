@@ -4,6 +4,9 @@
     "initial": "auto",
     "valid-types": [
       "color"
+    ],
+    "valid-identifiers": [
+      "auto"
     ]
   },
   "align-content": {

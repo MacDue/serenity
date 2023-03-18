@@ -455,6 +455,10 @@ void NodeWithStyle::apply_style(const CSS::StyleProperties& computed_style)
     if (justify_content.has_value())
         computed_values.set_justify_content(justify_content.value());
 
+    auto accent_color = computed_style.accent_color();
+    if (accent_color.has_value())
+        computed_values.set_accent_color(accent_color.value());
+
     auto align_content = computed_style.align_content();
     if (align_content.has_value())
         computed_values.set_align_content(align_content.value());
