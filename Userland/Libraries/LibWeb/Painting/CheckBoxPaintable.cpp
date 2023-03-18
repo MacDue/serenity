@@ -40,48 +40,42 @@ void CheckBoxPaintable::paint(PaintContext& context, PaintPhase phase) const
 
     PaintableBox::paint(context, phase);
 
+    // Make a CrachertBitmap -> Bitmap mathod
+    // -> some coloring
+    // -> use accent_color
     // auto const& checkbox = static_cast<HTML::HTMLInputElement const&>(layout_box().dom_node());
     if (phase == PaintPhase::Foreground) {
-        constexpr float left_offset = 1 / 2.0f;
-        constexpr float top_offset = 1 / 2.0f;
-        // constexpr float bottom_offset = 1/5.0f;
+        constexpr float tick_width = 0.5f;
+        constexpr float tick_height = 0.7f;
+        constexpr float offset_y = -0.07f;
+        constexpr float angle = AK::Pi<float> / 4;
 
-        auto checkbox_rect = context.enclosing_device_rect(absolute_rect()).to_type<int>();
+        auto checkbox_rect = context.enclosing_device_rect(absolute_rect()).to_type<int>().to_type<float>();
 
         auto border_radius = round_to<int>(checkbox_rect.width() * 1 / 5.0f);
-        auto line_width = checkbox_rect.width() * 1 / 6.0f;
+        auto line_width = round_to<int>(checkbox_rect.width() * 1 / 6.0f) | 1;
 
-        // device_pixels_per_css_pixel
         Gfx::AntiAliasingPainter painter { context.painter() };
         // bool enabled = layout_box().dom_node().enabled();
         //  checkbox.checked(), being_pressed()
-        painter.fill_rect_with_rounded_corners(checkbox_rect, Gfx::Color::Black, border_radius);
-        auto tick_rect = checkbox_rect.to_type<float>().shrunken(line_width * 2, line_width * 2);
+        painter.fill_rect_with_rounded_corners(checkbox_rect.to_type<int>(), Gfx::Color::Black, border_radius);
 
-        auto rotate_90 = [&](auto point, auto center) {
-            using T = decltype(point);
-            point -= center;
-            return T { -point.y(), point.x() } + center;
+        auto tick_rect = Gfx::FloatRect { {}, checkbox_rect.size().scaled_by(tick_width, tick_height) }.centered_within(checkbox_rect);
+
+        auto center = tick_rect.center();
+        auto position_line = [=](auto line) {
+            return line.translated(-center).rotated(angle).translated(center).translated({ 0, checkbox_rect.height() * offset_y });
         };
-
-        auto shift = AK::Sqrt1_2<float> * line_width / 2;
-        Gfx::Line l0 {
-            Gfx::FloatPoint(0, tick_rect.height() * top_offset),
-            Gfx::FloatPoint(tick_rect.width() * left_offset, tick_rect.height())
-        };
-
-        Gfx::Line l1(rotate_90(l0.b(), l0.b()), rotate_90(l0.a(), l0.b()));
-        l1 = l1.translated({ -shift, shift });
-
-        // auto direction = (v1-v0)/v0.distance_from(v1);
-
-        // Gfx::Line l1 {
-        //     v0.translated(shift, shift),
-        //     tick_rect.closest_to(v0 + direction * checkbox_rect.height())
-        // };
-
-        painter.draw_line(l0.translated(tick_rect.top_left()), Gfx::Color::White, line_width);
-        painter.draw_line(l1.translated(tick_rect.top_left()), Gfx::Color::White, line_width);
+        auto shift = -line_width / 2;
+        painter.draw_line(position_line(Gfx::Line {
+                              tick_rect.bottom_left().translated(0, shift),
+                              tick_rect.bottom_right().translated(0, shift) }),
+            Gfx::Color::White, line_width);
+        painter.draw_line(position_line(Gfx::Line {
+                              tick_rect.bottom_right().translated(shift, 0),
+                              tick_rect.top_right().translated(shift, 0),
+                          }),
+            Gfx::Color::White, line_width);
     }
 }
 
