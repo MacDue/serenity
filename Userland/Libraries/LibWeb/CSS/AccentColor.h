@@ -9,7 +9,6 @@
 #include <AK/Variant.h>
 #include <LibGfx/Color.h>
 #include <LibWeb/CSS/StyleValue.h>
-#include <LibWeb/Layout/Node.h>
 
 namespace Web::CSS {
 
@@ -33,21 +32,12 @@ public:
 
     bool is_auto() const { return m_color.has<Auto>(); }
 
-    Gfx::Color to_color(Layout::NodeWithStyle const& node, Gfx::Color fallback = Color::Black) const
-    {
-        if (is_auto() || !style_value().has_color()) {
-            auto& document = node.document();
-            if (!document.page())
-                return fallback;
-            return document.page()->palette().color(ColorRole::Accent);
-        }
-        return style_value().to_color(node);
-    }
+    Gfx::Color to_color(Layout::NodeWithStyle const& node, Gfx::Color fallback = Color::Black) const;
 
 private:
     StyleValue const& style_value() const
     {
-        return m_color.get<NonnullRefPtr<StyleValue const>>(m_color);
+        return m_color.get<NonnullRefPtr<StyleValue const>>();
     }
 
     Variant<Auto, NonnullRefPtr<StyleValue const>> m_color;

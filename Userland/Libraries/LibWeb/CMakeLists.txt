@@ -15,6 +15,7 @@ set(SOURCES
     Bindings/PlatformObject.cpp
     Crypto/Crypto.cpp
     Crypto/SubtleCrypto.cpp
+    CSS/AccentColor.cpp
     CSS/Angle.cpp
     CSS/Clip.cpp
     CSS/CSS.cpp
