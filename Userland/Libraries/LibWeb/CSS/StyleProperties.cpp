@@ -344,13 +344,11 @@ CSS::TransformOrigin StyleProperties::transform_origin() const
     return { x_value.value(), y_value.value() };
 }
 
-Optional<CSS::AccentColor> StyleProperties::accent_color() const
+Optional<Color> StyleProperties::accent_color(Layout::NodeWithStyle const& node) const
 {
     auto value = property(CSS::PropertyID::AccentColor);
-    if (value->has_auto())
-        return CSS::AccentColor::make_auto();
     if (value->has_color())
-        return CSS::AccentColor { value };
+        return value->to_color(node);
     return {};
 }
 

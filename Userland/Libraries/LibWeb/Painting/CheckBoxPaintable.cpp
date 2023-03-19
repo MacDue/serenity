@@ -88,7 +88,7 @@ void CheckBoxPaintable::paint(PaintContext& context, PaintPhase phase) const
 
         auto& palette = context.palette();
         auto base_text_color = palette.color(ColorRole::BaseText);
-        auto accent = palette.color(ColorRole::Accent);
+        auto accent = computed_values().accent_color().value_or(palette.color(ColorRole::Accent));
         auto base = lighten(base_text_color.inverted(), 0.8f);
         auto gray = lighten(base_text_color, 0.6f);
         auto mid_gray = lighten(gray);

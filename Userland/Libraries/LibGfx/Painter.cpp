@@ -2578,8 +2578,6 @@ void Painter::draw_signed_distance_field(IntRect const& dst_rect, Color color, G
     auto x_ratio = static_cast<float>(sdf.width() - 1) / dst_rect.width();
     auto y_ratio = static_cast<float>(sdf.height() - 1) / dst_rect.height();
 
-    (void)smoothing;
-
     for (int i = 0; i < clipped_rect.height(); ++i) {
         for (int j = 0; j < clipped_rect.width(); ++j) {
             auto point = IntPoint { j, i };
