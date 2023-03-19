@@ -15,6 +15,9 @@
 #    pragma GCC optimize("O3")
 #endif
 
+#undef FILL_PATH_DEBUG
+#define FILL_PATH_DEBUG 1
+
 namespace Gfx {
 
 template<typename T, typename TColorOrFunction>
@@ -182,7 +185,7 @@ void Painter::fill_path_impl(Path const& path, ColorOrFunction color, Gfx::Paint
 
         VERIFY_NOT_REACHED();
     };
-
+    static int ff = 0;
     while (scanline >= last_y) {
         Optional<PointType> previous_to;
         if (active_list.size()) {
@@ -217,7 +220,8 @@ void Painter::fill_path_impl(Path const& path, ColorOrFunction color, Gfx::Paint
                         // inside the shape
 
                         dbgln_if(FILL_PATH_DEBUG, "y={}: {} at {}: {} -- {}", scanline, winding_number, i, from, to);
-                        draw_scanline(floorf(scanline), from.x(), to.x());
+                        if (++ff != 2)
+                            draw_scanline(floorf(scanline), from.x(), to.x());
                     }
 
                     auto is_passing_through_maxima = scanline == previous.maximum_y
