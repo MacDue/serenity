@@ -120,6 +120,13 @@ constexpr T mix(T const& v1, T const& v2, U const& interpolation)
 }
 
 template<typename T, typename U>
+constexpr T smooth_step(T edge0, T edge1, U x)
+{
+    x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f);
+    return x * x * (3 - 2 * x);
+}
+
+template<typename T, typename U>
 constexpr T ceil_div(T a, U b)
 {
     static_assert(sizeof(T) == sizeof(U));
@@ -203,6 +210,7 @@ using AK::mix;
 using AK::move;
 using AK::RawPtr;
 using AK::round_up_to_power_of_two;
+using AK::smooth_step;
 using AK::swap;
 using AK::to_underlying;
 #endif
