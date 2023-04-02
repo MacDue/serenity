@@ -4271,7 +4271,7 @@ RefPtr<StyleValue> Parser::parse_background_value(Vector<ComponentValue> const& 
         background_clip.release_nonnull());
 }
 
-static Optional<PositionEdge> to_edge(ValueID identifier)
+static Optional<PositionEdge> identifier_to_edge(ValueID identifier)
 {
     switch (identifier) {
     case ValueID::Top:
@@ -4287,7 +4287,7 @@ static Optional<PositionEdge> to_edge(ValueID identifier)
     }
 };
 
-static Optional<LengthPercentage> value_to_length_percentage(auto value)
+static Optional<LengthPercentage> style_value_to_length_percentage(auto value)
 {
     if (value->is_percentage())
         return LengthPercentage { value->as_percentage().percentage() };
@@ -4355,7 +4355,7 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
         tokens.next_token();
         auto value = maybe_value.release_nonnull();
 
-        auto offset = value_to_length_percentage(value);
+        auto offset = style_value_to_length_percentage(value);
         if (offset.has_value()) {
             if (!horizontal.has_value()) {
                 horizontal = EdgeOffset { PositionEdge::Left, *offset, false, true };
@@ -4373,7 +4373,7 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
                 auto maybe_value = parse_css_value(token);
                 if (!maybe_value)
                     return zero_offset;
-                auto offset = value_to_length_percentage(maybe_value.release_nonnull());
+                auto offset = style_value_to_length_percentage(maybe_value.release_nonnull());
                 if (offset.has_value()) {
                     offset_provided = true;
                     tokens.next_token();
@@ -4388,11 +4388,11 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
             if (is_horizontal(identifier)) {
                 bool offset_provided = false;
                 auto offset = try_parse_offset(offset_provided);
-                horizontal = EdgeOffset { *to_edge(identifier), offset, true, offset_provided };
+                horizontal = EdgeOffset { *identifier_to_edge(identifier), offset, true, offset_provided };
             } else if (is_vertical(identifier)) {
                 bool offset_provided = false;
                 auto offset = try_parse_offset(offset_provided);
-                vertical = EdgeOffset { *to_edge(identifier), offset, true, offset_provided };
+                vertical = EdgeOffset { *identifier_to_edge(identifier), offset, true, offset_provided };
             } else if (identifier == ValueID::Center) {
                 found_center = true;
             } else {
@@ -4448,8 +4448,10 @@ RefPtr<StyleValue> Parser::parse_single_background_position_x_or_y_value(TokenSt
 {
     PositionEdge relative_edge {};
     if (property == PropertyID::BackgroundPositionX) {
+        // [ center | [ [ left | right | x-start | x-end ]? <length-percentage>? ]! ]#
         relative_edge = PositionEdge::Left;
     } else if (property == PropertyID::BackgroundPositionY) {
+        // [ center | [ [ top | bottom | y-start | y-end ]? <length-percentage>? ]! ]#
         relative_edge = PositionEdge::Top;
     } else {
         VERIFY_NOT_REACHED();
@@ -4473,7 +4475,7 @@ RefPtr<StyleValue> Parser::parse_single_background_position_x_or_y_value(TokenSt
             transaction.commit();
             return EdgeStyleValue::create(relative_edge, Percentage { 50 });
         }
-        if (auto edge = to_edge(identifier); edge.has_value()) {
+        if (auto edge = identifier_to_edge(identifier); edge.has_value()) {
             relative_edge = *edge;
         } else {
             return {};
@@ -4488,7 +4490,7 @@ RefPtr<StyleValue> Parser::parse_single_background_position_x_or_y_value(TokenSt
         }
     }
 
-    auto offset = value_to_length_percentage(value);
+    auto offset = style_value_to_length_percentage(value);
     if (offset.has_value()) {
         transaction.commit();
         return EdgeStyleValue::create(relative_edge, *offset);
