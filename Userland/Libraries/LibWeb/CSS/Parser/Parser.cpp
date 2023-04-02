@@ -41,6 +41,7 @@
 #include <LibWeb/CSS/StyleValues/ColorStyleValue.h>
 #include <LibWeb/CSS/StyleValues/ConicGradientStyleValue.h>
 #include <LibWeb/CSS/StyleValues/ContentStyleValue.h>
+#include <LibWeb/CSS/StyleValues/EdgeStyleValue.h>
 #include <LibWeb/CSS/StyleValues/FilterValueListStyleValue.h>
 #include <LibWeb/CSS/StyleValues/FlexFlowStyleValue.h>
 #include <LibWeb/CSS/StyleValues/FlexStyleValue.h>
@@ -4436,8 +4437,8 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
 
     transaction.commit();
     return PositionStyleValue::create(
-        horizontal->edge, horizontal->offset,
-        vertical->edge, vertical->offset);
+        EdgeStyleValue::create(horizontal->edge, horizontal->offset),
+        EdgeStyleValue::create(vertical->edge, vertical->offset));
 }
 
 RefPtr<StyleValue> Parser::parse_single_background_repeat_value(TokenStream<ComponentValue>& tokens)

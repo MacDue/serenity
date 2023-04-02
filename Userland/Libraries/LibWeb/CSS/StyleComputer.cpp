@@ -43,6 +43,7 @@
 #include <LibWeb/CSS/StyleValues/NumericStyleValue.h>
 #include <LibWeb/CSS/StyleValues/OverflowStyleValue.h>
 #include <LibWeb/CSS/StyleValues/PercentageStyleValue.h>
+#include <LibWeb/CSS/StyleValues/PositionStyleValue.h>
 #include <LibWeb/CSS/StyleValues/StyleValueList.h>
 #include <LibWeb/CSS/StyleValues/TextDecorationStyleValue.h>
 #include <LibWeb/CSS/StyleValues/UnresolvedStyleValue.h>
@@ -456,14 +457,14 @@ static void set_property_expanding_shorthands(StyleProperties& style, CSS::Prope
 
     if (property_id == CSS::PropertyID::BackgroundPosition) {
         if (value.is_position()) {
-            auto const& overflow = value.as_overflow();
-            style.set_property(CSS::PropertyID::OverflowX, overflow.overflow_x());
-            style.set_property(CSS::PropertyID::OverflowY, overflow.overflow_y());
+            auto const& position = value.as_position();
+            style.set_property(CSS::PropertyID::BackgroundPositionX, position.edge_x());
+            style.set_property(CSS::PropertyID::BackgroundPositionY, position.edge_y());
             return;
         }
 
-        style.set_property(CSS::PropertyID::OverflowX, value);
-        style.set_property(CSS::PropertyID::OverflowY, value);
+        style.set_property(CSS::PropertyID::BackgroundPositionX, value);
+        style.set_property(CSS::PropertyID::BackgroundPositionY, value);
         return;
     }
 
