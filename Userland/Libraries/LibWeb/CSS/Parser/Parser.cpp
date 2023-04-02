@@ -4271,6 +4271,33 @@ RefPtr<StyleValue> Parser::parse_background_value(Vector<ComponentValue> const& 
         background_clip.release_nonnull());
 }
 
+static Optional<PositionEdge> to_edge(ValueID identifier)
+{
+    switch (identifier) {
+    case ValueID::Top:
+        return PositionEdge::Top;
+    case ValueID::Bottom:
+        return PositionEdge::Bottom;
+    case ValueID::Left:
+        return PositionEdge::Left;
+    case ValueID::Right:
+        return PositionEdge::Right;
+    default:
+        return {};
+    }
+};
+
+static Optional<LengthPercentage> value_to_length_percentage(auto value)
+{
+    if (value->is_percentage())
+        return LengthPercentage { value->as_percentage().percentage() };
+    if (value->has_length())
+        return LengthPercentage { value->to_length() };
+    if (value->is_calculated())
+        return LengthPercentage { value->as_calculated() };
+    return {};
+};
+
 RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<ComponentValue>& tokens)
 {
     // NOTE: This *looks* like it parses a <position>, but it doesn't. From the spec:
@@ -4282,20 +4309,6 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
 
     auto transaction = tokens.begin_transaction();
 
-    auto to_edge = [](ValueID identifier) -> Optional<PositionEdge> {
-        switch (identifier) {
-        case ValueID::Top:
-            return PositionEdge::Top;
-        case ValueID::Bottom:
-            return PositionEdge::Bottom;
-        case ValueID::Left:
-            return PositionEdge::Left;
-        case ValueID::Right:
-            return PositionEdge::Right;
-        default:
-            return {};
-        }
-    };
     auto is_horizontal = [](ValueID identifier) -> bool {
         switch (identifier) {
         case ValueID::Left:
@@ -4328,16 +4341,6 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
 
     auto const center_offset = Percentage { 50 };
     auto const zero_offset = Length::make_px(0);
-
-    auto value_to_length_percentage = [&](auto value) -> Optional<LengthPercentage> {
-        if (value->is_percentage())
-            return LengthPercentage { value->as_percentage().percentage() };
-        if (value->has_length())
-            return LengthPercentage { value->to_length() };
-        if (value->is_calculated())
-            return LengthPercentage { value->as_calculated() };
-        return {};
-    };
 
     while (tokens.has_next_token()) {
         // Check if we're done
@@ -4439,6 +4442,59 @@ RefPtr<StyleValue> Parser::parse_single_background_position_value(TokenStream<Co
     return PositionStyleValue::create(
         EdgeStyleValue::create(horizontal->edge, horizontal->offset),
         EdgeStyleValue::create(vertical->edge, vertical->offset));
+}
+
+RefPtr<StyleValue> Parser::parse_single_background_position_x_or_y_value(TokenStream<ComponentValue>& tokens, PropertyID property)
+{
+    PositionEdge relative_edge {};
+    if (property == PropertyID::BackgroundPositionX) {
+        relative_edge = PositionEdge::Left;
+    } else if (property == PropertyID::BackgroundPositionY) {
+        relative_edge = PositionEdge::Top;
+    } else {
+        VERIFY_NOT_REACHED();
+    }
+
+    auto transaction = tokens.begin_transaction();
+    if (!tokens.has_next_token())
+        return {};
+
+    auto parse_value = [&](auto& token) -> RefPtr<StyleValue> {
+        auto maybe_value = parse_css_value(token);
+        if (!maybe_value || !property_accepts_value(property, *maybe_value))
+            return {};
+        return maybe_value.release_nonnull();
+    };
+
+    auto value = parse_value(tokens.next_token());
+    if (value->has_identifier()) {
+        auto identifier = value->to_identifier();
+        if (identifier == ValueID::Center) {
+            transaction.commit();
+            return EdgeStyleValue::create(relative_edge, Percentage { 50 });
+        }
+        if (auto edge = to_edge(identifier); edge.has_value()) {
+            relative_edge = *edge;
+        } else {
+            return {};
+        }
+        if (tokens.has_next_token()) {
+            value = parse_value(tokens.peek_token());
+            if (!value) {
+                transaction.commit();
+                return EdgeStyleValue::create(relative_edge, Length::make_px(0));
+            }
+            tokens.next_token();
+        }
+    }
+
+    auto offset = value_to_length_percentage(value);
+    if (offset.has_value()) {
+        transaction.commit();
+        return EdgeStyleValue::create(relative_edge, *offset);
+    }
+
+    return {};
 }
 
 RefPtr<StyleValue> Parser::parse_single_background_repeat_value(TokenStream<ComponentValue>& tokens)
@@ -6530,6 +6586,11 @@ Parser::ParseErrorOr<NonnullRefPtr<StyleValue>> Parser::parse_css_value(Property
         return ParseError::SyntaxError;
     case PropertyID::BackgroundPosition:
         if (auto parsed_value = parse_comma_separated_value_list(component_values, [this](auto& tokens) { return parse_single_background_position_value(tokens); }))
+            return parsed_value.release_nonnull();
+        return ParseError::SyntaxError;
+    case PropertyID::BackgroundPositionX:
+    case PropertyID::BackgroundPositionY:
+        if (auto parsed_value = parse_comma_separated_value_list(component_values, [this, property_id](auto& tokens) { return parse_single_background_position_x_or_y_value(tokens, property_id); }))
             return parsed_value.release_nonnull();
         return ParseError::SyntaxError;
     case PropertyID::BackgroundRepeat:
