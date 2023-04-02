@@ -454,6 +454,19 @@ static void set_property_expanding_shorthands(StyleProperties& style, CSS::Prope
         return;
     }
 
+    if (property_id == CSS::PropertyID::BackgroundPosition) {
+        if (value.is_position()) {
+            auto const& overflow = value.as_overflow();
+            style.set_property(CSS::PropertyID::OverflowX, overflow.overflow_x());
+            style.set_property(CSS::PropertyID::OverflowY, overflow.overflow_y());
+            return;
+        }
+
+        style.set_property(CSS::PropertyID::OverflowX, value);
+        style.set_property(CSS::PropertyID::OverflowY, value);
+        return;
+    }
+
     if (property_id == CSS::PropertyID::Margin) {
         if (value.is_value_list()) {
             auto const& values_list = value.as_value_list();
