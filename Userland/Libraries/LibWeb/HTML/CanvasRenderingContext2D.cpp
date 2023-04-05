@@ -214,10 +214,10 @@ void CanvasRenderingContext2D::fill_text(DeprecatedString const& text, float x, 
 
     draw_clipped([&](auto& painter) {
         auto& drawing_state = this->drawing_state();
-
-        auto text_rect = Gfx::FloatRect(x, y, max_width.has_value() ? static_cast<float>(max_width.value()) : painter->font().width(text), painter->font().pixel_size());
+        auto& base_painter = painter.underlying_painter();
+        auto text_rect = Gfx::FloatRect(x, y, max_width.has_value() ? static_cast<float>(max_width.value()) : base_painter.font().width(text), base_painter.font().pixel_size());
         auto transformed_rect = drawing_state.transform.map(text_rect);
-        painter.underlying_painter().draw_text(transformed_rect, text, Gfx::TextAlignment::TopLeft, drawing_state.fill_style.to_color_but_fixme_should_accept_any_paint_style());
+        base_painter.draw_text(transformed_rect, text, Gfx::TextAlignment::TopLeft, drawing_state.fill_style.to_color_but_fixme_should_accept_any_paint_style());
         did_draw(transformed_rect);
     });
 }
@@ -489,10 +489,8 @@ CanvasRenderingContext2D::PreparedText CanvasRenderingContext2D::prepare_text(De
 
 void CanvasRenderingContext2D::clip_internal(Gfx::Path path, StringView fill_rule)
 {
-    draw_clipped([&](auto& painter) {
-        path.close_all_subpaths();
-        drawing_state().clip_path = CanvasClip { move(path), parse_fill_rule(fill_rule) };
-    });
+    path.close_all_subpaths();
+    drawing_state().clip_path = CanvasClip { move(path), parse_fill_rule(fill_rule) };
 }
 
 void CanvasRenderingContext2D::clip(DeprecatedString const& fill_rule)
