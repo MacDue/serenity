@@ -7,6 +7,7 @@
 #pragma once
 
 #include <LibGfx/Painter.h>
+#include <LibGfx/Path.h>
 
 namespace Web::HTML {
 
@@ -48,7 +49,7 @@ struct ScopedCanvasPathClip {
     ~ScopedCanvasPathClip()
     {
         if (m_canvas_clipper.has_value())
-            m_canvas_clipper->apply_clip(m_painter);
+            m_canvas_clipper->apply_clip(m_painter).release_value_but_fixme_should_propagate_errors();
     }
 
     AK_MAKE_NONMOVABLE(ScopedCanvasPathClip);
