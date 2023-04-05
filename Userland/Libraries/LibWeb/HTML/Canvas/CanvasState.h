@@ -78,7 +78,7 @@ public:
         float line_width { 1 };
         bool image_smoothing_enabled { true };
         Bindings::ImageSmoothingQuality image_smoothing_quality { Bindings::ImageSmoothingQuality::Low };
-        Optional<CanvasClip> clip_path;
+        Optional<CanvasClip> clip;
     };
     DrawingState& drawing_state() { return m_drawing_state; }
     DrawingState const& drawing_state() const { return m_drawing_state; }

@@ -118,8 +118,11 @@ private:
         auto painter = this->antialiased_painter();
         if (!painter.has_value())
             return;
-        ScopedCanvasPathClip clipper(painter->underlying_painter(), drawing_state().clip_path);
-        draw_function(*painter);
+        ScopedCanvasPathClip clipper(painter->underlying_painter(), drawing_state().clip);
+        auto draw_rect = draw_function(*painter);
+        if (drawing_state().clip.has_value())
+            draw_rect.intersect(drawing_state().clip->path.bounding_box());
+        did_draw(draw_rect);
     }
 
     PreparedText prepare_text(DeprecatedString const& text, float max_width = INFINITY);
