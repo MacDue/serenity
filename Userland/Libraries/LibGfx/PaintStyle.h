@@ -12,6 +12,7 @@
 #include <AK/RefCounted.h>
 #include <AK/RefPtr.h>
 #include <AK/Vector.h>
+#include <LibGfx/Bitmap.h>
 #include <LibGfx/Color.h>
 #include <LibGfx/Forward.h>
 #include <LibGfx/Gradients.h>
@@ -57,6 +58,29 @@ private:
     }
 
     Color m_color;
+};
+
+class BitmapPaintStyle : public PaintStyle {
+public:
+    static ErrorOr<NonnullRefPtr<BitmapPaintStyle>> create(Bitmap const& bitmap)
+    {
+        return adopt_nonnull_ref_or_enomem(new (nothrow) BitmapPaintStyle(bitmap));
+    }
+
+    virtual Color sample_color(IntPoint point) const override
+    {
+        if (m_bitmap->rect().contains(point))
+            return m_bitmap->get_pixel(point);
+        return Color();
+    }
+
+private:
+    BitmapPaintStyle(Bitmap const& bitmap)
+        : m_bitmap(bitmap)
+    {
+    }
+
+    NonnullRefPtr<Bitmap const> m_bitmap;
 };
 
 class GradientPaintStyle : public PaintStyle {
