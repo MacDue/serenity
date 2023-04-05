@@ -132,7 +132,7 @@ private:
 
     void stroke_internal(Gfx::Path const&);
     void fill_internal(Gfx::Path&, StringView fill_rule);
-    void clip_internal(Gfx::Path, StringView fill_rule);
+    void clip_internal(Gfx::Path&, StringView fill_rule);
 
     JS::NonnullGCPtr<HTMLCanvasElement> m_element;
     OwnPtr<Gfx::Painter> m_painter;

@@ -487,10 +487,10 @@ CanvasRenderingContext2D::PreparedText CanvasRenderingContext2D::prepare_text(De
     return prepared_text;
 }
 
-void CanvasRenderingContext2D::clip_internal(Gfx::Path path, StringView fill_rule)
+void CanvasRenderingContext2D::clip_internal(Gfx::Path& path, StringView fill_rule)
 {
     path.close_all_subpaths();
-    drawing_state().clip_path = CanvasClip { move(path), parse_fill_rule(fill_rule) };
+    drawing_state().clip_path = CanvasClip { path, parse_fill_rule(fill_rule) };
 }
 
 void CanvasRenderingContext2D::clip(DeprecatedString const& fill_rule)
@@ -501,7 +501,7 @@ void CanvasRenderingContext2D::clip(DeprecatedString const& fill_rule)
 void CanvasRenderingContext2D::clip(Path2D& path, DeprecatedString const& fill_rule)
 {
     auto transformed_path = path.path().copy_transformed(drawing_state().transform);
-    return clip_internal(move(transformed_path), fill_rule);
+    return clip_internal(transformed_path, fill_rule);
 }
 
 // https://html.spec.whatwg.org/multipage/canvas.html#check-the-usability-of-the-image-argument
