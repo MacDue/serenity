@@ -162,6 +162,27 @@ WebIDL::ExceptionOr<void> CanvasRenderingContext2D::draw_image_internal(CanvasIm
     if (source_width == 0 || source_height == 0)
         return {};
 
+    if (image.has<JS::Handle<HTMLCanvasElement>>()) {
+        if (drawing_state().clip.has_value()) {
+            auto scaling_mode = Gfx::Painter::ScalingMode::NearestNeighbor;
+            if (drawing_state().image_smoothing_enabled) {
+                // FIXME: Honor drawing_state().image_smoothing_quality
+                scaling_mode = Gfx::Painter::ScalingMode::BilinearBlend;
+            }
+            auto painter = this->painter();
+            if (!painter)
+                return {};
+            // Gfx::PainterStateSaver p { *painter };
+            // painter->add_clip_rect(enclosing_int_rect(drawing_state().clip->path.bounding_box()));
+            // dbgln("{}", enclosing_int_rect(drawing_state().clip->path.bounding_box()));
+
+            ScopedCanvasPathClip fdf { *painter, drawing_state().clip };
+            painter->draw_scaled_bitmap_with_transform(destination_rect.to_rounded<int>(), *bitmap, source_rect, drawing_state().transform, 1.0f, scaling_mode);
+            // painter->stroke_path(drawing_state().clip->path, Color::Green, 1);
+        }
+        return {};
+    }
+
     // 6. Paint the region of the image argument specified by the source rectangle on the region of the rendering context's output bitmap specified by the destination rectangle, after applying the current transformation matrix to the destination rectangle.
     draw_clipped([&](auto& painter) {
         auto scaling_mode = Gfx::Painter::ScalingMode::NearestNeighbor;
@@ -493,6 +514,9 @@ void CanvasRenderingContext2D::clip_internal(Gfx::Path& path, StringView fill_ru
     // FIXME: This should calculate the new clip path by intersecting the given path with the current one.
     // See: https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-clip-dev
     path.close_all_subpaths();
+    if (drawing_state().clip.has_value()) {
+        dbgln("FIXME: CRC2D: Calculate the new clip path by intersecting the given path with the current one.");
+    }
     drawing_state().clip = CanvasClip { path, parse_fill_rule(fill_rule) };
 }
 

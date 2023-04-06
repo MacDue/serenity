@@ -23,14 +23,14 @@ public:
     ErrorOr<void> apply_clip(Gfx::Painter& painter);
 
 private:
-    CanvasPathClipper(Gfx::Bitmap const& saved_bitmap, Gfx::IntPoint save_location, CanvasClip const& canvas_clip)
+    CanvasPathClipper(RefPtr<Gfx::Bitmap const> saved_bitmap, Gfx::IntPoint save_location, CanvasClip const& canvas_clip)
         : m_saved_bitmap(saved_bitmap)
         , m_save_location(save_location)
         , m_canvas_clip(canvas_clip)
     {
     }
 
-    NonnullRefPtr<Gfx::Bitmap const> m_saved_bitmap;
+    RefPtr<Gfx::Bitmap const> m_saved_bitmap;
     Gfx::IntPoint m_save_location;
     CanvasClip const& m_canvas_clip;
 };
@@ -43,6 +43,8 @@ struct ScopedCanvasPathClip {
             auto clipper = CanvasPathClipper::create(painter, *canvas_clip);
             if (!clipper.is_error())
                 m_canvas_clipper = clipper.release_value();
+            else
+                dbgln("Failed {}", clipper.error());
         }
     }
 
