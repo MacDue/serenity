@@ -62,25 +62,28 @@ private:
 
 class BitmapPaintStyle : public PaintStyle {
 public:
-    static ErrorOr<NonnullRefPtr<BitmapPaintStyle>> create(Bitmap const& bitmap)
+    static ErrorOr<NonnullRefPtr<BitmapPaintStyle>> create(Bitmap const& bitmap, IntPoint offset = {})
     {
-        return adopt_nonnull_ref_or_enomem(new (nothrow) BitmapPaintStyle(bitmap));
+        return adopt_nonnull_ref_or_enomem(new (nothrow) BitmapPaintStyle(bitmap, offset));
     }
 
     virtual Color sample_color(IntPoint point) const override
     {
+        point += m_offset;
         if (m_bitmap->rect().contains(point))
             return m_bitmap->get_pixel(point);
         return Color();
     }
 
 private:
-    BitmapPaintStyle(Bitmap const& bitmap)
+    BitmapPaintStyle(Bitmap const& bitmap, IntPoint offset)
         : m_bitmap(bitmap)
+        , m_offset(offset)
     {
     }
 
     NonnullRefPtr<Bitmap const> m_bitmap;
+    IntPoint m_offset;
 };
 
 class GradientPaintStyle : public PaintStyle {
