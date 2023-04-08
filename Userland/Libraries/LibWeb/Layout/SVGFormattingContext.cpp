@@ -66,7 +66,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
             }
 
             auto& path = dom_node.get_path();
-            auto path_bounding_box = path.bounding_box().to_type<CSSPixels>();
+            auto transform = dom_node.get_transform();
+            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
 
             // Stroke increases the path's size by stroke_width/2 per side.
             CSSPixels stroke_width = geometry_box.dom_node().stroke_width().value_or(0);

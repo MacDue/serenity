@@ -24,6 +24,8 @@ public:
     float viewbox_scaling() const;
     CSSPixelPoint viewbox_origin() const;
 
+    Gfx::AffineTransform paint_transform() const;
+
     virtual JS::GCPtr<Painting::Paintable> create_paintable() const override;
 
 private:
