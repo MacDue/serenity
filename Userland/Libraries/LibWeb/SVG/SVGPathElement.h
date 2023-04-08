@@ -30,8 +30,9 @@ private:
 
     Vector<PathInstruction> m_instructions;
     Optional<Gfx::Path> m_path;
+    Optional<Gfx::AffineTransform> m_transform;
 };
 
 Gfx::Path path_from_path_instructions(ReadonlySpan<PathInstruction>);
-
+Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform>);
 }

@@ -105,6 +105,44 @@ void SVGPathElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
         m_instructions = AttributeParser::parse_path_data(value);
         m_path.clear();
     }
+    if (name = "transform") {
+        auto transform_list = AttributeParser::parse_transform(value);
+        if (transform_list.has_value())
+            m_transform = transform_from_transform_list(*transform_list);
+    }
+}
+
+Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform> tranform_list)
+{
+    Gfx::AffineTransform affine_transform;
+    for (auto& tranform : tranform_list) {
+        tranform.visit(
+            [&](Transform::Translate const& translate) {
+                scale_transform.multiply(Gfx::AffineTransform {}.translate({ translate.x, translate.y }));
+            },
+            [&](Transform::Scale const& scale) {
+                scale_transform.multiply(Gfx::AffineTransform {}.scale({ scale.x, scale.y }));
+            },
+            [&](Transform::Rotate const& rotate) {
+                Gfx::AffineTransform translate_transform;
+                affine_transform.multiply(
+                    Gfx::AffineTransform {}
+                        .translate({ -rotate.x, -rotate.y })
+                        .rotate_radians(rotate.a * (AK::Pi<float> / 180.0f))
+                        .translate({ rotate.x, rotate.y }));
+            },
+            [&](Transform::SkewX const& skew_x) {
+                affine_transform.multiply(Gfx::AffineTransform {}.set_skew(skew_x.a, 0));
+            },
+            [&](Transform::SkewY const& skew_y) {
+                affine_transform.multiply(Gfx::AffineTransform {}.set_skew(0, skew_y.a));
+            },
+            [&](Transform::Matrix const& matrix) {
+                affine_transform.multiply(Gfx::AffineTransform {
+                    matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f });
+            });
+    }
+    return affine_transform;
 }
 
 Gfx::Path path_from_path_instructions(ReadonlySpan<PathInstruction> instructions)
@@ -279,6 +317,8 @@ Gfx::Path& SVGPathElement::get_path()
 {
     if (!m_path.has_value()) {
         m_path = path_from_path_instructions(m_instructions);
+        if (m_transform.has_value())
+            m_path = m_path->copy_transformed(*m_transform);
     }
     return m_path.value();
 }
