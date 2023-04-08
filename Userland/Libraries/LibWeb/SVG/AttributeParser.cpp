@@ -368,12 +368,12 @@ float AttributeParser::parse_nonnegative_number()
     //       at the start. That condition should have been checked by the caller.
     VERIFY(!match('+') && !match('-'));
 
-    auto remaining_source_text = m_source.substring_view(m_cursor);
+    auto remaining_source_text = m_lexer.remaining();
     char const* start = remaining_source_text.characters_without_null_termination();
 
     auto maybe_float = parse_first_floating_point<float>(start, start + remaining_source_text.length());
     VERIFY(maybe_float.parsed_value());
-    m_cursor += maybe_float.end_ptr - start;
+    m_lexer.ignore(maybe_float.end_ptr - start);
 
     return maybe_float.value;
 }
@@ -425,7 +425,7 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
         if (!m_lexer.consume_specific('('))
             return {};
         consume_whitespace();
-        Transform transform = Transform::Transform { body() };
+        Transform transform { .operation = Transform::Operation { body() } };
         consume_whitespace();
         if (m_lexer.consume_specific(')'))
             return transform;

@@ -64,8 +64,8 @@ struct Transform {
         float f;
     };
 
-    using Transform = Variant<Translate, Scale, Rotate, SkewX, SkewY, Matrix>;
-    Transform transform;
+    using Operation = Variant<Translate, Scale, Rotate, SkewX, SkewY, Matrix>;
+    Operation operation;
 };
 
 class AttributeParser final {

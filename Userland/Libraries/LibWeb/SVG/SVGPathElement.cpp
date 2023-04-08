@@ -101,11 +101,11 @@ void SVGPathElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
 {
     SVGGeometryElement::parse_attribute(name, value);
 
-    if (name == "d") {
+    if (name == "d"sv) {
         m_instructions = AttributeParser::parse_path_data(value);
         m_path.clear();
     }
-    if (name = "transform") {
+    if (name == "transform"sv) {
         auto transform_list = AttributeParser::parse_transform(value);
         if (transform_list.has_value())
             m_transform = transform_from_transform_list(*transform_list);
@@ -116,12 +116,12 @@ Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform> tranf
 {
     Gfx::AffineTransform affine_transform;
     for (auto& tranform : tranform_list) {
-        tranform.visit(
+        tranform.operation.visit(
             [&](Transform::Translate const& translate) {
-                scale_transform.multiply(Gfx::AffineTransform {}.translate({ translate.x, translate.y }));
+                affine_transform.multiply(Gfx::AffineTransform {}.translate({ translate.x, translate.y }));
             },
             [&](Transform::Scale const& scale) {
-                scale_transform.multiply(Gfx::AffineTransform {}.scale({ scale.x, scale.y }));
+                affine_transform.multiply(Gfx::AffineTransform {}.scale({ scale.x, scale.y }));
             },
             [&](Transform::Rotate const& rotate) {
                 Gfx::AffineTransform translate_transform;
