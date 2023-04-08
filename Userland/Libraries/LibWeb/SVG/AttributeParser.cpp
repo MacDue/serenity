@@ -410,6 +410,7 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
     auto consume_comma_whitespace = [&] {
         consume_whitespace();
         m_lexer.consume_specific(',');
+        consume_whitespace();
     };
 
     // FIXME: AttributeParser currently does not handle invalid parses in most cases (e.g. parse_number())
@@ -432,10 +433,9 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
         return {};
     };
 
-    bool first = true;
     Vector<Transform> transform_list;
+    consume_whitespace();
     while (!done()) {
-        first ? consume_whitespace() : consume_comma_whitespace();
         Optional<Transform> maybe_transform;
         if (m_lexer.consume_specific("translate"sv)) {
             maybe_transform = parse_function([&] {
@@ -492,7 +492,7 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
             transform_list.append(*maybe_transform);
         else
             return {};
-        first = false;
+        consume_comma_whitespace();
     }
     return transform_list;
 }

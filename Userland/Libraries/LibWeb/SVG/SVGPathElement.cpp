@@ -109,6 +109,8 @@ void SVGPathElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
         auto transform_list = AttributeParser::parse_transform(value);
         if (transform_list.has_value())
             m_transform = transform_from_transform_list(*transform_list);
+        else
+            dbgln("Transform parse failed: {}", value);
     }
 }
 
