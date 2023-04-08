@@ -62,7 +62,9 @@ struct Transform {
         float d;
         float e;
         float f;
-    } using Transform = Variant<Translate, Scale, Rotate, SkewX, SkewY, Matrix>;
+    };
+
+    using Transform = Variant<Translate, Scale, Rotate, SkewX, SkewY, Matrix>;
     Transform transform;
 };
 
