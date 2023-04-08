@@ -228,11 +228,15 @@ void HTMLParser::the_end()
     m_tokenizer.undefine_insertion_point();
 
     // 3. Update the current document readiness to "interactive".
-    m_document->update_readiness(HTML::DocumentReadyState::Interactive);
+    if (!m_parsing_fragment)
+        m_document->update_readiness(HTML::DocumentReadyState::Interactive);
 
     // 4. Pop all the nodes off the stack of open elements.
     while (!m_stack_of_open_elements.is_empty())
         (void)m_stack_of_open_elements.pop();
+
+    if (m_parsing_fragment)
+        return;
 
     // 5. While the list of scripts that will execute when the document has finished parsing is not empty:
     while (!m_document->scripts_to_execute_when_parsing_has_finished().is_empty()) {

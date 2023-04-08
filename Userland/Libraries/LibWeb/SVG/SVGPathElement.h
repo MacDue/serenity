@@ -34,5 +34,4 @@ private:
 };
 
 Gfx::Path path_from_path_instructions(ReadonlySpan<PathInstruction>);
-Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform>);
 }
