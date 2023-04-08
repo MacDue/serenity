@@ -39,6 +39,7 @@ static bool parent_element_for_event_dispatch(Painting::Paintable& paintable, JS
 {
     layout_node = &paintable.layout_node();
     while (layout_node && node && !node->is_element() && layout_node->parent()) {
+        dbgln("{}", node->debug_description());
         layout_node = layout_node->parent();
         if (layout_node->is_anonymous())
             continue;
@@ -210,8 +211,10 @@ bool EventHandler::handle_mouseup(CSSPixelPoint position, unsigned button, unsig
 
     JS::GCPtr<Painting::Paintable> paintable;
     if (m_mouse_event_tracking_layout_node) {
+        dbgln("1");
         paintable = m_mouse_event_tracking_layout_node->paintable();
     } else {
+        dbgln("2");
         if (auto result = paint_root()->hit_test(position, Painting::HitTestType::Exact); result.has_value())
             paintable = result->paintable;
     }
@@ -372,7 +375,7 @@ bool EventHandler::handle_mousedown(CSSPixelPoint position, unsigned button, uns
         auto offset = compute_mouse_event_offset(position, *layout_node);
         auto client_offset = compute_mouse_event_client_offset(position);
         auto page_offset = compute_mouse_event_page_offset(client_offset);
-        dbgln("hit {}", node->debug_description());
+        dbgln("mousedown at {} hit {}", position, node->debug_description());
         node->dispatch_event(UIEvents::MouseEvent::create_from_platform_event(node->realm(), UIEvents::EventNames::mousedown, offset, client_offset, page_offset, buttons, button).release_value_but_fixme_should_propagate_errors());
     }
 

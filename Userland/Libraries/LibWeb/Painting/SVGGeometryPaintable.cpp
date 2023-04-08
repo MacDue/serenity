@@ -26,21 +26,6 @@ Layout::SVGGeometryBox const& SVGGeometryPaintable::layout_box() const
     return static_cast<Layout::SVGGeometryBox const&>(layout_node());
 }
 
-// Optional<HitTestResult> SVGGeometryPaintable::hit_test(CSSPixelPoint position, HitTestType type) const {
-//     auto result = SVGGraphicsPaintable::hit_test(position, type);
-//     if (!result.has_value())
-//         return {};
-//     dbgln("here??");
-//     auto& geometry_element = layout_box().dom_node();
-//     auto transformed_bounding_box = layout_box().paint_transform().map_to_quad(
-//         const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().bounding_box());
-//     if (!transformed_bounding_box.contains(position.to_type<float>())) {
-//         dbgln("{} {}", absolute_border_box_rect(), transformed_bounding_box.bounding_rect());
-//         return {};
-//     }
-//     return result;
-// }
-
 void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 {
     if (!is_visible())
@@ -54,13 +39,9 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto& geometry_element = layout_box().dom_node();
 
     Gfx::AntiAliasingPainter painter { context.painter() };
-
-    context.painter().fill_rect(context.enclosing_device_rect(absolute_border_box_rect()).to_type<int>(), Gfx::Color::Blue);
-
     auto& svg_context = context.svg_context();
 
     auto offset = svg_context.svg_element_position();
-
     painter.translate(offset);
 
     auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
@@ -69,7 +50,17 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     context.painter().draw_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>(), Color::Black);
     context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
 
-    Gfx::Path path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().copy_transformed(layout_box().paint_transform());
+    Gfx::Path path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path();
+
+    if (maybe_view_box.has_value()) {
+        auto scaling = layout_box().viewbox_scaling();
+        auto origin = layout_box().viewbox_origin();
+
+        Gfx::AffineTransform point_transform;
+        point_transform.translate({ -origin.x(), -origin.y() });
+        point_transform.scale({ scaling, scaling });
+        path = path.copy_transformed(point_transform);
+    }
 
     if (auto fill_color = geometry_element.fill_color().value_or(svg_context.fill_color()); fill_color.alpha() > 0) {
         // We need to fill the path before applying the stroke, however the filled
