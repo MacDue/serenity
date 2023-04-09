@@ -58,15 +58,6 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
 
             auto& dom_node = const_cast<SVGGeometryBox&>(geometry_box).dom_node();
 
-            auto& svg_svg_state = m_state.get(static_cast<Box const&>(*svg_svg_element.layout_node()));
-
-            if (svg_svg_state.has_definite_width() && svg_svg_state.has_definite_height()) {
-                geometry_box_state.set_content_offset({ 0, 0 });
-                geometry_box_state.set_content_width(svg_svg_state.content_width());
-                geometry_box_state.set_content_height(svg_svg_state.content_height());
-                return IterationDecision::Continue;
-            }
-
             // FIXME: Allow for one of {width, height} to not be specified}
             if (svg_svg_element.has_attribute(HTML::AttributeNames::width)) {
             }
@@ -75,7 +66,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
             }
 
             auto& path = dom_node.get_path();
-            auto path_bounding_box = path.bounding_box().to_type<CSSPixels>();
+            auto transform = dom_node.get_transform();
+            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
 
             // Stroke increases the path's size by stroke_width/2 per side.
             CSSPixels stroke_width = geometry_box.dom_node().stroke_width().value_or(0);
@@ -83,18 +75,13 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
 
             auto& maybe_view_box = svg_svg_element.view_box();
 
+            CSSPixelPoint content_offset = path_bounding_box.top_left();
             if (maybe_view_box.has_value()) {
                 auto view_box = maybe_view_box.value();
                 CSSPixelPoint viewbox_offset = { view_box.min_x, view_box.min_y };
-                geometry_box_state.set_content_offset(path_bounding_box.top_left() + viewbox_offset);
-
-                geometry_box_state.set_content_width(view_box.width);
-                geometry_box_state.set_content_height(view_box.height);
-
-                return IterationDecision::Continue;
+                content_offset += viewbox_offset;
             }
-
-            geometry_box_state.set_content_offset(path_bounding_box.top_left());
+            geometry_box_state.set_content_offset(content_offset);
             geometry_box_state.set_content_width(path_bounding_box.width());
             geometry_box_state.set_content_height(path_bounding_box.height());
         }
