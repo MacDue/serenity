@@ -434,13 +434,10 @@ Gfx::FloatPoint StackingContext::compute_transform_origin() const
 }
 
 template<typename U, typename Callback>
-static TraversalDecision for_each_in_inclusive_subtree_of_type_within_same_stacking_context_in_reverse(Paintable const& paintable, Callback callback)
+static TraversalDecision for_each_in_inclusive_subtree_of_type_in_reverse(Paintable const& paintable, Callback callback)
 {
-    if (is<PaintableBox>(paintable) && static_cast<PaintableBox const&>(paintable).stacking_context())
-        return TraversalDecision::SkipChildrenAndContinue;
-
     for (auto* child = paintable.last_child(); child; child = child->previous_sibling()) {
-        if (for_each_in_inclusive_subtree_of_type_within_same_stacking_context_in_reverse<U>(*child, callback) == TraversalDecision::Break)
+        if (for_each_in_inclusive_subtree_of_type_in_reverse<U>(*child, callback) == TraversalDecision::Break)
             return TraversalDecision::Break;
     }
     if (is<U>(paintable)) {
@@ -451,10 +448,10 @@ static TraversalDecision for_each_in_inclusive_subtree_of_type_within_same_stack
 }
 
 template<typename U, typename Callback>
-static TraversalDecision for_each_in_subtree_of_type_within_same_stacking_context_in_reverse(Paintable const& paintable, Callback callback)
+static TraversalDecision for_each_in_subtree_of_type_in_reverse(Paintable const& paintable, Callback callback)
 {
     for (auto* child = paintable.last_child(); child; child = child->previous_sibling()) {
-        if (for_each_in_inclusive_subtree_of_type_within_same_stacking_context_in_reverse<U>(*child, callback) == TraversalDecision::Break)
+        if (for_each_in_inclusive_subtree_of_type_in_reverse<U>(*child, callback) == TraversalDecision::Break)
             return TraversalDecision::Break;
     }
     return TraversalDecision::Continue;
@@ -493,14 +490,22 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
         }
     }
 
-    Optional<HitTestResult> result;
     // 6. the child stacking contexts with stack level 0 and the positioned descendants with stack level 0.
-
-    for_each_in_subtree_of_type_within_same_stacking_context_in_reverse<PaintableBox>(paintable(), [&](PaintableBox const& paint_box) {
+    Optional<HitTestResult> result;
+    for_each_in_subtree_of_type_in_reverse<PaintableBox>(paintable(), [&](PaintableBox const& paint_box) {
         // FIXME: Support more overflow variations.
         if (paint_box.computed_values().overflow_x() == CSS::Overflow::Hidden && paint_box.computed_values().overflow_y() == CSS::Overflow::Hidden) {
             if (!paint_box.absolute_border_box_rect().contains(transformed_position.x().value(), transformed_position.y().value()))
                 return TraversalDecision::SkipChildrenAndContinue;
+        }
+
+        auto& layout_box = paint_box.layout_box();
+        if (layout_box.is_positioned() && !paint_box.stacking_context()) {
+            auto candidate = paint_box.hit_test(transformed_position, type);
+            if (candidate.has_value() && candidate->paintable->visible_for_hit_testing()) {
+                result = move(candidate);
+                return TraversalDecision::Break;
+            }
         }
 
         if (paint_box.stacking_context()) {
@@ -514,27 +519,10 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
             }
         }
 
-        auto& layout_box = paint_box.layout_box();
-        if (layout_box.is_positioned() && !paint_box.stacking_context()) {
-            if (auto candidate = paint_box.hit_test(transformed_position, type); candidate.has_value()) {
-                result = move(candidate);
-                return TraversalDecision::Break;
-            }
-        }
         return TraversalDecision::Continue;
     });
-    if (result.has_value() && result->paintable->visible_for_hit_testing())
+    if (result.has_value())
         return result;
-
-    // "child stacking contexts with stack level 0" is first in the step, so last here to match reverse order.
-    for (ssize_t i = m_children.size() - 1; i >= 0; --i) {
-        auto const& child = *m_children[i];
-        if (child.m_box->computed_values().z_index().value_or(0) == 0) {
-            auto result = child.hit_test(transformed_position, type);
-            if (result.has_value() && result->paintable->visible_for_hit_testing())
-                return result;
-        }
-    }
 
     // 5. the in-flow, inline-level, non-positioned descendants, including inline tables and inline blocks.
     if (m_box->children_are_inline() && is<Layout::BlockContainer>(*m_box)) {
@@ -544,7 +532,7 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
     }
 
     // 4. the non-positioned floats.
-    for_each_in_subtree_of_type_within_same_stacking_context_in_reverse<PaintableBox>(paintable(), [&](auto const& paint_box) {
+    for_each_in_subtree_of_type_in_reverse<PaintableBox>(paintable(), [&](auto const& paint_box) {
         // FIXME: Support more overflow variations.
         if (paint_box.computed_values().overflow_x() == CSS::Overflow::Hidden && paint_box.computed_values().overflow_y() == CSS::Overflow::Hidden) {
             if (!paint_box.absolute_border_box_rect().contains(transformed_position.x().value(), transformed_position.y().value()))
@@ -565,7 +553,7 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
 
     // 3. the in-flow, non-inline-level, non-positioned descendants.
     if (!m_box->children_are_inline()) {
-        for_each_in_subtree_of_type_within_same_stacking_context_in_reverse<PaintableBox>(paintable(), [&](auto const& paint_box) {
+        for_each_in_subtree_of_type_in_reverse<PaintableBox>(paintable(), [&](auto const& paint_box) {
             // FIXME: Support more overflow variations.
             if (paint_box.computed_values().overflow_x() == CSS::Overflow::Hidden && paint_box.computed_values().overflow_y() == CSS::Overflow::Hidden) {
                 if (!paint_box.absolute_border_box_rect().contains(transformed_position.x().value(), transformed_position.y().value()))
