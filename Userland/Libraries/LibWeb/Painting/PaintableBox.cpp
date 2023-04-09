@@ -668,11 +668,8 @@ void PaintableBox::set_stacking_context(NonnullOwnPtr<StackingContext> stacking_
 
 Optional<HitTestResult> PaintableBox::hit_test(CSSPixelPoint position, HitTestType type) const
 {
-    //  dbgln("Hit test {}", layout_node().debug_description());
-    if (!is_visible()) {
-        // dbgln("FAIL 1");
+    if (!is_visible())
         return {};
-    }
 
     if (layout_box().is_viewport()) {
         const_cast<Layout::Viewport&>(static_cast<Layout::Viewport const&>(layout_box())).build_stacking_context_tree_if_needed();
@@ -684,7 +681,6 @@ Optional<HitTestResult> PaintableBox::hit_test(CSSPixelPoint position, HitTestTy
 
     for (auto* child = first_child(); child; child = child->next_sibling()) {
         auto result = child->hit_test(position, type);
-        // dbgln("Hit test child {} - {}", child->layout_node().debug_description(), result.has_value());
         if (!result.has_value())
             continue;
         if (!result->paintable->visible_for_hit_testing())
@@ -692,12 +688,9 @@ Optional<HitTestResult> PaintableBox::hit_test(CSSPixelPoint position, HitTestTy
         return result;
     }
 
-    if (!visible_for_hit_testing()) {
-        // dbgln("!visible_for_hit_testing {}", layout_box().dom_node()->debug_description());
+    if (!visible_for_hit_testing())
         return {};
-    }
 
-    // dbgln("Hit {}", layout_box().dom_node()->debug_description());
     return HitTestResult { const_cast<PaintableBox&>(*this) };
 }
 
