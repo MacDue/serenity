@@ -79,6 +79,18 @@ AffineTransform& AffineTransform::set_scale(FloatPoint s)
     return set_scale(s.x(), s.y());
 }
 
+AffineTransform& AffineTransform::set_skew(float sx, float sy)
+{
+    m_values[1] = sx;
+    m_values[2] = sy;
+    return *this;
+}
+
+AffineTransform& AffineTransform::set_skew(FloatPoint s)
+{
+    return set_skew(s.x(), s.y());
+}
+
 AffineTransform& AffineTransform::translate(float tx, float ty)
 {
     m_values[4] += tx * m_values[0] + ty * m_values[2];
