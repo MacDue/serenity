@@ -668,6 +668,7 @@ void PaintableBox::set_stacking_context(NonnullOwnPtr<StackingContext> stacking_
 
 Optional<HitTestResult> PaintableBox::hit_test(CSSPixelPoint position, HitTestType type) const
 {
+    //  dbgln("Hit test {}", layout_node().debug_description());
     if (!is_visible()) {
         // dbgln("FAIL 1");
         return {};
