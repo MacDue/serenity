@@ -26,6 +26,19 @@ Layout::SVGGeometryBox const& SVGGeometryPaintable::layout_box() const
     return static_cast<Layout::SVGGeometryBox const&>(layout_node());
 }
 
+Optional<HitTestResult> SVGGeometryPaintable::hit_test(CSSPixelPoint position, HitTestType type) const
+{
+    auto result = SVGGraphicsPaintable::hit_test(position, type);
+    if (!result.has_value())
+        return {};
+    auto& geometry_element = layout_box().dom_node();
+    auto transformed_bounding_box = layout_box().paint_transform().map_to_quad(
+        const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().bounding_box());
+    if (!transformed_bounding_box.contains(position.to_type<float>()))
+        return {};
+    return result;
+}
+
 void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 {
     if (!is_visible())
@@ -39,9 +52,11 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto& geometry_element = layout_box().dom_node();
 
     Gfx::AntiAliasingPainter painter { context.painter() };
+
     auto& svg_context = context.svg_context();
 
     auto offset = svg_context.svg_element_position();
+
     painter.translate(offset);
 
     auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
