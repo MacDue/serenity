@@ -26,20 +26,18 @@ Layout::SVGGeometryBox const& SVGGeometryPaintable::layout_box() const
     return static_cast<Layout::SVGGeometryBox const&>(layout_node());
 }
 
-// Optional<HitTestResult> SVGGeometryPaintable::hit_test(CSSPixelPoint position, HitTestType type) const {
-//     auto result = SVGGraphicsPaintable::hit_test(position, type);
-//     if (!result.has_value())
-//         return {};
-//     dbgln("here??");
-//     auto& geometry_element = layout_box().dom_node();
-//     auto transformed_bounding_box = layout_box().paint_transform().map_to_quad(
-//         const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().bounding_box());
-//     if (!transformed_bounding_box.contains(position.to_type<float>())) {
-//         dbgln("{} {}", absolute_border_box_rect(), transformed_bounding_box.bounding_rect());
-//         return {};
-//     }
-//     return result;
-// }
+Optional<HitTestResult> SVGGeometryPaintable::hit_test(CSSPixelPoint position, HitTestType type) const
+{
+    auto result = SVGGraphicsPaintable::hit_test(position, type);
+    if (!result.has_value())
+        return {};
+    auto& geometry_element = layout_box().dom_node();
+    auto transformed_bounding_box = layout_box().paint_transform().map_to_quad(
+        const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().bounding_box());
+    if (!transformed_bounding_box.contains(position.to_type<float>()))
+        return {};
+    return result;
+}
 
 void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 {
@@ -55,8 +53,6 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 
     Gfx::AntiAliasingPainter painter { context.painter() };
 
-    context.painter().fill_rect(context.enclosing_device_rect(absolute_border_box_rect()).to_type<int>(), Gfx::Color::Blue);
-
     auto& svg_context = context.svg_context();
 
     auto offset = svg_context.svg_element_position();
@@ -66,7 +62,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
     auto maybe_view_box = svg_element->view_box();
 
-    context.painter().draw_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>(), Color::Black);
+    // context.painter().draw_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>(), Color::Black);
     context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
 
     Gfx::Path path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().copy_transformed(layout_box().paint_transform());

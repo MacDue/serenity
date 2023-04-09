@@ -63,6 +63,7 @@ Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform> tranf
 
 void SVGGeometryElement::parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value)
 {
+    SVGGraphicsElement::parse_attribute(name, value);
     if (name == "transform"sv) {
         auto transform_list = AttributeParser::parse_transform(value);
         if (transform_list.has_value()) {
