@@ -307,7 +307,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                     ++iterator;
                 } else {
                     url->m_cannot_be_a_base_url = true;
-                    url->append_path("");
+                    url->append_slash();
                     state = State::CannotBeABaseUrlPath;
                 }
             } else {
@@ -556,7 +556,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                 url->m_host = base_url->m_host;
                 auto substring_from_pointer = input.substring_view(iterator - input.begin()).as_string();
                 if (!starts_with_windows_drive_letter(substring_from_pointer) && is_normalized_windows_drive_letter(base_url->m_paths[0]))
-                    url->append_path(base_url->m_paths[0]);
+                    url->append_path(base_url->m_paths[0], URL::ApplyPercentEncoding::No);
                 state = State::Path;
                 continue;
             }
@@ -611,9 +611,9 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                     if (!url->m_paths.is_empty() && !(url->m_scheme == "file" && url->m_paths.size() == 1 && is_normalized_windows_drive_letter(url->m_paths[0])))
                         url->m_paths.remove(url->m_paths.size() - 1);
                     if (code_point != '/' && !(url->is_special() && code_point == '\\'))
-                        url->append_path("");
+                        url->append_slash();
                 } else if (is_single_dot_path_segment(buffer.string_view()) && code_point != '/' && !(url->is_special() && code_point == '\\')) {
-                    url->append_path("");
+                    url->append_slash();
                 } else if (!is_single_dot_path_segment(buffer.string_view())) {
                     if (url->m_scheme == "file" && url->m_paths.is_empty() && is_windows_drive_letter(buffer.string_view())) {
                         auto drive_letter = buffer.string_view()[0];
@@ -621,7 +621,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                         buffer.append(drive_letter);
                         buffer.append(':');
                     }
-                    url->append_path(buffer.string_view());
+                    url->append_path(buffer.string_view(), URL::ApplyPercentEncoding::No);
                 }
                 buffer.clear();
                 if (code_point == '?') {

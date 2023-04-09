@@ -482,7 +482,7 @@ WebIDL::ExceptionOr<Document*> Document::open(DeprecatedString const&, Deprecate
         auto new_url = entry_document.url();
         // 2. If entryDocument is not document, then set newURL's fragment to null.
         if (&entry_document != this)
-            new_url.set_fragment("");
+            new_url.set_fragment("", AK::URL::ApplyPercentEncoding::No);
 
         // FIXME: 3. Run the URL and history update steps with document and newURL.
     }
