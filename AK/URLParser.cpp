@@ -194,9 +194,6 @@ Optional<URL> URLParser::parse_data_url(StringView raw_input)
 //       future for validation of URLs, which would then lead to infinite recursion.
 //       The same goes for base_url, because e.g. the port() getter does not always return m_port, and we are interested in the underlying member
 //       variables' values here, not what the URL class presents to its users.
-// NOTE: Since the URL class's member variables contain percent decoded data, we have to deviate from the URL parser specification when setting
-//       some of those values. Because the specification leaves all values percent encoded in their URL data structure, we have to percent decode
-//       everything before setting the member variables.
 URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> url, Optional<State> state_override)
 {
     dbgln_if(URL_PARSER_DEBUG, "URLParser::parse: Parsing '{}'", raw_input);
@@ -441,13 +438,11 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                     if (password_token_seen) {
                         builder.append(url->password());
                         URL::append_percent_encoded_if_necessary(builder, c, URL::PercentEncodeSet::Userinfo);
-                        // NOTE: This is has to be encoded and then decoded because the original sequence could contain already percent-encoded sequences.
-                        url->m_password = URL::percent_decode(builder.string_view());
+                        url->m_password = builder.string_view();
                     } else {
                         builder.append(url->username());
                         URL::append_percent_encoded_if_necessary(builder, c, URL::PercentEncodeSet::Userinfo);
-                        // NOTE: This is has to be encoded and then decoded because the original sequence could contain already percent-encoded sequences.
-                        url->m_username = URL::percent_decode(builder.string_view());
+                        url->m_username = builder.string_view();
                     }
                 }
                 buffer.clear();
@@ -626,8 +621,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                         buffer.append(drive_letter);
                         buffer.append(':');
                     }
-                    // NOTE: This needs to be percent decoded since the member variables contain decoded data.
-                    url->append_path(URL::percent_decode(buffer.string_view()));
+                    url->append_path(buffer.string_view());
                 }
                 buffer.clear();
                 if (code_point == '?') {
@@ -649,13 +643,12 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
             // NOTE: Verify that the assumptions required for this simplification are correct.
             VERIFY(url->m_paths.size() == 1 && url->m_paths[0].is_empty());
             if (code_point == '?') {
-                // NOTE: This needs to be percent decoded since the member variables contain decoded data.
-                url->m_paths[0] = URL::percent_decode(buffer.string_view());
+                url->m_paths[0] = buffer.string_view();
                 url->m_query = "";
                 state = State::Query;
             } else if (code_point == '#') {
                 // NOTE: This needs to be percent decoded since the member variables contain decoded data.
-                url->m_paths[0] = URL::percent_decode(buffer.string_view());
+                url->m_paths[0] = buffer.string_view();
                 url->m_fragment = "";
                 state = State::Fragment;
             } else {
@@ -665,8 +658,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                 if (code_point != end_of_file) {
                     URL::append_percent_encoded_if_necessary(buffer, code_point, URL::PercentEncodeSet::C0Control);
                 } else {
-                    // NOTE: This needs to be percent decoded since the member variables contain decoded data.
-                    url->m_paths[0] = URL::percent_decode(buffer.string_view());
+                    url->m_paths[0] = buffer.string_view();
                 }
             }
             break;
@@ -696,8 +688,7 @@ URL URLParser::parse(StringView raw_input, URL const* base_url, Optional<URL> ur
                 // FIXME: If c is U+0025 (%) and remaining does not start with two ASCII hex digits, validation error.
                 buffer.append_code_point(code_point);
             } else {
-                // NOTE: This needs to be percent decoded since the member variables contain decoded data.
-                url->m_fragment = URL::percent_decode(buffer.string_view());
+                url->m_fragment = buffer.string_view();
                 buffer.clear();
             }
             break;

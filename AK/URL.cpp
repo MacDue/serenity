@@ -242,10 +242,10 @@ DeprecatedString URL::serialize(ExcludeFragment exclude_fragment) const
         builder.append("//"sv);
 
         if (includes_credentials()) {
-            builder.append(percent_encode(m_username, PercentEncodeSet::Userinfo));
+            builder.append(m_username);
             if (!m_password.is_empty()) {
                 builder.append(':');
-                builder.append(percent_encode(m_password, PercentEncodeSet::Userinfo));
+                builder.append(m_password);
             }
             builder.append('@');
         }
@@ -256,24 +256,24 @@ DeprecatedString URL::serialize(ExcludeFragment exclude_fragment) const
     }
 
     if (cannot_be_a_base_url()) {
-        builder.append(percent_encode(m_paths[0], PercentEncodeSet::Path));
+        builder.append(m_paths[0]);
     } else {
         if (m_host.is_null() && m_paths.size() > 1 && m_paths[0].is_empty())
             builder.append("/."sv);
         for (auto& segment : m_paths) {
             builder.append('/');
-            builder.append(percent_encode(segment, PercentEncodeSet::Path));
+            builder.append(segment);
         }
     }
 
     if (!m_query.is_null()) {
         builder.append('?');
-        builder.append(percent_encode(m_query, is_special() ? URL::PercentEncodeSet::SpecialQuery : URL::PercentEncodeSet::Query));
+        builder.append(m_query);
     }
 
     if (exclude_fragment == ExcludeFragment::No && !m_fragment.is_null()) {
         builder.append('#');
-        builder.append(percent_encode(m_fragment, PercentEncodeSet::Fragment));
+        builder.append(m_fragment);
     }
 
     return builder.to_deprecated_string();
@@ -300,24 +300,24 @@ DeprecatedString URL::serialize_for_display() const
     }
 
     if (cannot_be_a_base_url()) {
-        builder.append(percent_encode(m_paths[0], PercentEncodeSet::Path));
+        builder.append(m_paths[0]);
     } else {
         if (m_host.is_null() && m_paths.size() > 1 && m_paths[0].is_empty())
             builder.append("/."sv);
         for (auto& segment : m_paths) {
             builder.append('/');
-            builder.append(percent_encode(segment, PercentEncodeSet::Path));
+            builder.append(segment);
         }
     }
 
     if (!m_query.is_null()) {
         builder.append('?');
-        builder.append(percent_encode(m_query, is_special() ? URL::PercentEncodeSet::SpecialQuery : URL::PercentEncodeSet::Query));
+        builder.append(m_query);
     }
 
     if (!m_fragment.is_null()) {
         builder.append('#');
-        builder.append(percent_encode(m_fragment, PercentEncodeSet::Fragment));
+        builder.append(m_fragment);
     }
 
     return builder.to_deprecated_string();

@@ -70,7 +70,12 @@ public:
     bool includes_credentials() const { return !m_username.is_empty() || !m_password.is_empty(); }
     bool is_special() const { return is_special_scheme(m_scheme); }
 
-    void set_scheme(DeprecatedString);
+    enum class ApplyPercentEncoding {
+        Yes,
+        No
+    };
+
+    void set_scheme(DeprecatedString scheme); //, ApplyPercentEncoding apply ApplyPercentEncoding::Yes);
     void set_username(DeprecatedString);
     void set_password(DeprecatedString);
     void set_host(DeprecatedString);
