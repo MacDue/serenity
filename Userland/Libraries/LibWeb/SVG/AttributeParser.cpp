@@ -396,6 +396,7 @@ int AttributeParser::parse_sign()
     return 1;
 }
 
+// https://drafts.csswg.org/css-transforms/#svg-syntax
 Optional<Vector<Transform>> AttributeParser::parse_transform()
 {
     // wsp:
@@ -433,6 +434,7 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
         return {};
     };
 
+    // NOTE: This looks very similar to the CSS transform but the syntax is not compatible.
     Vector<Transform> transform_list;
     consume_whitespace();
     while (!done()) {
