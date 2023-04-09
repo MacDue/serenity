@@ -51,6 +51,7 @@ bool Paintable::handle_mousewheel(Badge<EventHandler>, CSSPixelPoint, unsigned, 
 
 Optional<HitTestResult> Paintable::hit_test(CSSPixelPoint, HitTestType) const
 {
+    abort();
     return {};
 }
 

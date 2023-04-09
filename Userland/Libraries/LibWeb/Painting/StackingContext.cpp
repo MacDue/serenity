@@ -487,6 +487,8 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
     for (ssize_t i = m_children.size() - 1; i >= 0; --i) {
         auto const& child = *m_children[i];
         if (child.m_box->computed_values().z_index().value_or(0) > 0) {
+            // if (m_children.size() == 5)
+            //     dbgln("Testing  {}", child.paintable().layout_box().dom_node()->debug_description());
             auto result = child.hit_test(transformed_position, type);
             if (result.has_value() && result->paintable->visible_for_hit_testing())
                 return result;
@@ -496,43 +498,51 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
     Optional<HitTestResult> result;
     // 6. the child stacking contexts with stack level 0 and the positioned descendants with stack level 0.
 
-    for_each_in_subtree_of_type_within_same_stacking_context_in_reverse<PaintableBox>(paintable(), [&](PaintableBox const& paint_box) {
-        // FIXME: Support more overflow variations.
-        if (paint_box.computed_values().overflow_x() == CSS::Overflow::Hidden && paint_box.computed_values().overflow_y() == CSS::Overflow::Hidden) {
-            if (!paint_box.absolute_border_box_rect().contains(transformed_position.x().value(), transformed_position.y().value()))
-                return TraversalDecision::SkipChildrenAndContinue;
-        }
+    // for_each_in_subtree_of_type_within_same_stacking_context_in_reverse<PaintableBox>(paintable(), [&](PaintableBox const& paint_box) {
+    //     // FIXME: Support more overflow variations.
+    //     if (paint_box.computed_values().overflow_x() == CSS::Overflow::Hidden && paint_box.computed_values().overflow_y() == CSS::Overflow::Hidden) {
+    //         if (!paint_box.absolute_border_box_rect().contains(transformed_position.x().value(), transformed_position.y().value()))
+    //             return TraversalDecision::SkipChildrenAndContinue;
+    //     }
 
-        if (paint_box.stacking_context()) {
-            auto const& z_index = paint_box.computed_values().z_index();
-            if (!z_index.has_value() || z_index.value() == 0) {
-                auto candidate = paint_box.stacking_context()->hit_test(transformed_position, type);
-                if (candidate.has_value() && candidate->paintable->visible_for_hit_testing()) {
-                    result = move(candidate);
-                    return TraversalDecision::Break;
-                }
-            }
-        }
+    //     if (paint_box.stacking_context()) {
+    //         auto const& z_index = paint_box.computed_values().z_index();
+    //         if (!z_index.has_value() || z_index.value() == 0) {
+    //             auto candidate = paint_box.stacking_context()->hit_test(transformed_position, type);
+    //             if (candidate.has_value() && candidate->paintable->visible_for_hit_testing()) {
+    //                 result = move(candidate);
+    //                 return TraversalDecision::Break;
+    //             }
+    //         }
+    //     }
 
-        auto& layout_box = paint_box.layout_box();
-        if (layout_box.is_positioned() && !paint_box.stacking_context()) {
-            if (auto candidate = paint_box.hit_test(transformed_position, type); candidate.has_value()) {
-                result = move(candidate);
-                return TraversalDecision::Break;
-            }
-        }
-        return TraversalDecision::Continue;
-    });
-    if (result.has_value() && result->paintable->visible_for_hit_testing())
+    //     auto& layout_box = paint_box.layout_box();
+    //     if (layout_box.is_positioned() && !paint_box.stacking_context()) {
+    //         if (auto candidate = paint_box.hit_test(transformed_position, type); candidate.has_value()) {
+    //             result = move(candidate);
+    //             return TraversalDecision::Break;
+    //         }
+    //     }
+    //     return TraversalDecision::Continue;
+    // });
+    if (result.has_value() && result->paintable->visible_for_hit_testing()) {
+        // if (m_children.size() == 5)
+        //     dbgln("What?");
         return result;
+    }
 
     // "child stacking contexts with stack level 0" is first in the step, so last here to match reverse order.
     for (ssize_t i = m_children.size() - 1; i >= 0; --i) {
         auto const& child = *m_children[i];
         if (child.m_box->computed_values().z_index().value_or(0) == 0) {
+            // if (m_children.size() == 5)
+            //     dbgln("Testing  {}", child.paintable().layout_box().dom_node()->debug_description());
             auto result = child.hit_test(transformed_position, type);
             if (result.has_value() && result->paintable->visible_for_hit_testing())
                 return result;
+        } else {
+            //       if (m_children.size() == 5)
+            // dbgln("not testing  {} {}", child.paintable().layout_box().dom_node()->debug_description(), child.m_box->computed_values().z_index().value_or(0));
         }
     }
 
@@ -590,6 +600,8 @@ Optional<HitTestResult> StackingContext::hit_test(CSSPixelPoint position, HitTes
     for (ssize_t i = m_children.size() - 1; i >= 0; --i) {
         auto const& child = *m_children[i];
         if (child.m_box->computed_values().z_index().value_or(0) < 0) {
+            if (m_children.size() == 5)
+                dbgln("Testing  {}", child.paintable().layout_box().dom_node()->debug_description());
             auto result = child.hit_test(transformed_position, type);
             if (result.has_value() && result->paintable->visible_for_hit_testing())
                 return result;
