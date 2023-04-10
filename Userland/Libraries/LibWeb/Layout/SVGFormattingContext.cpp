@@ -63,8 +63,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
             auto& maybe_view_box = svg_svg_element.view_box();
             if (maybe_view_box.has_value()) {
                 auto view_box = maybe_view_box.value();
-                auto scale_width = svg_svg_element.has_attribute(HTML::AttributeNames::width) ? svg_box_state.content_width().value() / view_box.width : 1;
-                auto scale_height = svg_svg_element.has_attribute(HTML::AttributeNames::height) ? svg_box_state.content_height().value() / view_box.height : 1;
+                auto scale_width = svg_box_state.has_definite_width() ? svg_box_state.content_width().value() / view_box.width : 1;
+                auto scale_height = svg_box_state.has_definite_height() ? svg_box_state.content_height().value() / view_box.height : 1;
                 // FIXME: This should probably allow both x and y scaling.
                 auto viewbox_scale = min(scale_width, scale_height);
                 transform = Gfx::AffineTransform {}.scale(viewbox_scale, viewbox_scale).translate({ -view_box.min_x, -view_box.min_y }).multiply(transform);
