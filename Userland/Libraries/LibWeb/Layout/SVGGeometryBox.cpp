@@ -29,7 +29,6 @@ float SVGGeometryBox::viewbox_scaling() const
     bool has_specified_height = svg_box->has_attribute(HTML::AttributeNames::height);
     auto scale_width = has_specified_width ? svg_box->paint_box()->content_width().value() / view_box.width : 1;
     auto scale_height = has_specified_height ? svg_box->paint_box()->content_height().value() / view_box.height : 1;
-
     return min(scale_width, scale_height);
 }
 
@@ -47,10 +46,7 @@ Gfx::AffineTransform SVGGeometryBox::paint_transform() const
     auto transform = geometry_element.get_transform();
     auto scaling = viewbox_scaling();
     auto origin = viewbox_origin();
-    transform.multiply(Gfx::AffineTransform {}
-                           .translate({ -origin.x(), -origin.y() })
-                           .scale({ scaling, scaling }));
-    return transform;
+    return Gfx::AffineTransform {}.scale(scaling, scaling).translate(-origin.to_type<float>()).multiply(transform);
 }
 
 JS::GCPtr<Painting::Paintable> SVGGeometryBox::create_paintable() const

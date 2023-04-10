@@ -37,7 +37,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
 
     auto& svg_svg_element = verify_cast<SVG::SVGSVGElement>(*box.dom_node());
 
-    auto root_offset = m_state.get(box).offset;
+    auto svg_box_state = m_state.get(box);
+    auto root_offset = svg_box_state.offset;
 
     box.for_each_child_of_type<BlockContainer>([&](BlockContainer const& child_box) {
         if (is<SVG::SVGForeignObjectElement>(child_box.dom_node())) {
@@ -53,35 +54,27 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
     box.for_each_in_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
         if (is<SVGGeometryBox>(descendant)) {
             auto const& geometry_box = static_cast<SVGGeometryBox const&>(descendant);
-
             auto& geometry_box_state = m_state.get_mutable(geometry_box);
-
             auto& dom_node = const_cast<SVGGeometryBox&>(geometry_box).dom_node();
-
-            // FIXME: Allow for one of {width, height} to not be specified}
-            if (svg_svg_element.has_attribute(HTML::AttributeNames::width)) {
-            }
-
-            if (svg_svg_element.has_attribute(HTML::AttributeNames::height)) {
-            }
 
             auto& path = dom_node.get_path();
             auto transform = dom_node.get_transform();
-            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
 
+            auto& maybe_view_box = svg_svg_element.view_box();
+            if (maybe_view_box.has_value()) {
+                auto view_box = maybe_view_box.value();
+                auto scale_width = svg_svg_element.has_attribute(HTML::AttributeNames::width) ? svg_box_state.content_width().value() / view_box.width : 1;
+                auto scale_height = svg_svg_element.has_attribute(HTML::AttributeNames::height) ? svg_box_state.content_height().value() / view_box.height : 1;
+                // FIXME: This should probably allow both x and y scaling.
+                auto viewbox_scale = min(scale_width, scale_height);
+                transform = Gfx::AffineTransform {}.scale(viewbox_scale, viewbox_scale).translate({ -view_box.min_x, -view_box.min_y }).multiply(transform);
+            }
+
+            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
             // Stroke increases the path's size by stroke_width/2 per side.
             CSSPixels stroke_width = geometry_box.dom_node().stroke_width().value_or(0);
             path_bounding_box.inflate(stroke_width, stroke_width);
-
-            auto& maybe_view_box = svg_svg_element.view_box();
-
-            CSSPixelPoint content_offset = path_bounding_box.top_left();
-            if (maybe_view_box.has_value()) {
-                auto view_box = maybe_view_box.value();
-                CSSPixelPoint viewbox_offset = { view_box.min_x, view_box.min_y };
-                content_offset += viewbox_offset;
-            }
-            geometry_box_state.set_content_offset(content_offset);
+            geometry_box_state.set_content_offset(path_bounding_box.top_left());
             geometry_box_state.set_content_width(path_bounding_box.width());
             geometry_box_state.set_content_height(path_bounding_box.height());
         }

@@ -372,6 +372,7 @@ bool EventHandler::handle_mousedown(CSSPixelPoint position, unsigned button, uns
         auto offset = compute_mouse_event_offset(position, *layout_node);
         auto client_offset = compute_mouse_event_client_offset(position);
         auto page_offset = compute_mouse_event_page_offset(client_offset);
+        dbgln("hit {}", node->debug_description());
         node->dispatch_event(UIEvents::MouseEvent::create_from_platform_event(node->realm(), UIEvents::EventNames::mousedown, offset, client_offset, page_offset, buttons, button).release_value_but_fixme_should_propagate_errors());
     }
 
