@@ -414,7 +414,7 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
         consume_whitespace();
     };
 
-    // FIXME: AttributeParser currently does not handle invalid parses in most cases (e.g. parse_number())
+    // FIXME: AttributeParser currently does not handle invalid parses in most cases (e.g. parse_number()) and just crashes.
     auto parse_optional_number = [&](float default_value = 0.0f) {
         consume_comma_whitespace();
         if (m_lexer.next_is(isdigit))
