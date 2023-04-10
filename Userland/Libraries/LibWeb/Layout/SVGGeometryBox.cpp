@@ -40,6 +40,15 @@ CSSPixelPoint SVGGeometryBox::viewbox_origin() const
     return { svg_box->view_box().value().min_x, svg_box->view_box().value().min_y };
 }
 
+Gfx::AffineTransform SVGGeometryBox::paint_transform() const
+{
+    auto& geometry_element = dom_node();
+    auto transform = geometry_element.get_transform();
+    auto scaling = viewbox_scaling();
+    auto origin = viewbox_origin();
+    return Gfx::AffineTransform {}.scale(scaling, scaling).translate(-origin.to_type<float>()).multiply(transform);
+}
+
 JS::GCPtr<Painting::Paintable> SVGGeometryBox::create_paintable() const
 {
     return Painting::SVGGeometryPaintable::create(*this);
