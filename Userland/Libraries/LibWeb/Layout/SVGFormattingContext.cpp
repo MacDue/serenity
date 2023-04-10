@@ -61,20 +61,34 @@ void SVGFormattingContext::run(Box const& box, LayoutMode, [[maybe_unused]] Avai
             auto transform = dom_node.get_transform();
 
             auto& maybe_view_box = svg_svg_element.view_box();
+            float viewbox_scale = 1.0f;
+
+            CSSPixelPoint offset {};
             if (maybe_view_box.has_value()) {
                 auto view_box = maybe_view_box.value();
+                // FIXME: This should allow just one of width or height to be specified.
+                // E.g. We should be able to layout <svg width="100%"> where height is unspecified/auto.
+                if (!svg_box_state.has_definite_width() || !svg_box_state.has_definite_height()) {
+                    dbgln("FIXME: Attempting to layout indefinitely sized SVG with a viewbox -- this likely won't work!");
+                }
                 auto scale_width = svg_box_state.has_definite_width() ? svg_box_state.content_width().value() / view_box.width : 1;
                 auto scale_height = svg_box_state.has_definite_height() ? svg_box_state.content_height().value() / view_box.height : 1;
-                // FIXME: This should probably allow both x and y scaling.
-                auto viewbox_scale = min(scale_width, scale_height);
+                viewbox_scale = min(scale_width, scale_height);
+
+                // Center the viewbox within the SVG element:
+                if (svg_box_state.has_definite_width())
+                    offset.translate_by((svg_box_state.content_width() - (view_box.width * viewbox_scale)) / 2, 0);
+                if (svg_box_state.has_definite_height())
+                    offset.translate_by(0, (svg_box_state.content_height() - (view_box.height * viewbox_scale)) / 2);
+
                 transform = Gfx::AffineTransform {}.scale(viewbox_scale, viewbox_scale).translate({ -view_box.min_x, -view_box.min_y }).multiply(transform);
             }
 
-            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
             // Stroke increases the path's size by stroke_width/2 per side.
+            auto path_bounding_box = transform.map(path.bounding_box()).to_type<CSSPixels>();
             CSSPixels stroke_width = geometry_box.dom_node().stroke_width().value_or(0);
             path_bounding_box.inflate(stroke_width, stroke_width);
-            geometry_box_state.set_content_offset(path_bounding_box.top_left());
+            geometry_box_state.set_content_offset(path_bounding_box.top_left() + offset);
             geometry_box_state.set_content_width(path_bounding_box.width());
             geometry_box_state.set_content_height(path_bounding_box.height());
         }
