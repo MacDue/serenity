@@ -30,7 +30,9 @@ namespace Web::SVG::TagNames {
     __ENUMERATE_SVG_TAG(desc)          \
     __ENUMERATE_SVG_TAG(foreignObject) \
     __ENUMERATE_SVG_TAG(script)        \
-    __ENUMERATE_SVG_TAG(title)
+    __ENUMERATE_SVG_TAG(title)         \
+    __ENUMERATE_SVG_TAG(stop)          \
+    __ENUMERATE_SVG_TAG(linearGradient)
 
 #define __ENUMERATE_SVG_TAG(name) extern DeprecatedFlyString name;
 ENUMERATE_SVG_TAGS
