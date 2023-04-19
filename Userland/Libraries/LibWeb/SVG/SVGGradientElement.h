@@ -17,7 +17,7 @@ class SVGGradientElement : public SVGElement {
 public:
     virtual ~SVGGradientElement() override = default;
 
-    virtual Gfx::PaintStyle const& to_gfx_paint_style() const = 0;
+    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style() const = 0;
 
 protected:
     SVGGradientElement(DOM::Document&, DOM::QualifiedName);

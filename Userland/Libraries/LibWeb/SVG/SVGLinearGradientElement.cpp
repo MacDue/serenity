@@ -8,6 +8,7 @@
 #include <LibWeb/SVG/AttributeNames.h>
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGLinearGradientElement.h>
+#include <LibWeb/SVG/SVGStopElement.h>
 
 namespace Web::SVG {
 
@@ -30,13 +31,19 @@ void SVGLinearGradientElement::parse_attribute(DeprecatedFlyString const& name, 
 
     if (name == SVG::AttributeNames::x1) {
         m_x1 = AttributeParser::parse_coordinate(value);
+        m_paint_style = nullptr;
     } else if (name == SVG::AttributeNames::y1) {
         m_y1 = AttributeParser::parse_coordinate(value);
+        m_paint_style = nullptr;
     } else if (name == SVG::AttributeNames::x2) {
         m_x2 = AttributeParser::parse_coordinate(value);
+        m_paint_style = nullptr;
     } else if (name == SVG::AttributeNames::y2) {
         m_y2 = AttributeParser::parse_coordinate(value);
+        m_paint_style = nullptr;
     }
+
+    dbgln("<linearGradient>: Parsed coords: {} {} {} {}", m_x1, m_y1, m_x2, m_y2);
 }
 
 float SVGLinearGradientElement::start_x() const
@@ -63,9 +70,21 @@ float SVGLinearGradientElement::end_y() const
     return m_y2.value_or(0);
 }
 
-Gfx::PaintStyle const& SVGLinearGradientElement::to_gfx_paint_style() const
+Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style() const
 {
-    VERIFY_NOT_REACHED();
+    if (m_paint_style)
+        return *m_paint_style;
+
+    auto gradient_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(), start_y() }, { end_x(), end_y() }).release_value_but_fixme_should_propagate_errors();
+    for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
+        auto stop_offset = stop.stop_offset().value_or(0);
+        auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
+        dbgln("<linearGradient>: Adding stop: {} {}", stop_offset, stop_color);
+        gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
+    });
+
+    m_paint_style = gradient_style;
+    return *m_paint_style;
 }
 
 // https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute

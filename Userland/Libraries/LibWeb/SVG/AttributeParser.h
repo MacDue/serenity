@@ -94,6 +94,13 @@ public:
 
     static Optional<float> parse_coordinate(StringView input);
     static Optional<float> parse_length(StringView input);
+
+    static Optional<float> parse_length_percentage(StringView input)
+    {
+        // TODO: Make this actually do length-percentage...
+        return parse_length(input);
+    }
+
     static Optional<float> parse_positive_length(StringView input);
     static Vector<Gfx::FloatPoint> parse_points(StringView input);
     static Vector<PathInstruction> parse_path_data(StringView input);

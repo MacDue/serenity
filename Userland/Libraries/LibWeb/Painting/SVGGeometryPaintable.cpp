@@ -75,16 +75,24 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto paint_transform = Gfx::AffineTransform {}.scale(css_scale, css_scale).multiply(*transform);
     Gfx::Path path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().copy_transformed(paint_transform);
 
-    if (auto fill_color = geometry_element.fill_color().value_or(svg_context.fill_color()); fill_color.alpha() > 0) {
+    // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
+    auto closed_path = [&] {
         // We need to fill the path before applying the stroke, however the filled
         // path must be closed, whereas the stroke path may not necessary be closed.
         // Copy the path and close it for filling, but use the previous path for stroke
-        auto closed_path = path;
-        closed_path.close();
+        auto copy = path;
+        copy.close();
+        return copy;
+    };
 
-        // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
+    if (auto fill = geometry_element.fill(); fill.has_value()) {
         painter.fill_path(
-            closed_path,
+            closed_path(),
+            *fill,
+            Gfx::Painter::WindingRule::EvenOdd);
+    } else if (auto fill_color = geometry_element.fill_color().value_or(svg_context.fill_color()); fill_color.alpha() > 0) {
+        painter.fill_path(
+            closed_path(),
             fill_color,
             Gfx::Painter::WindingRule::EvenOdd);
     }

@@ -8,8 +8,10 @@
 
 #include <LibWeb/Bindings/Intrinsics.h>
 #include <LibWeb/CSS/Parser/Parser.h>
+#include <LibWeb/DOM/Document.h>
 #include <LibWeb/Layout/Node.h>
 #include <LibWeb/SVG/AttributeParser.h>
+#include <LibWeb/SVG/SVGGradientElement.h>
 #include <LibWeb/SVG/SVGGraphicsElement.h>
 #include <LibWeb/SVG/SVGSVGElement.h>
 
@@ -38,6 +40,26 @@ void SVGGraphicsElement::parse_attribute(DeprecatedFlyString const& name, Deprec
         if (transform_list.has_value())
             m_transform = transform_from_transform_list(*transform_list);
     }
+}
+
+// HACK
+Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill() const
+{
+    // SUPER HACK:
+    auto fill_value = get_attribute("fill"sv);
+    if (fill_value.starts_with("url("sv)) {
+        auto dom_id = fill_value.substring_view(5, fill_value.length() - 5 - 1);
+        auto maybe_gradient = document().get_element_by_id(dom_id);
+        if (!maybe_gradient) {
+            dbgln("Failed to find gradient: {}", dom_id);
+            return {};
+        }
+        if (is<SVG::SVGGradientElement>(*maybe_gradient)) {
+            auto& gradient = verify_cast<SVG::SVGGradientElement>(*maybe_gradient);
+            return gradient.to_gfx_paint_style();
+        }
+    }
+    return {};
 }
 
 Gfx::AffineTransform transform_from_transform_list(ReadonlySpan<Transform> transform_list)

@@ -21,12 +21,16 @@ public:
 
     JS::NonnullGCPtr<SVGAnimatedNumber> offset() const;
 
+    Optional<float> stop_offset() const { return m_offset; }
+    Optional<Gfx::Color> stop_color() const;
+
 private:
     SVGStopElement(DOM::Document&, DOM::QualifiedName);
 
     virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
 
     Optional<float> m_offset;
+    Optional<Gfx::Color> m_color;
 };
 
 }

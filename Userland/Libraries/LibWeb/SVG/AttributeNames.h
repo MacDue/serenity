@@ -65,6 +65,7 @@ namespace Web::SVG::AttributeNames {
     E(specularConstant)             \
     E(specularExponent)             \
     E(spreadMethod)                 \
+    E(offset)                       \
     E(startOffset)                  \
     E(stdDeviation)                 \
     E(stitchTiles)                  \

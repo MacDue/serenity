@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <LibGfx/PaintStyle.h>
 #include <LibGfx/Path.h>
 #include <LibWeb/DOM/Node.h>
 #include <LibWeb/SVG/AttributeParser.h>
@@ -36,6 +37,8 @@ public:
     }
 
     Gfx::AffineTransform get_transform() const;
+
+    Optional<Gfx::PaintStyle const&> fill() const;
 
 protected:
     SVGGraphicsElement(DOM::Document&, DOM::QualifiedName);

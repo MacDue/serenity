@@ -5,6 +5,11 @@
  */
 
 #include <LibWeb/Bindings/Intrinsics.h>
+#include <LibWeb/CSS/Parser/Parser.h>
+#include <LibWeb/CSS/StyleValues/IdentifierStyleValue.h>
+#include <LibWeb/Layout/BlockContainer.h>
+#include <LibWeb/SVG/AttributeNames.h>
+#include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGStopElement.h>
 
 namespace Web::SVG {
@@ -17,7 +22,25 @@ SVGStopElement::SVGStopElement(DOM::Document& document, DOM::QualifiedName quali
 void SVGStopElement::parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value)
 {
     SVGElement::parse_attribute(name, value);
-    // TODO: Parse offset
+    if (name == SVG::AttributeNames::offset) {
+        m_offset = AttributeParser::parse_length_percentage(value);
+        dbgln("<stop>: Parsed offset: {}", m_offset);
+    } else if (name.equals_ignoring_ascii_case("stop-color"sv)) {
+        CSS::Parser::ParsingContext parsing_context { document() };
+        if (auto stop_color = parse_css_value(parsing_context, value, CSS::PropertyID::StopColor)) {
+            m_color = stop_color->to_color(*layout_node());
+        }
+        dbgln("<stop>: Parsed color: {}", m_color);
+    }
+}
+
+// void SVGStopElement::apply_presentational_hints(CSS::StyleProperties&) const
+// {
+// }
+
+Optional<Gfx::Color> SVGStopElement::stop_color() const
+{
+    return m_color;
 }
 
 JS::NonnullGCPtr<SVGAnimatedNumber> SVGStopElement::offset() const

@@ -243,4 +243,27 @@ private:
     float m_end_radius { 0.0f };
 };
 
+// The following paint styles implement the gradients required for the SVGs
+
+// TODO: Implement gradientUnits
+class SVGLinearGradientPaintStyle final : public GradientPaintStyle {
+public:
+    static ErrorOr<NonnullRefPtr<SVGLinearGradientPaintStyle>> create(FloatPoint p0, FloatPoint p1)
+    {
+        return adopt_nonnull_ref_or_enomem(new (nothrow) SVGLinearGradientPaintStyle(p0, p1));
+    }
+
+private:
+    virtual void paint(IntRect physical_bounding_box, PaintFunction paint) const override;
+
+    SVGLinearGradientPaintStyle(FloatPoint p0, FloatPoint p1)
+        : m_p0(p0)
+        , m_p1(p1)
+    {
+    }
+
+    FloatPoint m_p0;
+    FloatPoint m_p1;
+};
+
 }
