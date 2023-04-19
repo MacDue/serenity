@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <LibWeb/SVG/SVGAnimatedLength.h>
+#include <LibWeb/SVG/SVGAnimatedNumber.h>
 #include <LibWeb/SVG/SVGElement.h>
 
 namespace Web::SVG {
@@ -19,7 +19,7 @@ public:
 
     virtual void parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value) override;
 
-    JS::NonnullGCPtr<SVGAnimatedLength> offset() const;
+    JS::NonnullGCPtr<SVGAnimatedNumber> offset() const;
 
 private:
     SVGStopElement(DOM::Document&, DOM::QualifiedName);

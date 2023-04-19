@@ -20,7 +20,7 @@ void SVGStopElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
     // TODO: Parse offset
 }
 
-JS::NonnullGCPtr<SVGAnimatedLength> SVGStopElement::offset() const
+JS::NonnullGCPtr<SVGAnimatedNumber> SVGStopElement::offset() const
 {
     VERIFY_NOT_REACHED();
 }
