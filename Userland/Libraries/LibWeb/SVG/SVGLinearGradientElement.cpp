@@ -5,6 +5,7 @@
  */
 
 #include <LibWeb/Bindings/Intrinsics.h>
+#include <LibWeb/DOM/Document.h>
 #include <LibWeb/SVG/AttributeNames.h>
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGLinearGradientElement.h>
@@ -96,12 +97,31 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
                                                                        start_y() },
         { end_x(), end_y() })
                               .release_value_but_fixme_should_propagate_errors();
-    for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
-        auto stop_offset = stop.stop_offset().value_or(0);
-        auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
-        dbgln("<linearGradient>: Adding stop: {} {}", stop_offset, stop_color);
-        gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
-    });
+
+    auto add_stops = [&](auto* el) {
+        el->template for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
+            auto stop_offset = stop.stop_offset().value_or(0);
+            auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
+            dbgln("<linearGradient>: Adding stop: {} {}", stop_offset, stop_color);
+            gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
+        });
+    };
+
+    dbgln("---->");
+    DOM::Element const* el = this;
+    while (true) {
+        add_stops(el);
+        if (!el->has_attribute("href"))
+            break;
+        auto val = el->get_attribute("href");
+        dbgln("Adding stops from ref: {}", val);
+        el = document().get_element_by_id(val.substring_view(1));
+        if (!el)
+            break;
+    }
+    dbgln("<----");
+
+    // FIXME: This breaks on resize...(the paintstyle needs invalidating on layout changes)
     gradient_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
     gradient_style->set_gradient_transform(
         (
