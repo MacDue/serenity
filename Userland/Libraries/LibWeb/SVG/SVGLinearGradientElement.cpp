@@ -70,7 +70,7 @@ float SVGLinearGradientElement::end_y() const
     return m_y2.value_or(0);
 }
 
-Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(float viewbox_scale) const
+Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform) const
 {
     if (m_paint_style)
         return *m_paint_style;
@@ -88,10 +88,14 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(fl
         }
     };
 
-    float scale = gradient_units() == GradientUnits::UserSpaceOnUse ? viewbox_scale : 1;
+    // float scale = gradient_units() == GradientUnits::UserSpaceOnUse ? viewbox_scale : 1;
+    // (void)viewbox_scale;
 
     // FIXME: Resolve default lengths for UserSpaceOnUse
-    auto gradient_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x() * scale, start_y() * scale }, { end_x() * scale, end_y() * scale }).release_value_but_fixme_should_propagate_errors();
+    auto gradient_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(),
+                                                                       start_y() },
+        { end_x(), end_y() })
+                              .release_value_but_fixme_should_propagate_errors();
     for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
         auto stop_offset = stop.stop_offset().value_or(0);
         auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
@@ -99,9 +103,11 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(fl
         gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
     });
     gradient_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
-    if (auto& transform = gradient_transform(); transform.has_value())
-        gradient_style->set_gradient_transform(*transform);
-
+    gradient_style->set_gradient_transform(
+        (
+            Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})))
+            .inverse()
+            .value_or(Gfx::AffineTransform {}));
     m_paint_style = gradient_style;
     return *m_paint_style;
 }

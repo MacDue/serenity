@@ -85,7 +85,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     // Note: This is assuming .x_scale() == .y_scale() (which it does currently).
     auto viewbox_scale = paint_transform.x_scale();
 
-    if (auto fill = geometry_element.fill(viewbox_scale); fill.has_value()) {
+    if (auto fill = geometry_element.fill(paint_transform); fill.has_value()) {
         painter.fill_path(
             closed_path(),
             *fill,

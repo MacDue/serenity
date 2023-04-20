@@ -349,16 +349,11 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
         // TODO figure out viewbox offset
     }
     auto linear_gradient = make_linear_gradient_between_two_points(start_point, end_point, color_stops(), repeat_length());
-    auto inverse_transform = gradient_transform().map([&](auto& transform) {
-        return transform.inverse();
-    });
     // IntPoint offset (min(start_point.x(), end_point.x()), min(start_point.y(), end_point.y()));
     paint([&, sampler = linear_gradient.sample_function()](auto point) {
         point.translate_by(physical_bounding_box.location());
-        if (inverse_transform.has_value() && inverse_transform->has_value())
-            point = (**inverse_transform).map(point);
-        // if (gradient_transform().has_value())
-        //     point = gradient_transform()->map(point);
+        if (gradient_transform().has_value())
+            point = gradient_transform()->map(point);
 
         return sampler(point);
     });
