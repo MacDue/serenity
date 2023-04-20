@@ -251,6 +251,7 @@ enum SVGGradientUnits {
 };
 
 class SVGGradientPaintStyle : public GradientPaintStyle {
+public:
     void set_gradient_units(SVGGradientUnits gradient_units)
     {
         m_gradient_units = gradient_units;

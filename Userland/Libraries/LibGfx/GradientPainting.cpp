@@ -339,12 +339,18 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
     if (color_stops().size() < 2)
         return paint([this](IntPoint) { return color_stops().first().color; });
 
-    // This assuming gradientUnits = objectBoundingBox
-    // auto foop = physical_bounding_box.location().to_type<float>();
-    auto start_point = m_p0.scaled(physical_bounding_box.width(), physical_bounding_box.height());
-    auto end_point = m_p1.scaled(physical_bounding_box.width(), physical_bounding_box.height());
+    auto start_point = m_p0;
+    auto end_point = m_p1;
+    if (gradient_units() == SVGGradientUnits::ObjectBoundingBox) {
+        start_point.scale_by(physical_bounding_box.width(), physical_bounding_box.height());
+        end_point.scale_by(physical_bounding_box.width(), physical_bounding_box.height());
+    }
     auto linear_gradient = make_linear_gradient_between_two_points(start_point, end_point, color_stops(), repeat_length());
-    paint(linear_gradient.sample_function());
+    paint([&, sampler = linear_gradient.sample_function()](auto point) {
+        if (gradient_transform().has_value())
+            point = gradient_transform()->map(point);
+        return sampler(point);
+    });
 }
 
 void CanvasConicGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunction paint) const
