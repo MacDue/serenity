@@ -62,9 +62,6 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto offset = context.floored_device_point(svg_context.svg_element_position()).to_type<int>().to_type<float>();
     painter.translate(offset);
 
-    auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
-    auto maybe_view_box = svg_element->view_box();
-
     context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
     auto css_scale = context.device_pixels_per_css_pixel();
 
@@ -85,7 +82,10 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
         return copy;
     };
 
-    if (auto fill = geometry_element.fill(); fill.has_value()) {
+    // Note: This is assuming .x_scale() == .y_scale() (which it does currently).
+    auto viewbox_scale = paint_transform.x_scale();
+
+    if (auto fill = geometry_element.fill(viewbox_scale); fill.has_value()) {
         painter.fill_path(
             closed_path(),
             *fill,
@@ -102,7 +102,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
             path,
             stroke_color,
             // Note: This is assuming .x_scale() == .y_scale() (which it does currently).
-            geometry_element.stroke_width().value_or(svg_context.stroke_width()) * paint_transform.x_scale());
+            geometry_element.stroke_width().value_or(svg_context.stroke_width()) * viewbox_scale);
     }
 }
 

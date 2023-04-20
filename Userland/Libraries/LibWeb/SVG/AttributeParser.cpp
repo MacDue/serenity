@@ -495,11 +495,13 @@ Optional<Vector<Transform>> AttributeParser::parse_transform()
         m_lexer.consume_specific(',');
         consume_whitespace();
     };
-
+    auto something_that_could_be_a_number = [](char c) {
+        return isdigit(c) || c == '-' || c == '+';
+    };
     // FIXME: AttributeParser currently does not handle invalid parses in most cases (e.g. parse_number()) and just crashes.
     auto parse_optional_number = [&](float default_value = 0.0f) {
         consume_comma_whitespace();
-        if (m_lexer.next_is(isdigit))
+        if (m_lexer.next_is(something_that_could_be_a_number))
             return parse_number();
         return default_value;
     };

@@ -28,9 +28,12 @@ void SVGGradientElement::parse_attribute(DeprecatedFlyString const& name, Deprec
     if (name == AttributeNames::gradientUnits) {
         m_gradient_units = AttributeParser::parse_gradient_units(value);
     } else if (name == AttributeNames::gradientTransform) {
+        dbgln("herE?");
         if (auto transform_list = AttributeParser::parse_transform(value); transform_list.has_value()) {
             m_gradient_transform = transform_from_transform_list(*transform_list);
+            dbgln("Parsed gradient transform: {}", value);
         } else {
+            dbgln("Failed to parse gradient transform: {}", value);
             m_gradient_transform = {};
         }
     }

@@ -38,7 +38,7 @@ public:
 
     Gfx::AffineTransform get_transform() const;
 
-    Optional<Gfx::PaintStyle const&> fill() const;
+    Optional<Gfx::PaintStyle const&> fill(float viewbox_scale) const;
 
 protected:
     SVGGraphicsElement(DOM::Document&, DOM::QualifiedName);
