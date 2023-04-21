@@ -89,43 +89,31 @@ float SVGLinearGradientElement::end_y() const
 
 Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform) const
 {
-    if (m_paint_style)
-        return *m_paint_style;
+    if (!m_paint_style) {
+        // FIXME: Resolve default lengths for UserSpaceOnUse
+        m_paint_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(), start_y() }, { end_x(), end_y() })
+                            .release_value_but_fixme_should_propagate_errors();
+
+        for_each_color_stop([&](auto& stop) {
+            auto stop_offset = stop.stop_offset().value_or(0);
+            auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
+            m_paint_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
+        });
+    }
 
     auto to_gfx_gradient_units = [](GradientUnits units) {
         switch (units) {
         case GradientUnits::ObjectBoundingBox:
-            dbgln("Units: ObjectBoundingBox");
             return Gfx::SVGGradientUnits::ObjectBoundingBox;
         case GradientUnits::UserSpaceOnUse:
-            dbgln("Units: UserSpaceOnUse");
             return Gfx::SVGGradientUnits::UserSpaceOnUse;
         default:
             VERIFY_NOT_REACHED();
         }
     };
 
-    // FIXME: Resolve default lengths for UserSpaceOnUse
-    auto gradient_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(),
-                                                                       start_y() },
-        { end_x(), end_y() })
-                              .release_value_but_fixme_should_propagate_errors();
-
-    for_each_color_stop([&](auto& stop) {
-        auto stop_offset = stop.stop_offset().value_or(0);
-        auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
-        gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
-    });
-
-    // FIXME: This breaks on resize...(the paintstyle needs invalidating on layout changes)
-    // FIXME: Make changes for both gradient_units
-    gradient_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
-    gradient_style->set_gradient_transform(
-        (
-            Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})))
-            .inverse()
-            .value_or(Gfx::AffineTransform {}));
-    m_paint_style = gradient_style;
+    m_paint_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
+    m_paint_style->set_gradient_transform(Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})));
     return *m_paint_style;
 }
 

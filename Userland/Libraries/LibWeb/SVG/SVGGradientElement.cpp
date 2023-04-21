@@ -4,12 +4,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-/*
- * Copyright (c) 2020, Matthew Olsson <mattco@serenityos.org>
- *
- * SPDX-License-Identifier: BSD-2-Clause
- */
-
 #include <LibWeb/Bindings/Intrinsics.h>
 #include <LibWeb/DOM/Document.h>
 #include <LibWeb/SVG/AttributeNames.h>
@@ -57,6 +51,7 @@ Optional<Gfx::AffineTransform> SVGGradientElement::gradient_transform() const
 
 JS::GCPtr<SVGGradientElement const> SVGGradientElement::xlink_href() const
 {
+    // FIXME: This entire function is an ad-hoc hack!
     if (auto href = get_attribute("href"); href.starts_with('#')) {
         auto element = document().get_element_by_id(href.substring_view(1));
         if (!element)

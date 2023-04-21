@@ -49,7 +49,7 @@ private:
     Optional<float> m_x2;
     Optional<float> m_y2;
 
-    mutable RefPtr<Gfx::PaintStyle> m_paint_style;
+    mutable RefPtr<Gfx::SVGGradientPaintStyle> m_paint_style;
 };
 
 }
