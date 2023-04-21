@@ -70,7 +70,8 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
         return;
 
     auto paint_transform = Gfx::AffineTransform {}.scale(css_scale, css_scale).multiply(*transform);
-    Gfx::Path path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path().copy_transformed(paint_transform);
+    auto const& original_path = const_cast<SVG::SVGGeometryElement&>(geometry_element).get_path();
+    Gfx::Path path = original_path.copy_transformed(paint_transform);
 
     // Fills are computed as though all paths are closed (https://svgwg.org/svg2-draft/painting.html#FillProperties)
     auto closed_path = [&] {
@@ -85,7 +86,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     // Note: This is assuming .x_scale() == .y_scale() (which it does currently).
     auto viewbox_scale = paint_transform.x_scale();
 
-    if (auto fill = geometry_element.fill(paint_transform); fill.has_value()) {
+    if (auto fill = geometry_element.fill(paint_transform, original_path.bounding_box()); fill.has_value()) {
         painter.fill_path(
             closed_path(),
             *fill,

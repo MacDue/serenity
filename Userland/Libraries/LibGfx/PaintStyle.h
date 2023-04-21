@@ -245,28 +245,16 @@ private:
 
 // The following paint styles implement the gradients required for the SVGs
 
-enum SVGGradientUnits {
-    ObjectBoundingBox,
-    UserSpaceOnUse
-};
-
 class SVGGradientPaintStyle : public GradientPaintStyle {
 public:
-    void set_gradient_units(SVGGradientUnits gradient_units)
-    {
-        m_gradient_units = gradient_units;
-    }
-
     void set_gradient_transform(Gfx::AffineTransform transform)
     {
         m_gradient_transform = transform;
     }
 
-    SVGGradientUnits gradient_units() const { return m_gradient_units; }
     Optional<Gfx::AffineTransform> const& gradient_transform() const { return m_gradient_transform; }
 
 private:
-    SVGGradientUnits m_gradient_units { SVGGradientUnits::ObjectBoundingBox };
     Optional<Gfx::AffineTransform> m_gradient_transform {};
 };
 

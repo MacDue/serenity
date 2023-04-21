@@ -43,7 +43,7 @@ void SVGGraphicsElement::parse_attribute(DeprecatedFlyString const& name, Deprec
 }
 
 // HACK
-Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill(Gfx::AffineTransform const& transform) const
+Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const
 {
     // SUPER HACK:
     auto fill_value = get_attribute("fill"sv);
@@ -56,7 +56,7 @@ Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill(Gfx::AffineTransform c
         }
         if (is<SVG::SVGGradientElement>(*maybe_gradient)) {
             auto& gradient = verify_cast<SVG::SVGGradientElement>(*maybe_gradient);
-            return gradient.to_gfx_paint_style(transform);
+            return gradient.to_gfx_paint_style(transform, object_bounding_box);
         }
     }
     return {};

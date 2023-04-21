@@ -339,13 +339,7 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
     if (color_stops().size() < 2)
         return paint([this](IntPoint) { return color_stops().first().color; });
 
-    auto start_point = m_p0;
-    auto end_point = m_p1;
-    if (gradient_units() == SVGGradientUnits::ObjectBoundingBox) {
-        start_point.scale_by(physical_bounding_box.width(), physical_bounding_box.height());
-        end_point.scale_by(physical_bounding_box.width(), physical_bounding_box.height());
-    }
-    auto linear_gradient = make_linear_gradient_between_two_points(start_point, end_point, color_stops(), repeat_length());
+    auto linear_gradient = make_linear_gradient_between_two_points(m_p0, m_p1, color_stops(), repeat_length());
 
     auto sample_transform = gradient_transform().map([](auto& transform) {
         if (auto inverse = transform.inverse(); inverse.has_value())

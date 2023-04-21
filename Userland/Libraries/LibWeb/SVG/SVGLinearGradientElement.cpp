@@ -87,10 +87,16 @@ float SVGLinearGradientElement::end_y() const
     return 0;
 }
 
-Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform) const
+Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const
 {
     if (!m_paint_style) {
-        // FIXME: Resolve default lengths for UserSpaceOnUse
+        // FIXME: Resolve percentages properly
+        Gfx::FloatPoint start_point { start_x(), start_y() };
+        Gfx::FloatPoint end_point { end_x(), end_y() };
+        if (gradient_units() == GradientUnits::ObjectBoundingBox) {
+            start_point.scale_by(object_bounding_box.width(), object_bounding_box.height());
+            end_point.scale_by(object_bounding_box.width(), object_bounding_box.height());
+        }
         m_paint_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(), start_y() }, { end_x(), end_y() })
                             .release_value_but_fixme_should_propagate_errors();
 
@@ -100,17 +106,6 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
             m_paint_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
         });
     }
-
-    auto to_gfx_gradient_units = [](GradientUnits units) {
-        switch (units) {
-        case GradientUnits::ObjectBoundingBox:
-            return Gfx::SVGGradientUnits::ObjectBoundingBox;
-        case GradientUnits::UserSpaceOnUse:
-            return Gfx::SVGGradientUnits::UserSpaceOnUse;
-        default:
-            VERIFY_NOT_REACHED();
-        }
-    };
 
     m_paint_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
     m_paint_style->set_gradient_transform(Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})));

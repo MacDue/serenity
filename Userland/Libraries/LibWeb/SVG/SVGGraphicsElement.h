@@ -38,7 +38,7 @@ public:
 
     Gfx::AffineTransform get_transform() const;
 
-    Optional<Gfx::PaintStyle const&> fill(Gfx::AffineTransform const& transform) const;
+    Optional<Gfx::PaintStyle const&> fill(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const;
 
 protected:
     SVGGraphicsElement(DOM::Document&, DOM::QualifiedName);

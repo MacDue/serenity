@@ -19,7 +19,7 @@ public:
 
     virtual void parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value) override;
 
-    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform) const override;
+    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const override;
 
     JS::NonnullGCPtr<SVGAnimatedLength> x1() const;
     JS::NonnullGCPtr<SVGAnimatedLength> y1() const;

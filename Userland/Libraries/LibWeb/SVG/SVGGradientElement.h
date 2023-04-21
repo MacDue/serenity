@@ -22,7 +22,7 @@ public:
 
     virtual void parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value) override;
 
-    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform) const = 0;
+    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const = 0;
 
     GradientUnits gradient_units() const;
 
