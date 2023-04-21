@@ -89,11 +89,12 @@ float SVGLinearGradientElement::end_y() const
 
 Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const
 {
+    auto units = gradient_units();
     if (!m_paint_style) {
         // FIXME: Resolve percentages properly
         Gfx::FloatPoint start_point { start_x(), start_y() };
         Gfx::FloatPoint end_point { end_x(), end_y() };
-        if (gradient_units() == GradientUnits::ObjectBoundingBox) {
+        if (units == GradientUnits::ObjectBoundingBox) {
             start_point = object_bounding_box.location() + start_point.scaled(object_bounding_box.width(), object_bounding_box.height());
             end_point = object_bounding_box.location() + end_point.scaled(object_bounding_box.width(), object_bounding_box.height());
         }
@@ -107,7 +108,17 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
         });
     }
 
-    m_paint_style->set_gradient_transform(Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})));
+    auto gradient_affine_transform = gradient_transform().value_or(Gfx::AffineTransform {});
+
+    if (units == GradientUnits::ObjectBoundingBox) {
+        // Adjust origin of gradient transform to top corner of bounding box:
+        gradient_affine_transform = Gfx::AffineTransform {}
+                                        .translate(object_bounding_box.location())
+                                        .multiply(gradient_affine_transform)
+                                        .translate(-object_bounding_box.location());
+    }
+
+    m_paint_style->set_gradient_transform(Gfx::AffineTransform { transform }.multiply(gradient_affine_transform));
     return *m_paint_style;
 }
 

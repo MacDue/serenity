@@ -24,14 +24,12 @@ void SVGStopElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
     SVGElement::parse_attribute(name, value);
     if (name == SVG::AttributeNames::offset) {
         m_offset = AttributeParser::parse_length_percentage(value);
-        dbgln("<stop>: Parsed offset: {}", m_offset);
     } else if (name.equals_ignoring_ascii_case("stop-color"sv)) {
         CSS::Parser::ParsingContext parsing_context { document() };
         if (auto stop_color = parse_css_value(parsing_context, value, CSS::PropertyID::StopColor)) {
             // HACK!!!! Pass null to_color() since this never has a layout node!
             m_color = stop_color->to_color(*layout_node());
         }
-        dbgln("<stop>: Parsed color: {}", m_color);
     }
 }
 
