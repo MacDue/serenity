@@ -94,10 +94,10 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
         Gfx::FloatPoint start_point { start_x(), start_y() };
         Gfx::FloatPoint end_point { end_x(), end_y() };
         if (gradient_units() == GradientUnits::ObjectBoundingBox) {
-            start_point.scale_by(object_bounding_box.width(), object_bounding_box.height());
-            end_point.scale_by(object_bounding_box.width(), object_bounding_box.height());
+            start_point = object_bounding_box.location() + start_point.scaled(object_bounding_box.width(), object_bounding_box.height());
+            end_point = object_bounding_box.location() + end_point.scaled(object_bounding_box.width(), object_bounding_box.height());
         }
-        m_paint_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(), start_y() }, { end_x(), end_y() })
+        m_paint_style = Gfx::SVGLinearGradientPaintStyle::create(start_point, end_point)
                             .release_value_but_fixme_should_propagate_errors();
 
         for_each_color_stop([&](auto& stop) {
@@ -107,7 +107,6 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
         });
     }
 
-    m_paint_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
     m_paint_style->set_gradient_transform(Gfx::AffineTransform { transform }.multiply(gradient_transform().value_or(Gfx::AffineTransform {})));
     return *m_paint_style;
 }
