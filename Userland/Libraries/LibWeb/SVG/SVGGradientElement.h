@@ -6,9 +6,11 @@
 
 #pragma once
 
+#include <AK/IterationDecision.h>
 #include <LibGfx/PaintStyle.h>
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGElement.h>
+#include <LibWeb/SVG/SVGStopElement.h>
 
 namespace Web::SVG {
 
@@ -22,20 +24,26 @@ public:
 
     virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform) const = 0;
 
-    GradientUnits gradient_units() const
-    {
-        return m_gradient_units.value_or(GradientUnits::ObjectBoundingBox);
-    }
+    GradientUnits gradient_units() const;
 
-    Optional<Gfx::AffineTransform> const& gradient_transform() const
-    {
-        return m_gradient_transform;
-    }
+    Optional<Gfx::AffineTransform> gradient_transform() const;
 
 protected:
     SVGGradientElement(DOM::Document&, DOM::QualifiedName);
 
     virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
+
+    JS::GCPtr<SVGGradientElement const> xlink_href() const;
+
+    template<VoidFunction<SVGStopElement> Callback>
+    void for_each_color_stop(Callback const& callback) const
+    {
+        for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
+            callback(stop);
+        });
+        if (auto href = xlink_href())
+            href->for_each_color_stop(callback);
+    }
 
 private:
     Optional<GradientUnits> m_gradient_units = {};

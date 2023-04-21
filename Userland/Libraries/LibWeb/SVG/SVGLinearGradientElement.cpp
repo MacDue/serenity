@@ -49,26 +49,42 @@ void SVGLinearGradientElement::parse_attribute(DeprecatedFlyString const& name, 
 
 float SVGLinearGradientElement::start_x() const
 {
+    if (m_x1.has_value())
+        return *m_x1;
+    if (auto href = linear_gradient_xlink_href())
+        return href->start_x();
     // If the attribute is not specified, the effect is as if a value of '0%' were specified.
-    return m_x1.value_or(0);
+    return 0;
 }
 
 float SVGLinearGradientElement::start_y() const
 {
+    if (m_y1.has_value())
+        return *m_y1;
+    if (auto href = linear_gradient_xlink_href())
+        return href->start_x();
     // If the attribute is not specified, the effect is as if a value of '0%' were specified.
-    return m_y1.value_or(0);
+    return 0;
 }
 
 float SVGLinearGradientElement::end_x() const
 {
+    if (m_x2.has_value())
+        return *m_x2;
+    if (auto href = linear_gradient_xlink_href())
+        return href->start_x();
     // If the attribute is not specified, the effect is as if a value of '100%' were specified.
-    return m_x2.value_or(1);
+    return 1;
 }
 
 float SVGLinearGradientElement::end_y() const
 {
+    if (m_y2.has_value())
+        return *m_y2;
+    if (auto href = linear_gradient_xlink_href())
+        return href->start_x();
     // If the attribute is not specified, the effect is as if a value of '0%' were specified.
-    return m_y2.value_or(0);
+    return 0;
 }
 
 Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gfx::AffineTransform const& transform) const
@@ -89,39 +105,20 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(Gf
         }
     };
 
-    // float scale = gradient_units() == GradientUnits::UserSpaceOnUse ? viewbox_scale : 1;
-    // (void)viewbox_scale;
-
     // FIXME: Resolve default lengths for UserSpaceOnUse
     auto gradient_style = Gfx::SVGLinearGradientPaintStyle::create({ start_x(),
                                                                        start_y() },
         { end_x(), end_y() })
                               .release_value_but_fixme_should_propagate_errors();
 
-    auto add_stops = [&](auto* el) {
-        el->template for_each_child_of_type<SVG::SVGStopElement>([&](auto& stop) {
-            auto stop_offset = stop.stop_offset().value_or(0);
-            auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
-            dbgln("<linearGradient>: Adding stop: {} {}", stop_offset, stop_color);
-            gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
-        });
-    };
-
-    dbgln("---->");
-    DOM::Element const* el = this;
-    while (true) {
-        add_stops(el);
-        if (!el->has_attribute("href"))
-            break;
-        auto val = el->get_attribute("href");
-        dbgln("Adding stops from ref: {}", val);
-        el = document().get_element_by_id(val.substring_view(1));
-        if (!el)
-            break;
-    }
-    dbgln("<----");
+    for_each_color_stop([&](auto& stop) {
+        auto stop_offset = stop.stop_offset().value_or(0);
+        auto stop_color = stop.stop_color().value_or(Gfx::Color::Black);
+        gradient_style->add_color_stop(stop_offset, stop_color).release_value_but_fixme_should_propagate_errors();
+    });
 
     // FIXME: This breaks on resize...(the paintstyle needs invalidating on layout changes)
+    // FIXME: Make changes for both gradient_units
     gradient_style->set_gradient_units(to_gfx_gradient_units(gradient_units()));
     gradient_style->set_gradient_transform(
         (

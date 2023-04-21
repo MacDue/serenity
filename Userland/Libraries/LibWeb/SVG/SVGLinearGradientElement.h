@@ -32,6 +32,13 @@ protected:
     virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
 
 private:
+    JS::GCPtr<SVGLinearGradientElement const> linear_gradient_xlink_href() const
+    {
+        if (auto href = xlink_href(); href && is<SVGLinearGradientElement>(*href))
+            return &verify_cast<SVGLinearGradientElement>(*href);
+        return {};
+    }
+
     float start_x() const;
     float start_y() const;
     float end_x() const;
