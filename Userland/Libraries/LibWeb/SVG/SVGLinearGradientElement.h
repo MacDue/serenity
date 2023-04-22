@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGAnimatedLength.h>
 #include <LibWeb/SVG/SVGGradientElement.h>
 
@@ -19,7 +20,7 @@ public:
 
     virtual void parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value) override;
 
-    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const override;
+    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(SVGPaintContext const&) const override;
 
     JS::NonnullGCPtr<SVGAnimatedLength> x1() const;
     JS::NonnullGCPtr<SVGAnimatedLength> y1() const;
@@ -39,15 +40,15 @@ private:
         return {};
     }
 
-    float start_x() const;
-    float start_y() const;
-    float end_x() const;
-    float end_y() const;
+    NumberPercentage start_x() const;
+    NumberPercentage start_y() const;
+    NumberPercentage end_x() const;
+    NumberPercentage end_y() const;
 
-    Optional<float> m_x1;
-    Optional<float> m_y1;
-    Optional<float> m_x2;
-    Optional<float> m_y2;
+    Optional<NumberPercentage> m_x1;
+    Optional<NumberPercentage> m_y1;
+    Optional<NumberPercentage> m_x2;
+    Optional<NumberPercentage> m_y2;
 
     mutable RefPtr<Gfx::SVGGradientPaintStyle> m_paint_style;
 };

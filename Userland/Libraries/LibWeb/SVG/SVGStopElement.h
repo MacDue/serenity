@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGAnimatedNumber.h>
 #include <LibWeb/SVG/SVGElement.h>
 
@@ -21,15 +22,17 @@ public:
 
     JS::NonnullGCPtr<SVGAnimatedNumber> offset() const;
 
-    Optional<float> stop_offset() const { return m_offset; }
-    Optional<Gfx::Color> stop_color() const;
+    virtual void apply_presentational_hints(CSS::StyleProperties&) const override;
+
+    NumberPercentage stop_offset() const { return m_offset.value_or(NumberPercentage::create_number(0)); }
+    Gfx::Color stop_color() const;
 
 private:
     SVGStopElement(DOM::Document&, DOM::QualifiedName);
 
     virtual JS::ThrowCompletionOr<void> initialize(JS::Realm&) override;
 
-    Optional<float> m_offset;
+    Optional<NumberPercentage> m_offset;
     Optional<Gfx::Color> m_color;
 };
 

@@ -62,6 +62,9 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto offset = context.floored_device_point(svg_context.svg_element_position()).to_type<int>().to_type<float>();
     painter.translate(offset);
 
+    auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
+    auto maybe_view_box = svg_element->view_box();
+
     context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
     auto css_scale = context.device_pixels_per_css_pixel();
 
@@ -86,7 +89,19 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     // Note: This is assuming .x_scale() == .y_scale() (which it does currently).
     auto viewbox_scale = paint_transform.x_scale();
 
-    if (auto fill = geometry_element.fill(paint_transform, original_path.bounding_box()); fill.has_value()) {
+    auto svg_viewport = [&] {
+        if (maybe_view_box.has_value())
+            return Gfx::FloatRect { maybe_view_box->min_x, maybe_view_box->min_y, maybe_view_box->width, maybe_view_box->height };
+        return Gfx::FloatRect { { 0, 0 }, svg_context.svg_element_size().to_type<float>() };
+    }();
+
+    SVG::SVGPaintContext paint_context {
+        .viewport = svg_viewport,
+        .path_bounding_box = original_path.bounding_box(),
+        .transform = paint_transform
+    };
+
+    if (auto fill = geometry_element.fill(paint_context); fill.has_value()) {
         painter.fill_path(
             closed_path(),
             *fill,

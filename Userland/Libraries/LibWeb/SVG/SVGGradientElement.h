@@ -14,6 +14,12 @@
 
 namespace Web::SVG {
 
+struct SVGPaintContext {
+    Gfx::FloatRect viewport;
+    Gfx::FloatRect path_bounding_box;
+    Gfx::AffineTransform transform;
+};
+
 class SVGGradientElement : public SVGElement {
     WEB_PLATFORM_OBJECT(SVGGradientElement, SVGElement);
 
@@ -22,7 +28,7 @@ public:
 
     virtual void parse_attribute(DeprecatedFlyString const& name, DeprecatedString const& value) override;
 
-    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(Gfx::AffineTransform const& transform, Gfx::FloatRect const& object_bounding_box) const = 0;
+    virtual Optional<Gfx::PaintStyle const&> to_gfx_paint_style(SVGPaintContext const&) const = 0;
 
     GradientUnits gradient_units() const;
 

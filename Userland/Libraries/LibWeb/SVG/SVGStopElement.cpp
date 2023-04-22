@@ -23,28 +23,33 @@ void SVGStopElement::parse_attribute(DeprecatedFlyString const& name, Deprecated
 {
     SVGElement::parse_attribute(name, value);
     if (name == SVG::AttributeNames::offset) {
-        m_offset = AttributeParser::parse_length_percentage(value);
-    } else if (name.equals_ignoring_ascii_case("stop-color"sv)) {
-        CSS::Parser::ParsingContext parsing_context { document() };
-        if (auto stop_color = parse_css_value(parsing_context, value, CSS::PropertyID::StopColor)) {
-            // HACK!!!! Pass null to_color() since this never has a layout node!
-            m_color = stop_color->to_color(*layout_node());
-        }
+        m_offset = AttributeParser::parse_number_percentage(value);
     }
 }
 
-// void SVGStopElement::apply_presentational_hints(CSS::StyleProperties&) const
-// {
-// }
-
-Optional<Gfx::Color> SVGStopElement::stop_color() const
+void SVGStopElement::apply_presentational_hints(CSS::StyleProperties& style) const
 {
-    return m_color;
+    CSS::Parser::ParsingContext parsing_context { document() };
+    for_each_attribute([&](auto& name, auto& value) {
+        if (name.equals_ignoring_ascii_case("stop-color"sv)) {
+            CSS::Parser::ParsingContext parsing_context { document() };
+            if (auto stop_color = parse_css_value(parsing_context, value, CSS::PropertyID::StopColor)) {
+                style.set_property(CSS::PropertyID::StopColor, stop_color.release_nonnull());
+            }
+        }
+    });
+}
+
+Gfx::Color SVGStopElement::stop_color() const
+{
+    if (auto css_values = computed_css_values())
+        return css_values->stop_color();
+    return Color::Black;
 }
 
 JS::NonnullGCPtr<SVGAnimatedNumber> SVGStopElement::offset() const
 {
-    VERIFY_NOT_REACHED();
+    TODO();
 }
 
 JS::ThrowCompletionOr<void> SVGStopElement::initialize(JS::Realm& realm)
