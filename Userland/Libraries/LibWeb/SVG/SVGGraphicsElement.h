@@ -39,7 +39,7 @@ public:
 
     Gfx::AffineTransform get_transform() const;
 
-    Optional<Gfx::PaintStyle const&> fill(SVGPaintContext const&) const;
+    Optional<Gfx::PaintStyle const&> fill_paint_style(SVGPaintContext const&) const;
 
 protected:
     SVGGraphicsElement(DOM::Document&, DOM::QualifiedName);

@@ -42,22 +42,19 @@ void SVGGraphicsElement::parse_attribute(DeprecatedFlyString const& name, Deprec
     }
 }
 
-// HACK
-Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill(SVGPaintContext const& paint_context) const
+Optional<Gfx::PaintStyle const&> SVGGraphicsElement::fill_paint_style(SVGPaintContext const& paint_context) const
 {
-    // SUPER HACK:
-    auto fill_value = get_attribute("fill"sv);
-    if (fill_value.starts_with("url("sv)) {
-        auto dom_id = fill_value.substring_view(5, fill_value.length() - 5 - 1);
-        auto maybe_gradient = document().get_element_by_id(dom_id);
-        if (!maybe_gradient) {
-            dbgln("Failed to find gradient: {}", dom_id);
-            return {};
-        }
-        if (is<SVG::SVGGradientElement>(*maybe_gradient)) {
-            auto& gradient = verify_cast<SVG::SVGGradientElement>(*maybe_gradient);
-            return gradient.to_gfx_paint_style(paint_context);
-        }
+    // FIXME: This entire function is an ad-hoc hack:
+    if (!layout_node())
+        return {};
+    auto& fill = layout_node()->computed_values().fill();
+    if (!fill.has_value() || !fill->is_url())
+        return {};
+    auto& url = fill->as_url();
+    auto maybe_gradient = document().get_element_by_id(url.fragment());
+    if (is<SVG::SVGGradientElement>(*maybe_gradient)) {
+        auto& gradient = verify_cast<SVG::SVGGradientElement>(*maybe_gradient);
+        return gradient.to_gfx_paint_style(paint_context);
     }
     return {};
 }
@@ -133,8 +130,10 @@ Optional<Gfx::Color> SVGGraphicsElement::fill_color() const
         return {};
     // FIXME: In the working-draft spec, `fill` is intended to be a shorthand, with `fill-color`
     //        being what we actually want to use. But that's not final or widely supported yet.
-    return layout_node()->computed_values().fill().map([&](Gfx::Color color) {
-        return color.with_alpha(m_fill_opacity.value_or(1) * 255);
+    return layout_node()->computed_values().fill().map([&](auto& paint) -> Gfx::Color {
+        if (!paint.is_color())
+            return Color::Black;
+        return paint.as_color().with_alpha(m_fill_opacity.value_or(1) * 255);
     });
 }
 
@@ -144,7 +143,11 @@ Optional<Gfx::Color> SVGGraphicsElement::stroke_color() const
         return {};
     // FIXME: In the working-draft spec, `stroke` is intended to be a shorthand, with `stroke-color`
     //        being what we actually want to use. But that's not final or widely supported yet.
-    return layout_node()->computed_values().stroke();
+    return layout_node()->computed_values().stroke().map([](auto& paint) -> Gfx::Color {
+        if (!paint.is_color())
+            return Color::Black;
+        return paint.as_color();
+    });
 }
 
 Optional<float> SVGGraphicsElement::stroke_width() const
