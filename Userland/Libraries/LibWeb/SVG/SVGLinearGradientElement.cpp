@@ -46,6 +46,7 @@ void SVGLinearGradientElement::parse_attribute(DeprecatedFlyString const& name, 
     }
 }
 
+// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute
 NumberPercentage SVGLinearGradientElement::start_x() const
 {
     if (m_x1.has_value())
@@ -56,6 +57,7 @@ NumberPercentage SVGLinearGradientElement::start_x() const
     return NumberPercentage::create_percentage(0);
 }
 
+// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementY1Attribute
 NumberPercentage SVGLinearGradientElement::start_y() const
 {
     if (m_y1.has_value())
@@ -66,6 +68,7 @@ NumberPercentage SVGLinearGradientElement::start_y() const
     return NumberPercentage::create_percentage(0);
 }
 
+// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX2Attribute
 NumberPercentage SVGLinearGradientElement::end_x() const
 {
     if (m_x2.has_value())
@@ -76,6 +79,7 @@ NumberPercentage SVGLinearGradientElement::end_x() const
     return NumberPercentage::create_percentage(100);
 }
 
+// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementY2Attribute
 NumberPercentage SVGLinearGradientElement::end_y() const
 {
     if (m_y2.has_value())
@@ -89,32 +93,45 @@ NumberPercentage SVGLinearGradientElement::end_y() const
 Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(SVGPaintContext const& paint_context) const
 {
     auto units = gradient_units();
+    // FIXME: Resolve percentages properly
+    Gfx::FloatPoint start_point {};
+    Gfx::FloatPoint end_point {};
+    // https://svgwg.org/svg2-draft/pservers.html#LinearGradientElementGradientUnitsAttribute
+    if (units == GradientUnits::ObjectBoundingBox) {
+        // If gradientUnits="objectBoundingBox", the user coordinate system for attributes ‘x1’, ‘y1’, ‘x2’ and ‘y2’
+        // is established using the bounding box of the element to which the gradient is applied (see Object bounding
+        // box units) and then applying the transform specified by attribute ‘gradientTransform’. Percentages represent
+        // values relative to the bounding box for the object.
+        // Note: For gradientUnits="objectBoundingBox" both "100%" and "1" are treated the same.
+        start_point = paint_context.path_bounding_box.location() + Gfx::FloatPoint { start_x().value() * paint_context.path_bounding_box.width(), start_y().value() * paint_context.path_bounding_box.height() };
+        end_point = paint_context.path_bounding_box.location() + Gfx::FloatPoint { end_x().value() * paint_context.path_bounding_box.width(), end_y().value() * paint_context.path_bounding_box.height() };
+    } else {
+        // GradientUnits::UserSpaceOnUse
+        // If gradientUnits="userSpaceOnUse", ‘x1’, ‘y1’, ‘x2’, and ‘y2’ represent values in the coordinate system
+        // that results from taking the current user coordinate system in place at the time when the gradient element
+        // is referenced (i.e., the user coordinate system for the element referencing the gradient element via a
+        // fill or stroke property) and then applying the transform specified by attribute ‘gradientTransform’.
+        // Percentages represent values relative to the current SVG viewport.
+        start_point = Gfx::FloatPoint {
+            start_x().resolve_relative_to(paint_context.viewport.width()),
+            start_y().resolve_relative_to(paint_context.viewport.height()),
+        };
+        end_point = Gfx::FloatPoint {
+            end_x().resolve_relative_to(paint_context.viewport.width()),
+            end_y().resolve_relative_to(paint_context.viewport.height()),
+        };
+    }
+
     if (!m_paint_style) {
-        // FIXME: Resolve percentages properly
-        Gfx::FloatPoint start_point {};
-        Gfx::FloatPoint end_point {};
-        if (units == GradientUnits::ObjectBoundingBox) {
-            // For gradientUnits="objectBoundingBox" both "100%" and "1" are treated the same.
-            start_point = paint_context.path_bounding_box.location() + Gfx::FloatPoint { start_x().value() * paint_context.path_bounding_box.width(), start_y().value() * paint_context.path_bounding_box.height() };
-            end_point = paint_context.path_bounding_box.location() + Gfx::FloatPoint { end_x().value() * paint_context.path_bounding_box.width(), end_y().value() * paint_context.path_bounding_box.height() };
-        } else {
-            // GradientUnits::UserSpaceOnUse
-            start_point = Gfx::FloatPoint {
-                start_x().resolve_relative_to(paint_context.viewport.width()),
-                start_y().resolve_relative_to(paint_context.viewport.height()),
-            };
-            end_point = Gfx::FloatPoint {
-                end_x().resolve_relative_to(paint_context.viewport.width()),
-                end_y().resolve_relative_to(paint_context.viewport.height()),
-            };
-        }
         m_paint_style = Gfx::SVGLinearGradientPaintStyle::create(start_point, end_point)
                             .release_value_but_fixme_should_propagate_errors();
-
+        // FIXME: Update this if DOM changes?
         for_each_color_stop([&](auto& stop) {
-            dbgln("Stop value {}", stop.stop_offset().value());
             m_paint_style->add_color_stop(stop.stop_offset().value(), stop.stop_color()).release_value_but_fixme_should_propagate_errors();
         });
+    } else {
+        m_paint_style->set_start_point(start_point);
+        m_paint_style->set_end_point(end_point);
     }
 
     auto gradient_affine_transform = gradient_transform().value_or(Gfx::AffineTransform {});
@@ -131,25 +148,21 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(SV
     return *m_paint_style;
 }
 
-// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX1Attribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGLinearGradientElement::x1() const
 {
     TODO();
 }
 
-// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementY1Attribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGLinearGradientElement::y1() const
 {
     TODO();
 }
 
-// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementX2Attribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGLinearGradientElement::x2() const
 {
     TODO();
 }
 
-// https://www.w3.org/TR/SVG11/pservers.html#LinearGradientElementY2Attribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGLinearGradientElement::y2() const
 {
     TODO();

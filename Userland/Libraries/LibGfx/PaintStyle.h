@@ -265,6 +265,16 @@ public:
         return adopt_nonnull_ref_or_enomem(new (nothrow) SVGLinearGradientPaintStyle(p0, p1));
     }
 
+    void set_start_point(FloatPoint start_point)
+    {
+        m_p0 = start_point;
+    }
+
+    void set_end_point(FloatPoint end_point)
+    {
+        m_p1 = end_point;
+    }
+
 private:
     virtual void paint(IntRect physical_bounding_box, PaintFunction paint) const override;
 

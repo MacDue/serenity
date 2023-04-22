@@ -50,7 +50,7 @@ private:
     Optional<NumberPercentage> m_x2;
     Optional<NumberPercentage> m_y2;
 
-    mutable RefPtr<Gfx::SVGGradientPaintStyle> m_paint_style;
+    mutable RefPtr<Gfx::SVGLinearGradientPaintStyle> m_paint_style;
 };
 
 }

@@ -339,6 +339,8 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
     if (color_stops().size() < 2)
         return paint([this](IntPoint) { return color_stops().first().color; });
 
+    // Note: The scaling is removed so enough points on the gradient line are generated.
+    // Otherwise, if you scale a tiny path the gradient looks pixelated.
     FloatPoint scale { 1, 1 };
     auto sample_transform = gradient_transform().map([&](auto& transform) {
         if (auto inverse = transform.inverse(); inverse.has_value()) {
