@@ -52,8 +52,13 @@ Optional<Gfx::AffineTransform> SVGGradientElement::gradient_transform() const
 JS::GCPtr<SVGGradientElement const> SVGGradientElement::xlink_href() const
 {
     // FIXME: This entire function is an ad-hoc hack!
-    if (auto href = get_attribute("href"); href.starts_with('#')) {
-        auto element = document().get_element_by_id(href.substring_view(1));
+    // It can only resolve #<ids> in the same document.
+    if (auto href = get_attribute("href"); !href.is_empty()) {
+        auto url = document().parse_url(href);
+        auto id = url.fragment();
+        if (id.is_empty())
+            return {};
+        auto element = document().get_element_by_id(id);
         if (!element)
             return {};
         if (!is<SVGGradientElement>(*element))

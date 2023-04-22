@@ -92,6 +92,7 @@ enum class GradientUnits {
     ObjectBoundingBox,
     UserSpaceOnUse
 };
+
 class NumberPercentage {
 public:
     NumberPercentage(float value, bool is_percentage)

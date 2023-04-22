@@ -243,7 +243,7 @@ private:
     float m_end_radius { 0.0f };
 };
 
-// The following paint styles implement the gradients required for the SVGs
+// The following paint styles implement the gradients required for SVGs
 
 class SVGGradientPaintStyle : public GradientPaintStyle {
 public:
