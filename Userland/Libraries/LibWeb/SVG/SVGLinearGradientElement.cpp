@@ -134,19 +134,7 @@ Optional<Gfx::PaintStyle const&> SVGLinearGradientElement::to_gfx_paint_style(SV
         m_paint_style->set_end_point(end_point);
     }
 
-    auto gradient_affine_transform = gradient_transform().value_or(Gfx::AffineTransform {});
-
-    if (units == GradientUnits::ObjectBoundingBox) {
-        // Adjust transform to take place in the coordinate system defined by the bounding box:
-        gradient_affine_transform = Gfx::AffineTransform {}
-                                        .translate(paint_context.path_bounding_box.location())
-                                        .scale(paint_context.path_bounding_box.width(), paint_context.path_bounding_box.height())
-                                        .multiply(gradient_affine_transform)
-                                        .scale(1 / paint_context.path_bounding_box.width(), 1 / paint_context.path_bounding_box.height())
-                                        .translate(-paint_context.path_bounding_box.location());
-    }
-
-    m_paint_style->set_gradient_transform(Gfx::AffineTransform { paint_context.transform }.multiply(gradient_affine_transform));
+    m_paint_style->set_gradient_transform(gradient_paint_transform(paint_context));
     return *m_paint_style;
 }
 

@@ -49,6 +49,22 @@ Optional<Gfx::AffineTransform> SVGGradientElement::gradient_transform() const
     return {};
 }
 
+// The gradient transform, appropriately scaled and combined with the paint transform.
+Gfx::AffineTransform SVGGradientElement::gradient_paint_transform(SVGPaintContext const& paint_context) const
+{
+    auto transform = gradient_transform().value_or(Gfx::AffineTransform {});
+    if (gradient_units() == GradientUnits::ObjectBoundingBox) {
+        // Adjust transform to take place in the coordinate system defined by the bounding box:
+        transform = Gfx::AffineTransform {}
+                        .translate(paint_context.path_bounding_box.location())
+                        .scale(paint_context.path_bounding_box.width(), paint_context.path_bounding_box.height())
+                        .multiply(transform)
+                        .scale(1 / paint_context.path_bounding_box.width(), 1 / paint_context.path_bounding_box.height())
+                        .translate(-paint_context.path_bounding_box.location());
+    }
+    return Gfx::AffineTransform { paint_context.transform }.multiply(transform);
+}
+
 JS::GCPtr<SVGGradientElement const> SVGGradientElement::xlink_href() const
 {
     // FIXME: This entire function is an ad-hoc hack!

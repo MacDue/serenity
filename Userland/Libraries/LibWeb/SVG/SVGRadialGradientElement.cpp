@@ -122,6 +122,28 @@ NumberPercentage SVGRadialGradientElement::end_circle_radius() const
     return NumberPercentage::create_percentage(50);
 }
 
+Optional<Gfx::PaintStyle const&> SVGRadialGradientElement::to_gfx_paint_style(SVGPaintContext const& paint_context) const
+{
+    auto units = gradient_units();
+    // Gfx::FloatPoint start_center;
+    // float start_radius = 0.0f;
+    // Gfx::FloatPoint end_center;
+    // float end_radius = 0.0f;
+
+    if (units == GradientUnits::ObjectBoundingBox) {
+
+    } else {
+    }
+
+    if (!m_paint_style) {
+
+    } else {
+    }
+
+    m_paint_style->set_gradient_transform(gradient_paint_transform(paint_context));
+    return *m_paint_style;
+}
+
 JS::NonnullGCPtr<SVGAnimatedLength> SVGRadialGradientElement::cx() const
 {
     TODO();
