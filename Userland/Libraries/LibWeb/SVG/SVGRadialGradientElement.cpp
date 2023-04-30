@@ -49,6 +49,79 @@ void SVGRadialGradientElement::parse_attribute(DeprecatedFlyString const& name, 
     }
 }
 
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementFXAttribute
+NumberPercentage SVGRadialGradientElement::start_circle_x() const
+{
+    if (m_fx.has_value())
+        return *m_fx;
+    // If the element references an element that specifies a value for 'fx', then the value of 'fx' is
+    // inherited from the referenced element.
+    if (auto href = radial_gradient_xlink_href(); href && href->has_attribute(SVG::AttributeNames::fx))
+        return href->start_circle_x();
+    // If attribute ‘fx’ is not specified, ‘fx’ will coincide with the presentational value of ‘cx’ for
+    // the element whether the value for 'cx' was inherited or not.
+    return end_circle_x();
+}
+
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementFYAttribute
+NumberPercentage SVGRadialGradientElement::start_circle_y() const
+{
+    if (m_fy.has_value())
+        return *m_fy;
+    // If the element references an element that specifies a value for 'fy', then the value of 'fy' is
+    // inherited from the referenced element.
+    if (auto href = radial_gradient_xlink_href())
+        return href->start_circle_y();
+    // If attribute ‘fy’ is not specified, ‘fy’ will coincide with the presentational value of ‘cy’ for
+    // the element whether the value for 'cy' was inherited or not.
+    return end_circle_y();
+}
+
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementFRAttribute
+NumberPercentage SVGRadialGradientElement::start_circle_radius() const
+{
+    // Note: A negative value is an error.
+    if (m_fr.has_value() && m_fr->value() >= 0)
+        return *m_fr;
+    // if the element references an element that specifies a value for 'fr', then the value of
+    // 'fr' is inherited from the referenced element.
+    if (auto href = radial_gradient_xlink_href())
+        return href->start_circle_radius();
+    // If the attribute is not specified, the effect is as if a value of '0%' were specified.
+    return NumberPercentage::create_percentage(0);
+}
+
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementCXAttribute
+NumberPercentage SVGRadialGradientElement::end_circle_x() const
+{
+    if (m_cx.has_value())
+        return *m_cx;
+    if (auto href = radial_gradient_xlink_href())
+        return href->end_circle_x();
+    return NumberPercentage::create_percentage(50);
+}
+
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementCYAttribute
+NumberPercentage SVGRadialGradientElement::end_circle_y() const
+{
+    if (m_cy.has_value())
+        return *m_cy;
+    if (auto href = radial_gradient_xlink_href())
+        return href->end_circle_y();
+    return NumberPercentage::create_percentage(50);
+}
+
+// https://svgwg.org/svg2-draft/pservers.html#RadialGradientElementRAttribute
+NumberPercentage SVGRadialGradientElement::end_circle_radius() const
+{
+    // Note: A negative value is an error.
+    if (m_r.has_value() && m_r->value() >= 0)
+        return *m_r;
+    if (auto href = radial_gradient_xlink_href())
+        return href->end_circle_radius();
+    return NumberPercentage::create_percentage(50);
+}
+
 JS::NonnullGCPtr<SVGAnimatedLength> SVGRadialGradientElement::cx() const
 {
     TODO();
