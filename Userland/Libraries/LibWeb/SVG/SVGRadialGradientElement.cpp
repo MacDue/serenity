@@ -56,7 +56,7 @@ NumberPercentage SVGRadialGradientElement::start_circle_x() const
         return *m_fx;
     // If the element references an element that specifies a value for 'fx', then the value of 'fx' is
     // inherited from the referenced element.
-    if (auto href = radial_gradient_xlink_href(); href && href->has_attribute(SVG::AttributeNames::fx))
+    if (auto href = radial_gradient_xlink_href())
         return href->start_circle_x();
     // If attribute ‘fx’ is not specified, ‘fx’ will coincide with the presentational value of ‘cx’ for
     // the element whether the value for 'cx' was inherited or not.
