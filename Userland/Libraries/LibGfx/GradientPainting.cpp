@@ -339,6 +339,20 @@ void CanvasLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintF
     paint(make_sample_non_relative(physical_bounding_box.location(), linear_gradient.sample_function()));
 }
 
+void SVGGradientPaintStyle::set_gradient_transform(AffineTransform transform)
+{
+    // Note: The scaling is removed so enough points on the gradient line are generated.
+    // Otherwise, if you scale a tiny path the gradient looks pixelated.
+    m_scale = 1.0f;
+    if (auto inverse = transform.inverse(); inverse.has_value()) {
+        auto transform_scale = transform.scale();
+        m_scale = max(transform_scale.x(), transform_scale.y());
+        m_inverse_transform = AffineTransform {}.scale(m_scale, m_scale).multiply(*inverse);
+    } else {
+        m_inverse_transform = OptionalNone {};
+    }
+}
+
 void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunction paint) const
 {
     if (color_stops().is_empty())
@@ -350,23 +364,15 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
     if (color_stops().size() < 2)
         return paint([this](IntPoint) { return color_stops().first().color; });
 
-    // Note: The scaling is removed so enough points on the gradient line are generated.
-    // Otherwise, if you scale a tiny path the gradient looks pixelated.
-    FloatPoint scale { 1, 1 };
-    auto sample_transform = gradient_transform().map([&](auto& transform) {
-        if (auto inverse = transform.inverse(); inverse.has_value()) {
-            scale = transform.scale();
-            return Gfx::AffineTransform {}.scale(scale).multiply(*inverse);
-        }
-        return Gfx::AffineTransform {};
-    });
-
-    auto linear_gradient = make_linear_gradient_between_two_points(m_p0.scaled(scale), m_p1.scaled(scale), color_stops(), repeat_length());
+    float scale = gradient_transform_scale();
+    auto linear_gradient = make_linear_gradient_between_two_points(
+        m_p0.scaled(scale, scale), m_p1.scaled(scale, scale),
+        color_stops(), repeat_length());
 
     paint([&, sampler = linear_gradient.sample_function()](auto point) {
         point.translate_by(physical_bounding_box.location());
-        if (sample_transform.has_value())
-            point = sample_transform->map(point);
+        if (auto inverse_transform = scale_adjusted_inverse_gradient_transform(); inverse_transform.has_value())
+            point = inverse_transform->map(point);
 
         return sampler(point);
     });
@@ -387,24 +393,8 @@ void CanvasConicGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFu
     paint(make_sample_non_relative(physical_bounding_box.location(), conic_gradient.sample_function()));
 }
 
-void CanvasRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunction paint) const
+static auto create_radial_gradient_between_two_circles(Gfx::FloatPoint start_center, float start_radius, Gfx::FloatPoint end_center, float end_radius, ReadonlySpan<ColorStop> color_stops, Optional<float> repeat_length)
 {
-    // 1. If x0 = x1 and y0 = y1 and r0 = r1, then the radial gradient must paint nothing. Return.
-    if (m_start_center == m_end_center && m_start_radius == m_end_radius)
-        return;
-    if (color_stops().is_empty())
-        return;
-    if (color_stops().size() < 2)
-        return paint([this](IntPoint) { return color_stops().first().color; });
-
-    auto start_radius = m_start_radius;
-    auto start_center = m_start_center;
-    auto end_radius = m_end_radius;
-    auto end_center = m_end_center;
-
-    if (end_radius == 0 && start_radius == 0)
-        return;
-
     if (fabs(start_radius - end_radius) < 1)
         start_radius += 1;
 
@@ -442,8 +432,8 @@ void CanvasRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintF
     }
 
     // This is just an approximate upperbound (the gradient line class will shorten this if necessary).
-    int gradient_length = AK::ceil(center_dist + end_radius + start_radius);
-    GradientLine gradient_line(gradient_length, color_stops(), repeat_length(), UsePremultipliedAlpha::No);
+    int gradient_length = 256; // AK::ceil(center_dist + end_radius + start_radius);
+    GradientLine gradient_line(gradient_length, color_stops, repeat_length, UsePremultipliedAlpha::No);
 
     auto radius2 = end_radius * end_radius;
     center_delta = end_center - start_point;
@@ -459,7 +449,7 @@ void CanvasRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintF
     //      - Start circle larger than end circle (outside end circle)
     //      - Start circle or end circle radius == 0
 
-    Gradient radial_gradient {
+    return Gradient {
         move(gradient_line),
         [=](int x, int y) {
             auto get_gradient_location = [&] {
@@ -491,8 +481,41 @@ void CanvasRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintF
             return loc * gradient_length;
         }
     };
+}
 
+void CanvasRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunction paint) const
+{
+    // 1. If x0 = x1 and y0 = y1 and r0 = r1, then the radial gradient must paint nothing. Return.
+    if (m_start_center == m_end_center && m_start_radius == m_end_radius)
+        return;
+    if (color_stops().is_empty())
+        return;
+    if (color_stops().size() < 2)
+        return paint([this](IntPoint) { return color_stops().first().color; });
+    if (m_end_radius == 0 && m_start_radius == 0)
+        return;
+    auto radial_gradient = create_radial_gradient_between_two_circles(m_start_center, m_start_radius, m_end_center, m_end_radius, color_stops(), repeat_length());
     paint(make_sample_non_relative(physical_bounding_box.location(), radial_gradient.sample_function()));
+}
+
+void SVGRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunction paint) const
+{
+    if (color_stops().is_empty())
+        return;
+    if (color_stops().size() < 2 || (m_end_radius == 0 && m_start_radius == 0))
+        return paint([this](IntPoint) { return color_stops().last().color; });
+
+    float scale = gradient_transform_scale();
+    auto radial_gradient = create_radial_gradient_between_two_circles(
+        m_start_center.scaled(scale, scale), m_start_radius * scale, m_end_center.scaled(scale, scale), m_end_radius * scale,
+        color_stops(), repeat_length());
+
+    paint([&, sampler = radial_gradient.sample_function()](auto point) {
+        point.translate_by(physical_bounding_box.location());
+        if (auto inverse_transform = scale_adjusted_inverse_gradient_transform(); inverse_transform.has_value())
+            point = inverse_transform->map(point);
+        return sampler(point);
+    });
 }
 
 }

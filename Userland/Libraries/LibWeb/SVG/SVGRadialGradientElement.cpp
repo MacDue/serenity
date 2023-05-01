@@ -26,7 +26,7 @@ void SVGRadialGradientElement::parse_attribute(DeprecatedFlyString const& name, 
 {
     SVGGradientElement::parse_attribute(name, value);
 
-    // FIXME: These are <length> or <coordinate> in the spec, but allow examples seem to allow percentages
+    // FIXME: These are <length> or <coordinate> in the spec, but all examples seem to allow percentages
     // and unitless values.
     if (name == SVG::AttributeNames::cx) {
         m_cx = AttributeParser::parse_number_percentage(value);
@@ -125,21 +125,54 @@ NumberPercentage SVGRadialGradientElement::end_circle_radius() const
 Optional<Gfx::PaintStyle const&> SVGRadialGradientElement::to_gfx_paint_style(SVGPaintContext const& paint_context) const
 {
     auto units = gradient_units();
-    // Gfx::FloatPoint start_center;
-    // float start_radius = 0.0f;
-    // Gfx::FloatPoint end_center;
-    // float end_radius = 0.0f;
+    Gfx::FloatPoint start_center;
+    float start_radius = 0.0f;
+    Gfx::FloatPoint end_center;
+    float end_radius = 0.0f;
 
     if (units == GradientUnits::ObjectBoundingBox) {
-
+        // If gradientUnits="objectBoundingBox", the user coordinate system for attributes ‘cx’, ‘cy’, ‘r’, ‘fx’, ‘fy’, and ‘fr’
+        // is established using the bounding box of the element to which the gradient is applied (see Object bounding box units)
+        // and then applying the transform specified by attribute ‘gradientTransform’. Percentages represent values relative
+        // to the bounding box for the object.
+        start_center = Gfx::FloatPoint {
+            start_circle_x().value(), start_circle_y().value()
+        };
+        start_radius = start_circle_radius().value();
+        end_center = paint_context.path_bounding_box.location() + Gfx::FloatPoint { end_circle_x().value(), end_circle_y().value() };
+        end_radius = end_circle_radius().value();
     } else {
+        // GradientUnits::UserSpaceOnUse
+        // If gradientUnits="userSpaceOnUse", ‘cx’, ‘cy’, ‘r’, ‘fx’, ‘fy’, and ‘fr’ represent values in the coordinate system
+        // that results from taking the current user coordinate system in place at the time when the gradient element is
+        // referenced (i.e., the user coordinate system for the element referencing the gradient element via a fill or stroke property)
+        // and then applying the transform specified by attribute ‘gradientTransform’.
+        // Percentages represent values relative to the current SVG viewport.
+        start_center = Gfx::FloatPoint {
+            start_circle_x().resolve_relative_to(paint_context.viewport.width()),
+            start_circle_y().resolve_relative_to(paint_context.viewport.height()),
+        };
+        // FIXME: Where in the spec does it say what axis the radius is relative to?
+        start_radius = start_circle_radius().resolve_relative_to(paint_context.viewport.width());
+        end_center = Gfx::FloatPoint {
+            end_circle_x().resolve_relative_to(paint_context.viewport.width()),
+            end_circle_y().resolve_relative_to(paint_context.viewport.height()),
+        };
+        end_radius = end_circle_radius().resolve_relative_to(paint_context.viewport.width());
     }
 
     if (!m_paint_style) {
-
+        m_paint_style = Gfx::SVGRadialGradientPaintStyle::create(start_center, start_radius, end_center, end_radius)
+                            .release_value_but_fixme_should_propagate_errors();
+        // FIXME: Update stops in DOM changes:
+        add_color_stops(*m_paint_style);
     } else {
+        m_paint_style->set_start_center(start_center);
+        m_paint_style->set_start_radius(start_radius);
+        m_paint_style->set_end_center(end_center);
+        m_paint_style->set_end_radius(end_radius);
     }
-
+    dbgln("WHAT? {}", gradient_paint_transform(paint_context));
     m_paint_style->set_gradient_transform(gradient_paint_transform(paint_context));
     return *m_paint_style;
 }

@@ -33,10 +33,15 @@ void SVGGradientElement::parse_attribute(DeprecatedFlyString const& name, Deprec
 
 GradientUnits SVGGradientElement::gradient_units() const
 {
-    if (m_gradient_units.has_value())
+    if (m_gradient_units.has_value()) {
+        dbgln("A");
         return *m_gradient_units;
-    if (auto href = xlink_href())
+    }
+    if (auto href = xlink_href()) {
+        dbgln("B");
         return href->gradient_units();
+    }
+    dbgln("C");
     return GradientUnits::ObjectBoundingBox;
 }
 
@@ -55,14 +60,27 @@ Gfx::AffineTransform SVGGradientElement::gradient_paint_transform(SVGPaintContex
     auto transform = gradient_transform().value_or(Gfx::AffineTransform {});
     if (gradient_units() == GradientUnits::ObjectBoundingBox) {
         // Adjust transform to take place in the coordinate system defined by the bounding box:
-        transform = Gfx::AffineTransform {}
-                        .translate(paint_context.path_bounding_box.location())
-                        .scale(paint_context.path_bounding_box.width(), paint_context.path_bounding_box.height())
-                        .multiply(transform)
-                        .scale(1 / paint_context.path_bounding_box.width(), 1 / paint_context.path_bounding_box.height())
-                        .translate(-paint_context.path_bounding_box.location());
+        return Gfx::AffineTransform { paint_context.transform }
+            .translate(paint_context.path_bounding_box.location())
+            .scale(paint_context.path_bounding_box.width(), paint_context.path_bounding_box.height())
+            .multiply(transform);
     }
     return Gfx::AffineTransform { paint_context.transform }.multiply(transform);
+}
+
+void SVGGradientElement::add_color_stops(Gfx::SVGGradientPaintStyle& paint_style) const
+{
+    for_each_color_stop([&](auto& stop) {
+        // https://svgwg.org/svg2-draft/pservers.html#StopNotes
+        // Gradient offset values less than 0 (or less than 0%) are rounded up to 0%.
+        // Gradient offset values greater than 1 (or greater than 100%) are rounded down to 100%.
+        float stop_offset = AK::clamp(stop.stop_offset().value(), 0.0f, 1.0f);
+        // FIXME: Each gradient offset value is required to be equal to or greater than the previous gradient
+        // stop's offset value. If a given gradient stop's offset value is not equal to or greater than all
+        // previous offset values, then the offset value is adjusted to be equal to the largest of all previous
+        // offset values.
+        paint_style.add_color_stop(stop_offset, stop.stop_color()).release_value_but_fixme_should_propagate_errors();
+    });
 }
 
 JS::GCPtr<SVGGradientElement const> SVGGradientElement::xlink_href() const
