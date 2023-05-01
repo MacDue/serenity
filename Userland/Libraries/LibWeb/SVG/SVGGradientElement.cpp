@@ -33,15 +33,10 @@ void SVGGradientElement::parse_attribute(DeprecatedFlyString const& name, Deprec
 
 GradientUnits SVGGradientElement::gradient_units() const
 {
-    if (m_gradient_units.has_value()) {
-        dbgln("A");
+    if (m_gradient_units.has_value())
         return *m_gradient_units;
-    }
-    if (auto href = xlink_href()) {
-        dbgln("B");
+    if (auto href = xlink_href())
         return href->gradient_units();
-    }
-    dbgln("C");
     return GradientUnits::ObjectBoundingBox;
 }
 
