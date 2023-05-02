@@ -153,9 +153,10 @@ struct Gradient {
         m_gradient_line.paint_into_physical_rect(painter, rect, m_transform_function);
     }
 
-    PaintStyle::SamplerFunction sample_function()
+    template<typename CoordinateType = int>
+    auto sample_function()
     {
-        return [this](IntPoint point) {
+        return [this](Point<CoordinateType> point) {
             return m_gradient_line.sample_color(m_transform_function(point.x(), point.y()));
         };
     }
@@ -369,8 +370,8 @@ void SVGLinearGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
         m_p0.scaled(scale, scale), m_p1.scaled(scale, scale),
         color_stops(), repeat_length());
 
-    paint([&, sampler = linear_gradient.sample_function()](auto point) {
-        point.translate_by(physical_bounding_box.location());
+    paint([&, sampler = linear_gradient.sample_function<float>()](IntPoint target_point) {
+        auto point = target_point.translated(physical_bounding_box.location()).to_type<float>();
         if (auto inverse_transform = scale_adjusted_inverse_gradient_transform(); inverse_transform.has_value())
             point = inverse_transform->map(point);
 
@@ -451,7 +452,7 @@ static auto create_radial_gradient_between_two_circles(Gfx::FloatPoint start_cen
 
     return Gradient {
         move(gradient_line),
-        [=](int x, int y) {
+        [=](float x, float y) {
             auto get_gradient_location = [&] {
                 FloatPoint point { x, y };
                 auto dist = point.distance_from(start_point);
@@ -510,8 +511,8 @@ void SVGRadialGradientPaintStyle::paint(IntRect physical_bounding_box, PaintFunc
         m_start_center.scaled(scale, scale), m_start_radius * scale, m_end_center.scaled(scale, scale), m_end_radius * scale,
         color_stops(), repeat_length());
 
-    paint([&, sampler = radial_gradient.sample_function()](auto point) {
-        point.translate_by(physical_bounding_box.location());
+    paint([&, sampler = radial_gradient.sample_function<float>()](IntPoint target_point) {
+        auto point = target_point.translated(physical_bounding_box.location()).to_type<float>();
         if (auto inverse_transform = scale_adjusted_inverse_gradient_transform(); inverse_transform.has_value())
             point = inverse_transform->map(point);
         return sampler(point);
