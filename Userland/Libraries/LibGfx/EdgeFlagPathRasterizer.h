@@ -22,7 +22,7 @@ private:
     void draw_line(Gfx::FloatPoint, Gfx::FloatPoint);
 
     Gfx::IntSize m_size;
-    RefPtr<Gfx::Bitmap> m_data;
+    Vector<u8> m_data;
 };
 
 }

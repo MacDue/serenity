@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <AK/Array.h>
+#include <AK/Types.h>
 #include <LibGfx/EdgeFlagPathRasterizer.h>
 #include <LibGfx/Painter.h>
 
@@ -12,29 +14,27 @@ namespace Gfx {
 EdgeFlagPathRasterizer::EdgeFlagPathRasterizer(Gfx::IntSize size)
     : m_size(size)
 {
-    m_data = MUST(Gfx::Bitmap::create(BitmapFormat::BGRA8888, size.scaled_by(8, 8)));
+    m_data.resize(m_size.width() * m_size.height());
 }
 
 RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer::accumulate()
 {
-    for (int y = 0; y < m_data->height(); y++) {
-        auto* line = m_data->scanline(y);
-        u8 pen_alpha = 0;
-        for (int x = 0; x < m_data->width(); x++) {
-            pen_alpha ^= Color::from_argb(line[x]).alpha();
-            line[x] = Color(Color::Black).with_alpha(pen_alpha).value();
-        }
-    }
+    // for (int y = 0; y < m_data->height(); y++) {
+    //     auto* line = m_data->scanline(y);
+    //     u8 pen_alpha = 0;
+    //     for (int x = 0; x < m_data->width(); x++) {
+    //         pen_alpha ^= Color::from_argb(line[x]).alpha();
+    //         line[x] = Color(Color::Black).with_alpha(pen_alpha).value();
+    //     }
+    // }
     auto result = MUST(Gfx::Bitmap::create(BitmapFormat::BGRA8888, m_size));
-    for (int y = 0; y < m_data->height(); y += 8) {
-        for (int x = 0; x < m_data->width(); x += 8) {
-            u32 area = 0;
-            for (int sy = y; sy < y + 8; sy++) {
-                for (int sx = x; sx < x + 8; sx++) {
-                    area += m_data->get_pixel(sx, sy).alpha();
-                }
-            }
-            result->set_pixel(x / 8, y / 8, Color(Color::Black).with_alpha(area / (8 * 8)));
+    for (int y = 0; y < m_size.height(); y += 1) {
+        u8 sample = 0;
+        for (int x = 0; x < m_size.width(); x += 1) {
+            sample ^= m_data[y * m_size.width() + x];
+            auto coverage = popcount(sample);
+            auto alpha = clamp(coverage << 5, 0, 255);
+            result->set_pixel(x, y, Color(Color::Black).with_alpha(alpha));
         }
     }
     return result;
@@ -42,7 +42,6 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer::accumulate()
 
 void EdgeFlagPathRasterizer::draw_path(Gfx::Path& path)
 {
-    Gfx::Painter painter(*m_data);
     for (auto& line : path.split_lines())
         draw_line(line.from, line.to);
 }
@@ -59,20 +58,26 @@ void EdgeFlagPathRasterizer::draw_line(Gfx::FloatPoint p0, Gfx::FloatPoint p1)
         return;
     }
 
-    auto int_p0 = p0.scaled(8, 8).to_type<int>();
-    auto int_p1 = p1.scaled(8, 8).to_type<int>();
+    p0.scale_by(1, 8);
+    p1.scale_by(1, 8);
 
-    if (int_p0.y() > int_p1.y())
-        swap(int_p0, int_p1);
+    Array offsets { 0.25f, 0.875f, 0.5f, 0.125f, 0.75f, 0.375f, 0.0f, 0.625f };
+    if (p0.y() > p1.y())
+        swap(p0, p1);
 
-    int const dx = int_p1.x() - int_p0.x();
-    int const dy = int_p1.y() - int_p0.y();
-    float dxdy = float(dx) / dy;
+    auto dx = p1.x() - p0.x();
+    auto dy = p1.y() - p0.y();
+    float dxdy = dx / dy;
 
-    float x = int_p0.x();
-    for (int y = int_p0.y(); y < int_p1.y(); ++y) {
-        if (x < m_data->width())
-            m_data->set_pixel(x, y, Color::Black);
+    float x = p0.x();
+    for (int y = p0.y(); y < p1.y(); y++) {
+        int y_sub = y % 8;
+        int y_bit = y / 8;
+        int xi = (int)(x + offsets[y_sub]);
+        u8 sample = 1 << y_sub;
+        int idx = y_bit * m_size.width() + xi;
+        if (idx < (int)m_data.size())
+            m_data[idx] ^= sample;
         x += dxdy;
     }
 }
