@@ -75,16 +75,28 @@ void EdgeFlagPathRasterizer::draw_line(Gfx::FloatPoint p0, Gfx::FloatPoint p1)
     if (p0.y() > p1.y())
         swap(p0, p1);
 
-    auto dx = p1.x() - p0.x();
-    auto dy = p1.y() - p0.y();
-    if (dy == 0)
+    if (p0.y() == p1.y())
         return;
 
-    float dxdy = float(dx) / dy;
+    // p1.translate_by(0, 10);
+
+    auto dx = p1.x() - p0.x();
+    auto dy = p1.y() - p0.y();
+
+    double dxdy = double(dx) / dy;
+
+    // if (dx >= dy)
+    // return;
+
+    // if (p0.y() > 70)
+    //   return;
+
+    dbgln("{}", dxdy);
 
     // dbgln("foo {}", dxdy);
 
-    float x = p0.x();
+    double x = p0.x();
+    // if
     for (int y = p0.y(); y < p1.y(); y++) {
         int y_sub = y % 8;
         int y_bit = y / 8;
