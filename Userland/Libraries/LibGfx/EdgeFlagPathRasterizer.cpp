@@ -9,10 +9,14 @@
 #include <LibGfx/EdgeFlagPathRasterizer.h>
 #include <LibGfx/Painter.h>
 
+// This a very naive implementation of edge-flag scanline AA.
+// The paper lists many possible optimizations, maybe implement one? (FIXME!)
+// https://mlab.taik.fi/~kkallio/antialiasing/EdgeFlagAA.pdf
+
 namespace Gfx {
 
 EdgeFlagPathRasterizer::EdgeFlagPathRasterizer(Gfx::IntSize size)
-    : m_size(size)
+    : m_size(size.width() + 10, size.height() + 10)
 {
     m_data.resize(m_size.width() * m_size.height());
 }
@@ -48,15 +52,21 @@ void EdgeFlagPathRasterizer::draw_path(Gfx::Path& path)
 
 void EdgeFlagPathRasterizer::draw_line(Gfx::FloatPoint p0, Gfx::FloatPoint p1)
 {
-    if (p0.x() < 0.f || p0.y() < 0.f || p0.x() > m_size.width() || p0.y() > m_size.height()) {
-        dbgln("!P0({},{})", p0.x(), p0.y());
-        return;
-    }
+    p0.translate_by(5, 5);
+    p1.translate_by(5, 5);
 
-    if (p1.x() < 0.f || p1.y() < 0.f || p1.x() > m_size.width() || p1.y() > m_size.height()) {
-        dbgln("!P1({},{})", p1.x(), p1.y());
-        return;
-    }
+    // if (p0.x() < 0.f || p0.y() < 0.f || p0.x() > m_size.width() || p0.y() > m_size.height()) {
+    //     dbgln("!P0({},{})", p0.x(), p0.y());
+    //     return;
+    // }
+
+    // if (p1.x() < 0.f || p1.y() < 0.f || p1.x() > m_size.width() || p1.y() > m_size.height()) {
+    //     dbgln("!P1({},{})", p1.x(), p1.y());
+    //     return;
+    // }
+
+    // p0 = Gfx::FloatPoint(m_size.width() / 2, 0);
+    // p1 = Gfx::FloatPoint(m_size.width() / 2, m_size.height());
 
     p0.scale_by(1, 8);
     p1.scale_by(1, 8);
@@ -67,7 +77,12 @@ void EdgeFlagPathRasterizer::draw_line(Gfx::FloatPoint p0, Gfx::FloatPoint p1)
 
     auto dx = p1.x() - p0.x();
     auto dy = p1.y() - p0.y();
-    float dxdy = dx / dy;
+    if (dy == 0)
+        return;
+
+    float dxdy = float(dx) / dy;
+
+    // dbgln("foo {}", dxdy);
 
     float x = p0.x();
     for (int y = p0.y(); y < p1.y(); y++) {
@@ -76,8 +91,11 @@ void EdgeFlagPathRasterizer::draw_line(Gfx::FloatPoint p0, Gfx::FloatPoint p1)
         int xi = (int)(x + offsets[y_sub]);
         u8 sample = 1 << y_sub;
         int idx = y_bit * m_size.width() + xi;
-        if (idx < (int)m_data.size())
-            m_data[idx] ^= sample;
+        // if (idx < (int)m_data.size()) {
+        m_data[idx] |= sample;
+        // if (idx == 3569)
+        //   dbgln("{:04} - {:08b} {:08b} {:08b}", idx, data, sample, m_data[idx]);
+        // }
         x += dxdy;
     }
 }
