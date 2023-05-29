@@ -221,14 +221,14 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_scanline(Painter& paint
     for (int x = 0; x < m_size.width(); x += 1) {
         sample ^= m_scanline[x];
         auto dest_x = m_blit_origin.x() + x;
-        if (m_clip.contains_vertically(dest_x)) {
+        if (m_clip.contains_horizontally(dest_x)) {
             // FIXME: We could detect runs of full coverage and use fast_u32_fills for those.
             auto coverage = SubpixelSample::compute_coverage(sample);
             if (coverage) {
                 auto alpha = (coverage << alpha_shift) - 1;
                 auto paint_color = scanline_color(scanline, x, color_or_function);
                 paint_color = paint_color.with_alpha(paint_color.alpha() * alpha / 255);
-                painter.set_physical_pixel({ dest_y, dest_x }, paint_color, true);
+                painter.set_physical_pixel({ dest_x, dest_y }, paint_color, true);
             }
         }
         m_scanline[x] = 0;
