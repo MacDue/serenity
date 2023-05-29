@@ -39,6 +39,7 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate()
             auto coverage = SubpixelSample::compute_coverage(sample);
             if (coverage) {
                 auto alpha = (coverage << alpha_shift) - 1;
+                (void)alpha;
                 result->set_pixel(x, y, Color(Color::Black).with_alpha(alpha));
             }
         }

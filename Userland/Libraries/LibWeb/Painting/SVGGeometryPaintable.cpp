@@ -65,7 +65,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
     auto const* svg_element = geometry_element.first_ancestor_of_type<SVG::SVGSVGElement>();
     auto maybe_view_box = svg_element->view_box();
 
-    context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
+    // context.painter().add_clip_rect(context.enclosing_device_rect(absolute_rect()).to_type<int>());
     auto css_scale = context.device_pixels_per_css_pixel();
 
     auto transform = layout_box().layout_transform();

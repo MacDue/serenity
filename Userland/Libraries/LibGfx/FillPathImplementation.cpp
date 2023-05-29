@@ -52,7 +52,8 @@ void Painter::fill_path_impl(Path const& path, ColorOrFunction color, Gfx::Paint
         //     return Color::Blue;
         // }
         // return Color();
-        return get_color(0).with_alpha(color.alpha());
+        auto foo = get_color(0);
+        return get_color(0).with_alpha((foo.alpha() * color.alpha()) / 255);
     });
 }
 
