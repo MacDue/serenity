@@ -35,22 +35,17 @@ EdgeFlagPathRasterizer<SamplesPerPixel>::EdgeFlagPathRasterizer(Gfx::IntSize siz
     m_edge_table.resize(m_size.height());
 }
 
-template<unsigned SamplesPerPixel>
-RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::Path& path)
+static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> lines, unsigned samples_per_pixel)
 {
-    auto& lines = path.split_lines();
-    if (lines.is_empty())
-        return nullptr;
-
     // FIXME: split_lines() gives similar information, but the form it's in is not that useful (and is const anyway).
-    Vector<Edge> edges;
+    Vector<Detail::Edge> edges;
     edges.ensure_capacity(lines.size());
     for (auto& line : lines) {
         auto p0 = line.from;
         auto p1 = line.to;
 
-        p0.scale_by(1, SamplesPerPixel);
-        p1.scale_by(1, SamplesPerPixel);
+        p0.scale_by(1, samples_per_pixel);
+        p1.scale_by(1, samples_per_pixel);
 
         if (p0.y() > p1.y())
             swap(p0, p1);
@@ -62,13 +57,24 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::
         auto dy = p1.y() - p0.y();
         float dxdy = float(dx) / dy;
         float x = p0.x();
-        edges.unchecked_append(Edge {
+        edges.unchecked_append(Detail::Edge {
             x,
             static_cast<int>(p0.y()),
             static_cast<int>(p1.y()),
             dxdy,
             nullptr });
     }
+    return edges;
+}
+
+template<unsigned SamplesPerPixel>
+RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::Path& path)
+{
+    auto& lines = path.split_lines();
+    if (lines.is_empty())
+        return nullptr;
+
+    auto edges = prepare_edges(lines, SamplesPerPixel);
 
     m_min_y = m_size.height();
     m_max_y = 0;
@@ -84,8 +90,8 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::
         m_max_y = max(m_max_y, max_scanline);
     }
 
-    Edge* active_edges = nullptr;
-    auto plot_edge = [&](Edge& edge, int start_subpixel_y, int end_subpixel_y) {
+    Detail::Edge* active_edges = nullptr;
+    auto plot_edge = [&](Detail::Edge& edge, int start_subpixel_y, int end_subpixel_y) {
         // auto slope =
         for (int y = start_subpixel_y; y < end_subpixel_y; y++) {
             int xi = static_cast<int>(edge.x + SubpixelSample::nrooks_subpixel_offsets[y]);
@@ -103,7 +109,7 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::
 
     for (int y = m_min_y; y <= m_max_y; y++) {
         auto* current_edge = active_edges;
-        Edge* prev_edge = nullptr;
+        Detail::Edge* prev_edge = nullptr;
 
         // Previous edges:
         while (current_edge) {

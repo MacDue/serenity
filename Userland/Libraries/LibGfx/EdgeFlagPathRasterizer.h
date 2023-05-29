@@ -126,32 +126,32 @@ struct Sample<32> {
     }
 };
 
+struct Edge {
+    float x;
+    int min_y;
+    int max_y;
+    float dxdy;
+    Edge* next_edge;
+};
+
 }
 
 template<unsigned SamplesPerPixel = 32>
 class EdgeFlagPathRasterizer {
 public:
-    EdgeFlagPathRasterizer(Gfx::IntSize);
+    EdgeFlagPathRasterizer(IntSize);
 
-    RefPtr<Gfx::Bitmap> fill_even_odd(Gfx::Path&);
+    RefPtr<Bitmap> fill_even_odd(Path&);
 
 private:
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
-    struct Edge {
-        float x;
-        int min_y;
-        int max_y;
-        float dxdy;
-        Edge* next_edge;
-    };
-
-    Gfx::IntSize m_size;
+    IntSize m_size;
     Vector<SampleType> m_scanline;
     int m_min_y { 0 };
     int m_max_y { 0 };
-    Vector<Edge*> m_edge_table;
+    Vector<Detail::Edge*> m_edge_table;
 };
 
 extern template class EdgeFlagPathRasterizer<8>;
