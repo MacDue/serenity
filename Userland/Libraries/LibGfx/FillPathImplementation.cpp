@@ -29,7 +29,9 @@ void Painter::fill_path_impl(Path const& path, ColorOrFunction color, Gfx::Paint
     (void)offset;
     auto foo = path.copy_transformed(AffineTransform {}.translate(offset.value_or({})));
     auto bounding_box = enclosing_int_rect(foo.bounding_box());
-    EdgeFlagPathRasterizer rasterizer(bounding_box.size());
+    if (bounding_box.size().is_empty())
+        return;
+    EdgeFlagPathRasterizer<32> rasterizer(bounding_box.size());
     auto temp = foo.copy_transformed(AffineTransform {}.translate(-bounding_box.top_left().to_type<float>()));
     rasterizer.draw_path(temp);
     auto result = rasterizer.accumulate();
