@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/Array.h>
+#include <AK/GenericShorthands.h>
 #include <AK/Vector.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Path.h>
@@ -22,8 +23,59 @@ static auto constexpr coverage_lut = [] {
     return coverage_lut;
 }();
 
-template<unsigned>
+template<unsigned SamplesPerPixel>
 struct Sample {
+    static_assert(!first_is_one_of(SamplesPerPixel, 8u, 16u, 32u), "EdgeFlagPathRasterizer: Invalid samples per pixel!");
+};
+
+template<>
+struct Sample<8> {
+    using Type = u8;
+    static constexpr Array nrooks_subpixel_offsets {
+        (5.0f / 8.0f),
+        (0.0f / 8.0f),
+        (3.0f / 8.0f),
+        (6.0f / 8.0f),
+        (1.0f / 8.0f),
+        (4.0f / 8.0f),
+        (7.0f / 8.0f),
+        (2.0f / 8.0f),
+    };
+
+    static u8 compute_coverage(Type sample)
+    {
+        return coverage_lut[sample];
+    }
+};
+
+template<>
+struct Sample<16> {
+    using Type = u16;
+    static constexpr Array nrooks_subpixel_offsets {
+        (1.0f / 16.0f),
+        (8.0f / 16.0f),
+        (4.0f / 16.0f),
+        (15.0f / 16.0f),
+        (11.0f / 16.0f),
+        (2.0f / 16.0f),
+        (6.0f / 16.0f),
+        (14.0f / 16.0f),
+        (10.0f / 16.0f),
+        (3.0f / 16.0f),
+        (7.0f / 16.0f),
+        (12.0f / 16.0f),
+        (0.0f / 16.0f),
+        (9.0f / 16.0f),
+        (5.0f / 16.0f),
+        (13.0f / 16.0f),
+    };
+
+    static u8 compute_coverage(Type sample)
+    {
+        return (
+            coverage_lut[(sample >> 0) & 0xff]
+            + coverage_lut[(sample >> 8) & 0xff]);
+    }
 };
 
 template<>
@@ -74,73 +126,32 @@ struct Sample<32> {
     }
 };
 
-template<>
-struct Sample<16> {
-    using Type = u16;
-    static constexpr Array nrooks_subpixel_offsets {
-        (1.0f / 16.0f),
-        (8.0f / 16.0f),
-        (4.0f / 16.0f),
-        (15.0f / 16.0f),
-        (11.0f / 16.0f),
-        (2.0f / 16.0f),
-        (6.0f / 16.0f),
-        (14.0f / 16.0f),
-        (10.0f / 16.0f),
-        (3.0f / 16.0f),
-        (7.0f / 16.0f),
-        (12.0f / 16.0f),
-        (0.0f / 16.0f),
-        (9.0f / 16.0f),
-        (5.0f / 16.0f),
-        (13.0f / 16.0f),
-    };
-
-    static u8 compute_coverage(Type sample)
-    {
-        return (
-            coverage_lut[(sample >> 0) & 0xff]
-            + coverage_lut[(sample >> 8) & 0xff]);
-    }
-};
-
-template<>
-struct Sample<8> {
-    using Type = u8;
-    static constexpr Array nrooks_subpixel_offsets {
-        (5.0f / 8.0f),
-        (0.0f / 8.0f),
-        (3.0f / 8.0f),
-        (6.0f / 8.0f),
-        (1.0f / 8.0f),
-        (4.0f / 8.0f),
-        (7.0f / 8.0f),
-        (2.0f / 8.0f),
-    };
-
-    static u8 compute_coverage(Type sample)
-    {
-        return coverage_lut[sample];
-    }
-};
-
 }
 
 template<unsigned SamplesPerPixel = 32>
 class EdgeFlagPathRasterizer {
 public:
     EdgeFlagPathRasterizer(Gfx::IntSize);
-    void draw_path(Gfx::Path&);
-    RefPtr<Gfx::Bitmap> accumulate();
+
+    RefPtr<Gfx::Bitmap> fill_even_odd(Gfx::Path&);
 
 private:
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
-    void draw_line(Gfx::FloatPoint, Gfx::FloatPoint);
+    struct Edge {
+        float x;
+        int min_y;
+        int max_y;
+        float dxdy;
+        Edge* next_edge;
+    };
 
     Gfx::IntSize m_size;
-    Vector<SampleType> m_data;
+    Vector<SampleType> m_scanline;
+    int m_min_y { 0 };
+    int m_max_y { 0 };
+    Vector<Edge*> m_edge_table;
 };
 
 extern template class EdgeFlagPathRasterizer<8>;

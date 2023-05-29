@@ -33,8 +33,7 @@ void Painter::fill_path_impl(Path const& path, ColorOrFunction color, Gfx::Paint
         return;
     EdgeFlagPathRasterizer<32> rasterizer(bounding_box.size());
     auto temp = foo.copy_transformed(AffineTransform {}.translate(-bounding_box.top_left().to_type<float>()));
-    rasterizer.draw_path(temp);
-    auto result = rasterizer.accumulate();
+    auto result = rasterizer.fill_even_odd(temp);
 
     constexpr bool has_constant_color = IsSameIgnoringCV<ColorOrFunction, Color>;
     auto get_color = [&](int) {
