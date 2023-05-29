@@ -23,7 +23,7 @@
 //      - Using fixed point numbers
 //      - Edge tracking
 //      - Mask tracking
-//      - Loop unrolling (compilers might handle this better now, the paper is form 2007)
+//      - Loop unrolling (compilers might handle this better now, the paper is from 2007)
 
 namespace Gfx {
 
@@ -68,31 +68,9 @@ static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> l
 }
 
 template<unsigned SamplesPerPixel>
-RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::Path& path)
+Detail::Edge* EdgeFlagPathRasterizer<SamplesPerPixel>::plot_edges_for_scanline(int scanline, Detail::Edge* active_edges)
 {
-    auto& lines = path.split_lines();
-    if (lines.is_empty())
-        return nullptr;
-
-    auto edges = prepare_edges(lines, SamplesPerPixel);
-
-    m_min_y = m_size.height();
-    m_max_y = 0;
-    for (auto& edge : edges) {
-        int min_scanline = edge.min_y / SamplesPerPixel;
-        int max_scanline = edge.max_y / SamplesPerPixel;
-
-        // Create a linked-list of edges starting on this scanline:
-        edge.next_edge = m_edge_table[min_scanline];
-        m_edge_table[min_scanline] = &edge;
-
-        m_min_y = min(m_min_y, min_scanline);
-        m_max_y = max(m_max_y, max_scanline);
-    }
-
-    Detail::Edge* active_edges = nullptr;
     auto plot_edge = [&](Detail::Edge& edge, int start_subpixel_y, int end_subpixel_y) {
-        // auto slope =
         for (int y = start_subpixel_y; y < end_subpixel_y; y++) {
             int xi = static_cast<int>(edge.x + SubpixelSample::nrooks_subpixel_offsets[y]);
             SampleType sample = 1 << y;
@@ -105,64 +83,99 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::
         return y & (SamplesPerPixel - 1);
     };
 
-    auto result = MUST(Gfx::Bitmap::create(BitmapFormat::BGRA8888, m_size));
+    auto* current_edge = active_edges;
+    Detail::Edge* prev_edge = nullptr;
 
-    for (int y = m_min_y; y <= m_max_y; y++) {
-        auto* current_edge = active_edges;
-        Detail::Edge* prev_edge = nullptr;
-
-        // Previous edges:
-        while (current_edge) {
-            int end_scanline = current_edge->max_y / SamplesPerPixel;
-            if (y == end_scanline) {
-                // This edge ends this scanline.
-                plot_edge(*current_edge, 0, y_subpixel(current_edge->max_y));
-                // Remove this edge from the AET
-                current_edge = current_edge->next_edge;
-                if (prev_edge)
-                    prev_edge->next_edge = current_edge;
-                else
-                    active_edges = current_edge;
-            } else {
-                // This egde sticks around for a few more scanlines.
-                plot_edge(*current_edge, 0, SamplesPerPixel);
-                prev_edge = current_edge;
-                current_edge = current_edge->next_edge;
-            }
-        }
-
-        // New edges starting this line
-        current_edge = m_edge_table[y];
-        while (current_edge) {
-            int end_scanline = current_edge->max_y / SamplesPerPixel;
-            if (y == end_scanline) {
-                // This edge will end this scanlines (no need to add to AET).
-                plot_edge(*current_edge, y_subpixel(current_edge->min_y), y_subpixel(current_edge->max_y));
-            } else {
-                // This edge will live on for a few more scanlines.
-                plot_edge(*current_edge, y_subpixel(current_edge->min_y), SamplesPerPixel);
-                // Add this edge to the AET
-                if (prev_edge)
-                    prev_edge->next_edge = current_edge;
-                else
-                    active_edges = current_edge;
-                prev_edge = current_edge;
-            }
+    // First iterate over the edge in the active edge table, these are edges added on earlier scanlines,
+    // that have not yet reached their end scanline.
+    while (current_edge) {
+        int end_scanline = current_edge->max_y / SamplesPerPixel;
+        if (scanline == end_scanline) {
+            // This edge ends this scanline.
+            plot_edge(*current_edge, 0, y_subpixel(current_edge->max_y));
+            // Remove this edge from the AET
+            current_edge = current_edge->next_edge;
+            if (prev_edge)
+                prev_edge->next_edge = current_edge;
+            else
+                active_edges = current_edge;
+        } else {
+            // This egde sticks around for a few more scanlines.
+            plot_edge(*current_edge, 0, SamplesPerPixel);
+            prev_edge = current_edge;
             current_edge = current_edge->next_edge;
         }
+    }
 
-        SampleType sample = 0;
-        constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
-        for (int x = 0; x < m_size.width(); x += 1) {
-            sample ^= m_scanline[x];
-            auto coverage = SubpixelSample::compute_coverage(sample);
-            if (coverage) {
-                auto alpha = (coverage << alpha_shift) - 1;
-                (void)alpha;
-                result->set_pixel(x, y, Color(Color::Black).with_alpha(alpha));
-            }
-            m_scanline[x] = 0;
+    // Next, iterate over new edges for this line. If active_edges was null this also becomes the new
+    // AET. Edges new will be appended here.
+    current_edge = m_edge_table[scanline];
+    while (current_edge) {
+        int end_scanline = current_edge->max_y / SamplesPerPixel;
+        if (scanline == end_scanline) {
+            // This edge will end this scanlines (no need to add to AET).
+            plot_edge(*current_edge, y_subpixel(current_edge->min_y), y_subpixel(current_edge->max_y));
+        } else {
+            // This edge will live on for a few more scanlines.
+            plot_edge(*current_edge, y_subpixel(current_edge->min_y), SamplesPerPixel);
+            // Add this edge to the AET
+            if (prev_edge)
+                prev_edge->next_edge = current_edge;
+            else
+                active_edges = current_edge;
+            prev_edge = current_edge;
         }
+        current_edge = current_edge->next_edge;
+    }
+
+    return active_edges;
+}
+
+template<unsigned SamplesPerPixel>
+void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_scanline(Gfx::Bitmap& result, int scanline)
+{
+    SampleType sample = 0;
+    constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
+    for (int x = 0; x < m_size.width(); x += 1) {
+        sample ^= m_scanline[x];
+        auto coverage = SubpixelSample::compute_coverage(sample);
+        if (coverage) {
+            auto alpha = (coverage << alpha_shift) - 1;
+            result.set_pixel(x, scanline, Color(Color::Black).with_alpha(alpha));
+        }
+        m_scanline[x] = 0;
+    }
+}
+
+template<unsigned SamplesPerPixel>
+RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::Path& path)
+{
+    auto& lines = path.split_lines();
+    if (lines.is_empty())
+        return nullptr;
+
+    auto edges = prepare_edges(lines, SamplesPerPixel);
+
+    int min_scanline = m_size.height();
+    int max_scanline = 0;
+    for (auto& edge : edges) {
+        int start_scanline = edge.min_y / SamplesPerPixel;
+        int end_scanline = edge.max_y / SamplesPerPixel;
+
+        // Create a linked-list of edges starting on this scanline:
+        edge.next_edge = m_edge_table[start_scanline];
+        m_edge_table[start_scanline] = &edge;
+
+        min_scanline = min(min_scanline, start_scanline);
+        max_scanline = max(max_scanline, end_scanline);
+    }
+
+    auto result = MUST(Gfx::Bitmap::create(BitmapFormat::BGRA8888, m_size));
+
+    Detail::Edge* active_edges = nullptr;
+    for (int scanline = min_scanline; scanline <= max_scanline; scanline++) {
+        active_edges = plot_edges_for_scanline(scanline, active_edges);
+        accumulate_scanline(*result, scanline);
     }
 
     return result;

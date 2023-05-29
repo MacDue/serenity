@@ -144,13 +144,14 @@ public:
     RefPtr<Bitmap> fill_even_odd(Path&);
 
 private:
+    Detail::Edge* plot_edges_for_scanline(int scanline, Detail::Edge* active_edges = nullptr);
+    void accumulate_scanline(Gfx::Bitmap& result, int scanline);
+
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
     IntSize m_size;
     Vector<SampleType> m_scanline;
-    int m_min_y { 0 };
-    int m_max_y { 0 };
     Vector<Detail::Edge*> m_edge_table;
 };
 
