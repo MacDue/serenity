@@ -8,7 +8,6 @@ set(SOURCES
     Color.cpp
     CursorParams.cpp
     DeltaE.cpp
-    FillPathImplementation.cpp
     EdgeFlagPathRasterizer.cpp
     Filters/ColorBlindnessFilter.cpp
     Filters/FastBoxBlurFilter.cpp

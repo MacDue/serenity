@@ -10,6 +10,8 @@
 #include <AK/GenericShorthands.h>
 #include <AK/Vector.h>
 #include <LibGfx/Bitmap.h>
+#include <LibGfx/PaintStyle.h>
+#include <LibGfx/Painter.h>
 #include <LibGfx/Path.h>
 
 namespace Gfx {
@@ -141,16 +143,28 @@ class EdgeFlagPathRasterizer {
 public:
     EdgeFlagPathRasterizer(IntSize);
 
-    RefPtr<Bitmap> fill_even_odd(Path&);
+    void fill(Painter&, Path const&, Color, Painter::WindingRule, FloatPoint offset = {});
+    void fill(Painter&, Path const&, PaintStyle const&, Painter::WindingRule, FloatPoint offset = {});
 
 private:
+    void fill_internal(Painter&, Path const&, auto color_or_function, Painter::WindingRule, FloatPoint offset);
+    void fill_even_odd_internal(Painter&, Path const&, auto color_or_function);
+    Color scanline_color(int scanline, int offset, auto& color_or_function);
+
+    // template<typename ColorOrFunction>
+    // void fill_non_zero_internal(Path&, ColorOrFunction);
+
     Detail::Edge* plot_edges_for_scanline(int scanline, Detail::Edge* active_edges = nullptr);
-    void accumulate_scanline(Gfx::Bitmap& result, int scanline);
+    void accumulate_scanline(Painter&, auto& color_or_function, int scanline);
 
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
     IntSize m_size;
+    IntPoint m_origin;
+    IntPoint m_blit_origin;
+    IntRect m_clip;
+
     Vector<SampleType> m_scanline;
     Vector<Detail::Edge*> m_edge_table;
 };
