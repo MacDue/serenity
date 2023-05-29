@@ -161,7 +161,7 @@ private:
     using SampleType = typename SubpixelSample::Type;
 
     IntSize m_size;
-    IntPoint m_origin;
+    FloatPoint m_origin;
     IntPoint m_blit_origin;
     IntRect m_clip;
 

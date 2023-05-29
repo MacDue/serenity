@@ -11,7 +11,7 @@
 #include <LibGfx/EdgeFlagPathRasterizer.h>
 
 #if defined(AK_COMPILER_GCC)
-#    pragma GCC optimize("O3")
+#    pragma GCC optimize("O0")
 #endif
 
 // This a pretty naive implementation of edge-flag scanline AA.
@@ -26,15 +26,15 @@
 //      - Loop unrolling (compilers might handle this better now, the paper is from 2007)
 namespace Gfx {
 
-static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> lines, unsigned samples_per_pixel, IntPoint origin)
+static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> lines, unsigned samples_per_pixel, FloatPoint origin)
 {
     // FIXME: split_lines() gives similar information, but the form it's in is not that useful (and is const anyway).
     Vector<Detail::Edge> edges;
     edges.ensure_capacity(lines.size());
 
     for (auto& line : lines) {
-        auto p0 = line.from - origin.to_type<float>();
-        auto p1 = line.to - origin.to_type<float>();
+        auto p0 = line.from - origin;
+        auto p1 = line.to - origin;
 
         p0.scale_by(1, samples_per_pixel);
         p1.scale_by(1, samples_per_pixel);
@@ -88,7 +88,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
     VERIFY(painter.scale() == 1);
     auto bounding_box = enclosing_int_rect(path.bounding_box().translated(offset));
     auto dest_rect = bounding_box.translated(painter.translation());
-    m_origin = bounding_box.top_left();
+    m_origin = bounding_box.top_left().to_type<float>() - offset;
     m_blit_origin = dest_rect.top_left();
     m_clip = dest_rect.intersected(painter.clip_rect());
 
