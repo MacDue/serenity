@@ -220,6 +220,8 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_scanline(Painter& paint
     constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
     auto dest_y = m_blit_origin.y() + scanline;
     if (!m_clip.contains_vertically(dest_y)) {
+        // FIXME: This memset only really needs to be done on transition from clipped to not clipped,
+        // or not at all if we properly clipped egde plotting.
         memset(m_scanline.data(), 0, sizeof(SampleType) * m_scanline.size());
         return;
     }
