@@ -73,7 +73,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::draw_line(Gfx::FloatPoint p0, Gfx:
     for (int y = p0.y(); y < (p1.y() - 1); y++) {
         int y_sub = y % SamplesPerPixel;
         int y_bit = y / SamplesPerPixel;
-        int xi = (int)(x + SubpixelSample::nrooks_subpixel_offsets[y_sub]);
+        int xi = static_cast<int>(x + SubpixelSample::nrooks_subpixel_offsets[y_sub]);
         SampleType sample = 1 << y_sub;
         int idx = y_bit * m_size.width() + xi;
         m_data[idx] ^= sample;
