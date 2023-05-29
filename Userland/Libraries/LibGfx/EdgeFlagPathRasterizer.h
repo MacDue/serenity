@@ -133,6 +133,7 @@ struct Edge {
     int min_y;
     int max_y;
     float dxdy;
+    i8 winding;
     Edge* next_edge;
 };
 
@@ -160,12 +161,18 @@ private:
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
+    struct WindingCounts {
+        u8 counts[SamplesPerPixel];
+    };
+
     IntSize m_size;
     FloatPoint m_origin;
     IntPoint m_blit_origin;
     IntRect m_clip;
 
     Vector<SampleType> m_scanline;
+    Vector<WindingCounts> m_windings;
+
     Vector<Detail::Edge*> m_edge_table;
 };
 

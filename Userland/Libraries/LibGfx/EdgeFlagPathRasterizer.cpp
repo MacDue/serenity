@@ -43,8 +43,12 @@ static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> l
         p0.scale_by(1, samples_per_pixel);
         p1.scale_by(1, samples_per_pixel);
 
-        if (p0.y() > p1.y())
+        i8 winding = -1;
+        if (p0.y() > p1.y()) {
             swap(p0, p1);
+        } else {
+            winding = 1;
+        }
 
         if (p0.y() == p1.y())
             continue;
@@ -58,6 +62,7 @@ static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> l
             static_cast<int>(p0.y()),
             static_cast<int>(p1.y()),
             dxdy,
+            winding,
             nullptr });
     }
     return edges;
