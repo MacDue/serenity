@@ -147,8 +147,8 @@ RefPtr<Gfx::Bitmap> EdgeFlagPathRasterizer<SamplesPerPixel>::fill_even_odd(Gfx::
                 auto alpha = (coverage << alpha_shift) - 1;
                 (void)alpha;
                 result->set_pixel(x, y, Color(Color::Black).with_alpha(alpha));
-                m_scanline[x] = 0;
             }
+            m_scanline[x] = 0;
         }
     }
 
