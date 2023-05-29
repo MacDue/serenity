@@ -11,7 +11,7 @@
 #include <LibGfx/EdgeFlagPathRasterizer.h>
 
 #if defined(AK_COMPILER_GCC)
-#    pragma GCC optimize("O0")
+#    pragma GCC optimize("O3")
 #endif
 
 // This a pretty naive implementation of edge-flag scanline AA.
@@ -24,6 +24,10 @@
 //      - Edge tracking
 //      - Mask tracking
 //      - Loop unrolling (compilers might handle this better now, the paper is from 2007)
+// Optimizations I think we could add:
+//      - Using fast_u32_fills() for runs of solid colors
+//      - Clipping the plotted edges earlier
+
 namespace Gfx {
 
 static Vector<Detail::Edge> prepare_edges(ReadonlySpan<Path::SplitLineSegment> lines, unsigned samples_per_pixel, FloatPoint origin)
@@ -213,11 +217,13 @@ Detail::Edge* EdgeFlagPathRasterizer<SamplesPerPixel>::plot_edges_for_scanline(i
 template<unsigned SamplesPerPixel>
 void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_scanline(Painter& painter, auto& color_or_function, int scanline)
 {
-    auto dest_y = m_blit_origin.y() + scanline;
-    if (!m_clip.contains_vertically(dest_y))
-        return;
-    SampleType sample = 0;
     constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
+    auto dest_y = m_blit_origin.y() + scanline;
+    if (!m_clip.contains_vertically(dest_y)) {
+        memset(m_scanline.data(), 0, sizeof(SampleType) * m_scanline.size());
+        return;
+    }
+    SampleType sample = 0;
     for (int x = 0; x < m_size.width(); x += 1) {
         sample ^= m_scanline[x];
         auto dest_x = m_blit_origin.x() + x;
