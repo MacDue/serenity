@@ -30,6 +30,7 @@ struct Sample {
     static_assert(!first_is_one_of(SamplesPerPixel, 8u, 16u, 32u), "EdgeFlagPathRasterizer: Invalid samples per pixel!");
 };
 
+// See paper for diagrams for how these offsets work, but they allow for nicely spread out samples in each pixel.
 template<>
 struct Sample<8> {
     using Type = u8;
@@ -148,6 +149,9 @@ public:
     void fill(Painter&, Path const&, PaintStyle const&, Painter::WindingRule, FloatPoint offset = {});
 
 private:
+    using SubpixelSample = Detail::Sample<SamplesPerPixel>;
+    using SampleType = typename SubpixelSample::Type;
+
     static u8 coverage_to_alpha(u8 coverage)
     {
         constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
@@ -157,16 +161,14 @@ private:
     }
 
     void fill_internal(Painter&, Path const&, auto color_or_function, Painter::WindingRule, FloatPoint offset);
-    Color scanline_color(int scanline, int offset, u8 alpha, auto& color_or_function);
-
     Detail::Edge* plot_edges_for_scanline(int scanline, auto plot_edge, Detail::Edge* active_edges = nullptr);
-    void accumulate_even_odd_scanline(Painter&, auto& color_or_function, int scanline);
-    void accumulate_non_zero_scanline(Painter&, auto& color_or_function, int scanline);
-
-    using SubpixelSample = Detail::Sample<SamplesPerPixel>;
-    using SampleType = typename SubpixelSample::Type;
+    void accumulate_even_odd_scanline(Painter&, int scanline, auto& color_or_function);
+    void accumulate_non_zero_scanline(Painter&, int scanline, auto& color_or_function);
+    Color scanline_color(int scanline, int offset, u8 alpha, auto& color_or_function);
+    void write_pixel(Painter&, int scanline, int offset, SampleType sample, auto& color_or_function);
 
     struct WindingCounts {
+        // NOTE: This only allows up to 256 winding levels. Increase this if required (i.e. to an i16).
         i8 counts[SamplesPerPixel];
     };
 
@@ -177,7 +179,6 @@ private:
 
     Vector<SampleType> m_scanline;
     Vector<WindingCounts> m_windings;
-
     Vector<Detail::Edge*> m_edge_table;
 };
 

@@ -97,9 +97,6 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
     // FIXME: Figure out how painter scaling works here...
     VERIFY(painter.scale() == 1);
 
-    if (winding_rule == Painter::WindingRule::Nonzero && m_windings.is_empty())
-        m_windings.resize(m_size.width());
-
     auto bounding_box = enclosing_int_rect(path.bounding_box().translated(offset));
     auto dest_rect = bounding_box.translated(painter.translation());
     m_origin = bounding_box.top_left().to_type<float>() - offset;
@@ -144,10 +141,15 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
         };
         for (int scanline = min_scanline; scanline <= max_scanline; scanline++) {
             active_edges = plot_edges_for_scanline(scanline, plot_edge, active_edges);
-            accumulate_even_odd_scanline(painter, color_or_function, scanline);
+            accumulate_even_odd_scanline(painter, scanline, color_or_function);
         }
     } else {
         VERIFY(winding_rule == Painter::WindingRule::Nonzero);
+        // Only allocate the winding buffer if needed.
+        // NOTE: non-zero fills are a fair bit less efficient. So if you can do an even-odd fill do that :^)
+        if (m_windings.is_empty())
+            m_windings.resize(m_size.width());
+
         auto plot_edge = [&](Detail::Edge& edge, int start_subpixel_y, int end_subpixel_y) {
             for (int y = start_subpixel_y; y < end_subpixel_y; y++) {
                 int xi = static_cast<int>(edge.x + SubpixelSample::nrooks_subpixel_offsets[y]);
@@ -159,7 +161,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
         };
         for (int scanline = min_scanline; scanline <= max_scanline; scanline++) {
             active_edges = plot_edges_for_scanline(scanline, plot_edge, active_edges);
-            accumulate_non_zero_scanline(painter, color_or_function, scanline);
+            accumulate_non_zero_scanline(painter, scanline, color_or_function);
         }
     }
 }
@@ -236,7 +238,21 @@ Detail::Edge* EdgeFlagPathRasterizer<SamplesPerPixel>::plot_edges_for_scanline(i
 }
 
 template<unsigned SamplesPerPixel>
-void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_even_odd_scanline(Painter& painter, auto& color_or_function, int scanline)
+void EdgeFlagPathRasterizer<SamplesPerPixel>::write_pixel(Painter& painter, int scanline, int offset, SampleType sample, auto& color_or_function)
+{
+    auto dest = IntPoint { offset, scanline } + m_blit_origin;
+    if (!m_clip.contains_horizontally(dest.x()))
+        return;
+    // FIXME: We could detect runs of full coverage and use fast_u32_fills for those rather than many set_pixel() calls.
+    auto coverage = SubpixelSample::compute_coverage(sample);
+    if (coverage) {
+        auto paint_color = scanline_color(scanline, offset, coverage_to_alpha(coverage), color_or_function);
+        painter.set_physical_pixel(dest, paint_color, true);
+    }
+}
+
+template<unsigned SamplesPerPixel>
+void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_even_odd_scanline(Painter& painter, int scanline, auto& color_or_function)
 {
     auto dest_y = m_blit_origin.y() + scanline;
     if (!m_clip.contains_vertically(dest_y)) {
@@ -245,24 +261,17 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_even_odd_scanline(Paint
         memset(m_scanline.data(), 0, sizeof(SampleType) * m_scanline.size());
         return;
     }
+
     SampleType sample = 0;
     for (int x = 0; x < m_size.width(); x += 1) {
         sample ^= m_scanline[x];
-        auto dest_x = m_blit_origin.x() + x;
-        if (m_clip.contains_horizontally(dest_x)) {
-            // FIXME: We could detect runs of full coverage and use fast_u32_fills for those.
-            auto coverage = SubpixelSample::compute_coverage(sample);
-            if (coverage) {
-                auto paint_color = scanline_color(scanline, x, coverage_to_alpha(coverage), color_or_function);
-                painter.set_physical_pixel({ dest_x, dest_y }, paint_color, true);
-            }
-        }
+        write_pixel(painter, scanline, x, sample, color_or_function);
         m_scanline[x] = 0;
     }
 }
 
 template<unsigned SamplesPerPixel>
-void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_non_zero_scanline(Painter& painter, auto& color_or_function, int scanline)
+void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_non_zero_scanline(Painter& painter, int scanline, auto& color_or_function)
 {
     // NOTE: Same FIXMEs apply from accumulate_even_odd_scanline()
     auto dest_y = m_blit_origin.y() + scanline;
@@ -283,6 +292,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_non_zero_scanline(Paint
                     auto winding = m_windings[x].counts[y_sub];
                     auto previous_winding_count = sum_winding.counts[y_sub];
                     sum_winding.counts[y_sub] += winding;
+                    // Toggle fill on change to/from zero
                     if ((previous_winding_count == 0 && sum_winding.counts[y_sub] != 0)
                         || (sum_winding.counts[y_sub] == 0 && previous_winding_count != 0)) {
                         sample ^= subpixel_bit;
@@ -290,14 +300,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::accumulate_non_zero_scanline(Paint
                 }
             }
         }
-        auto dest_x = m_blit_origin.x() + x;
-        if (m_clip.contains_horizontally(dest_x)) {
-            auto coverage = SubpixelSample::compute_coverage(sample);
-            if (coverage) {
-                auto paint_color = scanline_color(scanline, x, coverage_to_alpha(coverage), color_or_function);
-                painter.set_physical_pixel({ dest_x, dest_y }, paint_color, true);
-            }
-        }
+        write_pixel(painter, scanline, x, sample, color_or_function);
         m_scanline[x] = 0;
         m_windings[x] = {};
     }
