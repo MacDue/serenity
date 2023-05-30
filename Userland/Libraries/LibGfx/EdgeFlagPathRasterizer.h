@@ -148,21 +148,26 @@ public:
     void fill(Painter&, Path const&, PaintStyle const&, Painter::WindingRule, FloatPoint offset = {});
 
 private:
+    static u8 coverage_to_alpha(u8 coverage)
+    {
+        constexpr auto alpha_shift = AK::log2(256 / SamplesPerPixel);
+        if (!coverage)
+            return 0;
+        return (coverage << alpha_shift) - 1;
+    }
+
     void fill_internal(Painter&, Path const&, auto color_or_function, Painter::WindingRule, FloatPoint offset);
-    void fill_even_odd_internal(Painter&, Path const&, auto color_or_function);
-    Color scanline_color(int scanline, int offset, auto& color_or_function);
+    Color scanline_color(int scanline, int offset, u8 alpha, auto& color_or_function);
 
-    // template<typename ColorOrFunction>
-    // void fill_non_zero_internal(Path&, ColorOrFunction);
-
-    Detail::Edge* plot_edges_for_scanline(int scanline, Detail::Edge* active_edges = nullptr);
-    void accumulate_scanline(Painter&, auto& color_or_function, int scanline);
+    Detail::Edge* plot_edges_for_scanline(int scanline, auto plot_edge, Detail::Edge* active_edges = nullptr);
+    void accumulate_even_odd_scanline(Painter&, auto& color_or_function, int scanline);
+    void accumulate_non_zero_scanline(Painter&, auto& color_or_function, int scanline);
 
     using SubpixelSample = Detail::Sample<SamplesPerPixel>;
     using SampleType = typename SubpixelSample::Type;
 
     struct WindingCounts {
-        u8 counts[SamplesPerPixel];
+        i8 counts[SamplesPerPixel];
     };
 
     IntSize m_size;
