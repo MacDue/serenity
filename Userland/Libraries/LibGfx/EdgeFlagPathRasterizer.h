@@ -173,7 +173,6 @@ private:
     };
 
     IntSize m_size;
-    FloatPoint m_origin;
     IntPoint m_blit_origin;
     IntRect m_clip;
 

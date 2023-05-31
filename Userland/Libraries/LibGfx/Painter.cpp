@@ -2353,6 +2353,13 @@ void Painter::for_each_line_segment_on_elliptical_arc(FloatPoint p1, FloatPoint 
         p.set_y(original_x * sin_x_axis + original_y * cos_x_axis);
     };
 
+    auto emit_point = [&](auto p0, auto p1) {
+        // NOTE: If we swap the start/end we must swap the emitted points, so correct winding orders can be calculated.
+        if (start_swapped)
+            swap(p0, p1);
+        callback(p0, p1);
+    };
+
     for (float theta = theta_1; theta <= theta_1 + theta_delta; theta += theta_step) {
         float s, c;
         AK::sincos(theta, s, c);
@@ -2360,18 +2367,12 @@ void Painter::for_each_line_segment_on_elliptical_arc(FloatPoint p1, FloatPoint 
         next_point.set_y(b * s);
         rotate_point(next_point);
 
-        // NOTE: If we swap the start/end we must swap the emitted points, so correct winding orders can be calculated.
-        auto p0 = current_point + center;
-        auto p1 = next_point + center;
-        if (start_swapped)
-            swap(p0, p1);
-
-        callback(p0, p1);
+        emit_point(current_point + center, next_point + center);
 
         current_point = next_point;
     }
 
-    callback(current_point + center, end);
+    emit_point(current_point + center, end);
 }
 
 // static

@@ -99,7 +99,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
 
     auto bounding_box = enclosing_int_rect(path.bounding_box().translated(offset));
     auto dest_rect = bounding_box.translated(painter.translation());
-    m_origin = bounding_box.top_left().to_type<float>() - offset;
+    auto origin = bounding_box.top_left().to_type<float>() - offset;
     m_blit_origin = dest_rect.top_left();
     m_clip = dest_rect.intersected(painter.clip_rect());
 
@@ -110,7 +110,7 @@ void EdgeFlagPathRasterizer<SamplesPerPixel>::fill_internal(Painter& painter, Pa
     if (lines.is_empty())
         return;
 
-    auto edges = prepare_edges(lines, SamplesPerPixel, m_origin);
+    auto edges = prepare_edges(lines, SamplesPerPixel, origin);
 
     int min_scanline = m_size.height();
     int max_scanline = 0;
