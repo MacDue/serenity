@@ -2323,10 +2323,12 @@ void Painter::for_each_line_segment_on_elliptical_arc(FloatPoint p1, FloatPoint 
     auto start = p1;
     auto end = p2;
 
+    bool start_swapped = false;
     if (theta_delta < 0) {
         swap(start, end);
         theta_1 = theta_1 + theta_delta;
         theta_delta = fabsf(theta_delta);
+        start_swapped = true;
     }
 
     auto relative_start = start - center;
@@ -2358,7 +2360,13 @@ void Painter::for_each_line_segment_on_elliptical_arc(FloatPoint p1, FloatPoint 
         next_point.set_y(b * s);
         rotate_point(next_point);
 
-        callback(current_point + center, next_point + center);
+        // NOTE: If we swap the start/end we must swap the emitted points, so correct winding orders can be calculated.
+        auto p0 = current_point + center;
+        auto p1 = next_point + center;
+        if (start_swapped)
+            swap(p0, p1);
+
+        callback(p0, p1);
 
         current_point = next_point;
     }
