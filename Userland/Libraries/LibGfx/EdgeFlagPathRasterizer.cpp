@@ -27,7 +27,6 @@
 // Optimizations I think we could add:
 //      - Using fast_u32_fills() for runs of solid colors
 //      - Clipping the plotted edges earlier
-//      - SIMD for windings?
 
 namespace Gfx {
 
