@@ -10,13 +10,12 @@
 #include <AK/LEB128.h>
 #include <AK/MemoryStream.h>
 #include <AK/Variant.h>
-#include <LibGfx/Color.h>
+#include <LibCore/File.h>
+#include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Line.h>
-#include <LibGfx/PaintStyle.h>
 #include <LibGfx/Painter.h>
-#include <LibGfx/Path.h>
 #include <LibGfx/Point.h>
-#include <LibGfx/VectorFormats/TinyVGRender.h>
+#include <LibGfx/VectorFormats/TinyVG.h>
 
 namespace Gfx {
 
@@ -67,8 +66,6 @@ enum class PathCommand : u8 {
     ClosePath = 6,
     QuadraticBezier = 7
 };
-
-using Style = Variant<Color, NonnullRefPtr<SVGGradientPaintStyle>>;
 
 struct TinyVGHeader {
     u8 version;
@@ -194,7 +191,7 @@ public:
         return FloatPoint { TRY(read_unit()), TRY(read_unit()) };
     }
 
-    ErrorOr<Style> read_style(StyleType type)
+    ErrorOr<TinyVG::Style> read_style(StyleType type)
     {
         auto read_color = [&]() -> ErrorOr<Color> {
             auto color_index = TRY(m_stream.read_value<VarUInt>());
@@ -302,29 +299,6 @@ private:
     ReadonlySpan<Color> m_color_table;
 };
 
-struct DrawCommand {
-    Path path;
-    Optional<Style> fill {};
-    Optional<Style> stroke {};
-    float stroke_width { 0.0f };
-};
-
-struct TinyVG {
-    ErrorOr<RefPtr<Gfx::Bitmap>> bitmap(IntSize size);
-
-private:
-    static ErrorOr<TinyVG> decode(Stream& stream);
-
-    TinyVG(IntSize size, Vector<DrawCommand> draw_commands)
-        : m_size(size)
-        , m_draw_commands(move(draw_commands))
-    {
-    }
-
-    IntSize m_size;
-    Vector<DrawCommand> m_draw_commands;
-};
-
 ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
 {
     auto header = TRY(decode_tinyvg_header(stream));
@@ -345,13 +319,15 @@ ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
     };
 
     Vector<DrawCommand> draw_commands;
-    while (true) {
+    bool at_end = false;
+    while (!at_end) {
         u8 command_info = TRY(stream.read_value<u8>());
         auto command = static_cast<Command>(command_info & 0x3f);
         auto style_type = static_cast<StyleType>((command_info >> 6) & 0x3);
 
         switch (command) {
         case Command::EndOfDocument:
+            at_end = true;
             break;
         case Command::FillPolygon: {
             u32 point_count = TRY(reader.read_var_uint());
@@ -415,15 +391,41 @@ ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
             break;
         }
         case Command::OutlineFillPolygon: {
-
+            u8 segment_info = TRY(stream.read_value<u8>());
+            u8 segment_count = segment_info & 0x3f;
+            auto stroke_type = static_cast<StyleType>((segment_info >> 6) & 0x3);
+            auto fill_style = TRY(reader.read_style(style_type));
+            auto line_style = TRY(reader.read_style(stroke_type));
+            auto line_width = TRY(reader.read_unit());
+            Path polygon;
+            polygon.move_to(TRY(reader.read_point()));
+            for (u32 i = 0; i < segment_count; i++)
+                polygon.line_to(TRY(reader.read_point()));
+            TRY(draw_commands.try_append(DrawCommand { move(polygon), move(fill_style), move(line_style), line_width }));
             break;
         }
         case Command::OutlineFillRectangles: {
-
+            u8 rect_info = TRY(stream.read_value<u8>());
+            u8 rect_count = (rect_info & 0x3f) + 1;
+            auto stroke_type = static_cast<StyleType>((rect_info >> 6) & 0x3);
+            auto fill_style = TRY(reader.read_style(style_type));
+            auto line_style = TRY(reader.read_style(stroke_type));
+            auto line_width = TRY(reader.read_unit());
+            for (u32 i = 0; i < rect_count; i++) {
+                TRY(draw_commands.try_append(DrawCommand {
+                    rectangle_to_path(TRY(reader.read_rectangle())), move(fill_style), move(line_style), line_width }));
+            }
             break;
         }
         case Command::OutLineFillPath: {
-
+            u8 segment_info = TRY(stream.read_value<u8>());
+            u8 segment_count = (segment_info & 0x3f) + 1;
+            auto stroke_type = static_cast<StyleType>((segment_info >> 6) & 0x3);
+            auto fill_style = TRY(reader.read_style(style_type));
+            auto line_style = TRY(reader.read_style(stroke_type));
+            auto line_width = TRY(reader.read_unit());
+            auto path = TRY(reader.read_path(segment_count));
+            TRY(draw_commands.try_append(DrawCommand { move(path), move(fill_style), move(line_style), line_width }));
             break;
         }
         default:
@@ -432,6 +434,42 @@ ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
     }
 
     return TinyVG { { header.width, header.height }, move(draw_commands) };
+}
+
+ErrorOr<TinyVG> TinyVG::read_from_file(StringView path)
+{
+    auto file = TRY(Core::File::open_file_or_standard_stream(path, Core::File::OpenMode::Read));
+    return decode(*file);
+}
+
+ErrorOr<RefPtr<Gfx::Bitmap>> TinyVG::bitmap(IntSize size) const
+{
+    auto scale_x = float(size.width()) / m_size.width();
+    auto scale_y = float(size.height()) / m_size.height();
+    auto transform = Gfx::AffineTransform {}.scale(scale_x, scale_y);
+    auto bitmap = TRY(Bitmap::create(Gfx::BitmapFormat::BGRA8888, size));
+    Painter base_painter { *bitmap };
+    AntiAliasingPainter painter { base_painter };
+    for (auto const& command : m_draw_commands) {
+        auto draw_path = command.path.copy_transformed(transform);
+        if (command.fill.has_value()) {
+            command.fill->visit([&](Color color) { painter.fill_path(draw_path, color, Painter::WindingRule::EvenOdd); },
+                [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
+                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
+                    painter.fill_path(draw_path, style, 1.0f, Painter::WindingRule::EvenOdd);
+                });
+        }
+        if (command.stroke.has_value()) {
+            // FIXME: Just picking the max is not correct.
+            auto stroke_scale = max(scale_x, scale_y);
+            command.stroke->visit([&](Color color) { painter.stroke_path(draw_path, color, command.stroke_width * stroke_scale); },
+                [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
+                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
+                    painter.stroke_path(draw_path, style, command.stroke_width * stroke_scale);
+                });
+        }
+    }
+    return bitmap;
 }
 
 }
