@@ -65,6 +65,7 @@ set(SOURCES
     TextLayout.cpp
     Triangle.cpp
     WindowTheme.cpp
+    VectorFormats/TinyVGRender.cpp
 )
 
 serenity_lib(LibGfx gfx)
