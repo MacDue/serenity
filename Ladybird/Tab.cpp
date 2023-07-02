@@ -34,7 +34,7 @@
 extern DeprecatedString s_serenity_resource_root;
 extern Browser::Settings* s_settings;
 
-static QIcon render_svg_icon_with_theme_colors(QString name, QPalette const& palette)
+static QIcon render_tvg_icon_with_theme_colors(QString name, QPalette const& palette)
 {
     auto path = QString(":/Icons/%1.tvg").arg(name);
     QFile icon_resource(path);
@@ -627,9 +627,9 @@ bool Tab::event(QEvent* event)
 
 void Tab::rerender_toolbar_icons()
 {
-    m_window->go_back_action().setIcon(render_svg_icon_with_theme_colors("back", palette()));
-    m_window->go_forward_action().setIcon(render_svg_icon_with_theme_colors("forward", palette()));
-    m_window->reload_action().setIcon(render_svg_icon_with_theme_colors("reload", palette()));
+    m_window->go_back_action().setIcon(render_tvg_icon_with_theme_colors("back", palette()));
+    m_window->go_forward_action().setIcon(render_tvg_icon_with_theme_colors("forward", palette()));
+    m_window->reload_action().setIcon(render_tvg_icon_with_theme_colors("reload", palette()));
 }
 
 void Tab::show_inspector_window(InspectorTarget inspector_target)
