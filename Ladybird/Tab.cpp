@@ -37,18 +37,18 @@ extern Browser::Settings* s_settings;
 static QIcon render_tvg_icon_with_theme_colors(QString name, QPalette const& palette)
 {
     auto path = QString(":/Icons/%1.tvg").arg(name);
+    Gfx::IntSize icon_size(16, 16);
+
     QFile icon_resource(path);
     VERIFY(icon_resource.open(QIODeviceBase::ReadOnly));
-    auto icon_data = icon_resource.readAll();
-
-    Gfx::IntSize icon_size(16, 16);
+    auto icon_bytes = icon_resource.readAll();
+    AK::FixedMemoryStream icon_stream { ReadonlyBytes { icon_bytes.data(), static_cast<size_t>(icon_bytes.size()) } };
+    auto icon_data = MUST(Gfx::TinyVG::decode(icon_stream));
+    auto icon_raster = MUST(icon_data.bitmap(icon_size));
 
     QIcon icon;
     auto render = [&](QColor color) -> QPixmap {
         auto image = MUST(Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, icon_size));
-        AK::FixedMemoryStream icon_stream { ReadonlyBytes { icon_data.data(), static_cast<size_t>(icon_data.size()) } };
-        auto icon_data = MUST(Gfx::TinyVG::decode(icon_stream));
-        auto icon_raster = MUST(icon_data.bitmap(icon_size));
         Gfx::Painter painter { image };
         auto icon_color = Color::from_argb(color.rgba64().toArgb32());
         painter.blit_filtered({ 0, 0 }, *icon_raster, icon_raster->rect(), [&](auto color) {
