@@ -122,7 +122,7 @@ static ErrorOr<TinyVGHeader> decode_tinyvg_header(Stream& stream)
         height = TRY(stream.read_value<u32>());
         break;
     default:
-        VERIFY_NOT_REACHED();
+        return Error::from_string_literal("Invalid TVG: bad coordinate range");
     }
     auto color_count = TRY(stream.read_value<VarUInt>());
     return TinyVGHeader {
@@ -163,7 +163,7 @@ static ErrorOr<FixedArray<Color>> decode_color_table(Stream& stream, ColorEncodi
             return Color(red * 255, green * 255, blue * 255, alpha * 255);
         }
         default:
-            VERIFY_NOT_REACHED();
+            return Error::from_string_literal("Invalid TVG: bad color encoding");
         }
     };
     for (auto& color : color_table) {
@@ -193,6 +193,7 @@ public:
             case CoordinateRange::Enhanced:
                 return TRY(m_stream.read_value<i32>());
             default:
+                // Note: Already checked while reading the header.
                 VERIFY_NOT_REACHED();
             }
         };
@@ -229,7 +230,7 @@ public:
             return Color(Color::Black);
         }
         }
-        VERIFY_NOT_REACHED();
+        return Error::from_string_literal("Invalid TVG: bad style data");
     }
 
     ErrorOr<FloatRect> read_rectangle()
@@ -278,7 +279,7 @@ public:
                     bool sweep = (flags >> 1) & 0b1;
                     auto radius = TRY(read_unit());
                     auto target = TRY(read_point());
-                    path.arc_to(target, radius, large_arc, sweep);
+                    path.arc_to(target, radius, large_arc, !sweep);
                     break;
                 }
                 case PathCommand::ArcEllipse: {
@@ -289,7 +290,7 @@ public:
                     auto radius_y = TRY(read_unit());
                     auto rotation = TRY(read_unit());
                     auto target = TRY(read_point());
-                    path.elliptical_arc_to(target, { radius_x, radius_y }, rotation, large_arc, sweep);
+                    path.elliptical_arc_to(target, { radius_x, radius_y }, rotation, large_arc, !sweep);
                     break;
                 }
                 case PathCommand::ClosePath: {
@@ -303,7 +304,7 @@ public:
                     break;
                 }
                 default:
-                    VERIFY_NOT_REACHED();
+                    return Error::from_string_literal("Invalid TVG: bad path command");
                 }
             }
         }
@@ -441,7 +442,7 @@ ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::decode(Stream& stream)
             break;
         }
         default:
-            VERIFY_NOT_REACHED();
+            return Error::from_string_literal("Invalid TVG: bad command");
         }
     }
 
@@ -459,10 +460,12 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
     for (auto const& command : draw_commands()) {
         auto draw_path = command.path.copy_transformed(transform);
         if (command.fill.has_value()) {
-            command.fill->visit([&](Color color) { painter.fill_path(draw_path, color, Painter::WindingRule::EvenOdd); },
+            auto fill_path = draw_path;
+            fill_path.close_all_subpaths();
+            command.fill->visit([&](Color color) { painter.fill_path(fill_path, color, Painter::WindingRule::EvenOdd); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
                     const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
-                    painter.fill_path(draw_path, style, 1.0f, Painter::WindingRule::EvenOdd);
+                    painter.fill_path(fill_path, style, 1.0f, Painter::WindingRule::EvenOdd);
                 });
         }
         if (command.stroke.has_value()) {
