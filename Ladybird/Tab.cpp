@@ -11,8 +11,11 @@
 #include "InspectorWidget.h"
 #include "Settings.h"
 #include "Utilities.h"
+#include <AK/MemoryStream.h>
 #include <Browser/History.h>
 #include <LibGfx/ImageFormats/BMPWriter.h>
+#include <LibGfx/Painter.h>
+#include <LibGfx/VectorFormats/TinyVG.h>
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QCursor>
@@ -27,30 +30,32 @@
 #include <QPlainTextEdit>
 #include <QPoint>
 #include <QResizeEvent>
-#include <QSvgRenderer>
 
 extern DeprecatedString s_serenity_resource_root;
 extern Browser::Settings* s_settings;
 
 static QIcon render_svg_icon_with_theme_colors(QString name, QPalette const& palette)
 {
-    auto path = QString(":/Icons/%1.svg").arg(name);
+    auto path = QString(":/Icons/%1.tvg").arg(name);
+    QFile icon_resource(path);
+    VERIFY(icon_resource.open(QIODeviceBase::ReadOnly));
+    auto icon_data = icon_resource.readAll();
 
-    QSize icon_size(16, 16);
+    Gfx::IntSize icon_size(16, 16);
 
     QIcon icon;
-
     auto render = [&](QColor color) -> QPixmap {
-        QImage image(icon_size, QImage::Format_ARGB32);
-        image.fill(Qt::transparent);
-
-        QPainter painter(&image);
-        QSvgRenderer renderer(path);
-        renderer.render(&painter);
-        painter.setBrush(color);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceAtop);
-        painter.fillRect(image.rect(), color);
-        return QPixmap::fromImage(image);
+        auto image = MUST(Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, icon_size));
+        AK::FixedMemoryStream icon_stream { ReadonlyBytes { icon_data.data(), static_cast<size_t>(icon_data.size()) } };
+        auto icon_data = MUST(Gfx::TinyVG::decode(icon_stream));
+        auto icon_raster = MUST(icon_data.bitmap(icon_size));
+        Gfx::Painter painter { image };
+        auto icon_color = Color::from_argb(color.rgba64().toArgb32());
+        painter.blit_filtered({ 0, 0 }, *icon_raster, icon_raster->rect(), [&](auto color) {
+            return icon_color.with_alpha((icon_color.alpha() * color.alpha()) / 255);
+        });
+        QImage qimage { image->scanline_u8(0), image->width(), image->height(), QImage::Format::Format_ARGB32 };
+        return QPixmap::fromImage(qimage);
     };
 
     icon.addPixmap(render(palette.color(QPalette::ColorGroup::Normal, QPalette::ColorRole::ButtonText)), QIcon::Mode::Normal);
