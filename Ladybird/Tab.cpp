@@ -14,8 +14,8 @@
 #include <AK/MemoryStream.h>
 #include <Browser/History.h>
 #include <LibGfx/ImageFormats/BMPWriter.h>
+#include <LibGfx/ImageFormats/TinyVGLoader.h>
 #include <LibGfx/Painter.h>
-#include <LibGfx/VectorFormats/TinyVG.h>
 #include <QClipboard>
 #include <QCoreApplication>
 #include <QCursor>
@@ -43,7 +43,7 @@ static QIcon render_tvg_icon_with_theme_colors(QString name, QPalette const& pal
     VERIFY(icon_resource.open(QIODeviceBase::ReadOnly));
     auto icon_bytes = icon_resource.readAll();
     AK::FixedMemoryStream icon_stream { ReadonlyBytes { icon_bytes.data(), static_cast<size_t>(icon_bytes.size()) } };
-    auto icon_data = MUST(Gfx::TinyVG::decode(icon_stream));
+    auto icon_data = MUST(Gfx::TinyVGDecodedImageData::from_stream(icon_stream));
     auto icon_raster = MUST(icon_data.bitmap(icon_size));
 
     QIcon icon;

@@ -12,10 +12,10 @@
 #include <AK/Variant.h>
 #include <LibCore/File.h>
 #include <LibGfx/AntiAliasingPainter.h>
+#include <LibGfx/ImageFormats/TinyVGLoader.h>
 #include <LibGfx/Line.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/Point.h>
-#include <LibGfx/VectorFormats/TinyVG.h>
 
 namespace Gfx {
 
@@ -58,19 +58,19 @@ enum class Command : u8 {
 
 struct FillCommandHeader {
     u32 count;
-    TinyVG::Style style;
+    TinyVGDecodedImageData::Style style;
 };
 
 struct DrawCommandHeader {
     u32 count;
-    TinyVG::Style line_style;
+    TinyVGDecodedImageData::Style line_style;
     float line_width;
 };
 
 struct OutlineFillCommandHeader {
     u32 count;
-    TinyVG::Style fill_style;
-    TinyVG::Style line_style;
+    TinyVGDecodedImageData::Style fill_style;
+    TinyVGDecodedImageData::Style line_style;
     float line_width;
 };
 
@@ -209,7 +209,7 @@ public:
         return FloatPoint { TRY(read_unit()), TRY(read_unit()) };
     }
 
-    ErrorOr<TinyVG::Style> read_style(StyleType type)
+    ErrorOr<TinyVGDecodedImageData::Style> read_style(StyleType type)
     {
         auto read_color = [&]() -> ErrorOr<Color> {
             auto color_index = TRY(m_stream.read_value<VarUInt>());
@@ -335,7 +335,7 @@ private:
     ReadonlySpan<Color> m_color_table;
 };
 
-ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
+ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::from_stream(Stream& stream)
 {
     auto header = TRY(decode_tinyvg_header(stream));
     if (header.version != 1)
@@ -445,16 +445,10 @@ ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
         }
     }
 
-    return TinyVG { { header.width, header.height }, move(draw_commands) };
+    return TinyVGDecodedImageData { { header.width, header.height }, move(draw_commands) };
 }
 
-ErrorOr<TinyVG> TinyVG::read_from_file(StringView path)
-{
-    auto file = TRY(Core::File::open_file_or_standard_stream(path, Core::File::OpenMode::Read));
-    return decode(*file);
-}
-
-ErrorOr<RefPtr<Gfx::Bitmap>> TinyVG::bitmap(IntSize size) const
+ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
 {
     auto scale_x = float(size.width()) / m_size.width();
     auto scale_y = float(size.height()) / m_size.height();
@@ -472,7 +466,14 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVG::bitmap(IntSize size) const
                 });
         }
         if (command.stroke.has_value()) {
-            // FIXME: Just picking the max is not correct.
+            // FIXME: A more correct way to non-uniformly scale strokes would be:
+            //  1. Scale the path uniformly by the largest of scale_x/y
+            //  2. Convert that to a fill with .stroke_to_fill()
+            //  3.
+            //     If scale_x > scale_y
+            //        Scale by: (1, scale_y/scale_x)
+            //     else
+            //        Scale by: (scale_x/scale_y, 1)
             auto stroke_scale = max(scale_x, scale_y);
             command.stroke->visit([&](Color color) { painter.stroke_path(draw_path, color, command.stroke_width * stroke_scale); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {

@@ -49,6 +49,7 @@ set(SOURCES
     ImageFormats/QOILoader.cpp
     ImageFormats/QOIWriter.cpp
     ImageFormats/TGALoader.cpp
+    ImageFormats/TinyVGLoader.cpp
     ImageFormats/WebPLoader.cpp
     ImageFormats/WebPLoaderLossless.cpp
     ImageFormats/WebPLoaderLossy.cpp
@@ -65,7 +66,6 @@ set(SOURCES
     TextLayout.cpp
     Triangle.cpp
     WindowTheme.cpp
-    VectorFormats/TinyVG.cpp
 )
 
 serenity_lib(LibGfx gfx)
