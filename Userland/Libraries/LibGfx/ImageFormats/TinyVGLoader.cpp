@@ -462,7 +462,8 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
         if (command.fill.has_value()) {
             auto fill_path = draw_path;
             fill_path.close_all_subpaths();
-            command.fill->visit([&](Color color) { painter.fill_path(fill_path, color, Painter::WindingRule::EvenOdd); },
+            command.fill->visit(
+                [&](Color color) { painter.fill_path(fill_path, color, Painter::WindingRule::EvenOdd); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
                     const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
                     painter.fill_path(fill_path, style, 1.0f, Painter::WindingRule::EvenOdd);
@@ -478,7 +479,8 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
             //     else
             //        Scale by: (scale_x/scale_y, 1)
             auto stroke_scale = max(scale_x, scale_y);
-            command.stroke->visit([&](Color color) { painter.stroke_path(draw_path, color, command.stroke_width * stroke_scale); },
+            command.stroke->visit(
+                [&](Color color) { painter.stroke_path(draw_path, color, command.stroke_width * stroke_scale); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
                     const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
                     painter.stroke_path(draw_path, style, command.stroke_width * stroke_scale);
