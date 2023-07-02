@@ -44,6 +44,16 @@ public:
 
     ErrorOr<RefPtr<Gfx::Bitmap>> bitmap(IntSize size) const;
 
+    IntSize size() const
+    {
+        return m_size;
+    }
+
+    ReadonlySpan<DrawCommand> draw_commands() const
+    {
+        return m_draw_commands;
+    }
+
 private:
     TinyVG(IntSize size, Vector<DrawCommand> draw_commands)
         : m_size(size)

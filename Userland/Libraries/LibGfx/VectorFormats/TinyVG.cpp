@@ -56,6 +56,24 @@ enum class Command : u8 {
     OutLineFillPath = 10
 };
 
+struct FillCommandHeader {
+    u32 count;
+    TinyVG::Style style;
+};
+
+struct DrawCommandHeader {
+    u32 count;
+    TinyVG::Style line_style;
+    float line_width;
+};
+
+struct OutlineFillCommandHeader {
+    u32 count;
+    TinyVG::Style fill_style;
+    TinyVG::Style line_style;
+    float line_width;
+};
+
 enum class PathCommand : u8 {
     Line = 0,
     HorizontalLine = 1,
@@ -292,6 +310,24 @@ public:
         return path;
     }
 
+    ErrorOr<FillCommandHeader> read_fill_command_header(StyleType style_type)
+    {
+        return FillCommandHeader { TRY(read_var_uint()) + 1, TRY(read_style(style_type)) };
+    }
+
+    ErrorOr<DrawCommandHeader> read_draw_command_header(StyleType style_type)
+    {
+        return DrawCommandHeader { TRY(read_var_uint()) + 1, TRY(read_style(style_type)), TRY(read_unit()) };
+    }
+
+    ErrorOr<OutlineFillCommandHeader> read_outline_fill_command_header(StyleType style_type)
+    {
+        u8 header = TRY(m_stream.read_value<u8>());
+        u8 count = (header & 0x3f) + 1;
+        auto stroke_type = static_cast<StyleType>((header >> 6) & 0x3);
+        return OutlineFillCommandHeader { count, TRY(read_style(style_type)), TRY(read_style(stroke_type)), TRY(read_unit()) };
+    }
+
 private:
     Stream& m_stream;
     float m_scale {};
@@ -330,102 +366,78 @@ ErrorOr<TinyVG> TinyVG::decode(Stream& stream)
             at_end = true;
             break;
         case Command::FillPolygon: {
-            u32 point_count = TRY(reader.read_var_uint());
-            auto style = TRY(reader.read_style(style_type));
+            auto header = TRY(reader.read_fill_command_header(style_type));
             Path polygon;
             polygon.move_to(TRY(reader.read_point()));
-            for (u32 i = 0; i < point_count; i++)
+            for (u32 i = 0; i < header.count - 1; i++)
                 polygon.line_to(TRY(reader.read_point()));
-            TRY(draw_commands.try_append(DrawCommand { move(polygon), move(style) }));
+            TRY(draw_commands.try_append(DrawCommand { move(polygon), move(header.style) }));
             break;
         }
         case Command::FillRectangles: {
-            u32 rectangle_count = TRY(reader.read_var_uint()) + 1;
-            auto style = TRY(reader.read_style(style_type));
-            for (u32 i = 0; i < rectangle_count; i++) {
+            auto header = TRY(reader.read_fill_command_header(style_type));
+            for (u32 i = 0; i < header.count; i++) {
                 TRY(draw_commands.try_append(DrawCommand {
-                    rectangle_to_path(TRY(reader.read_rectangle())), move(style) }));
+                    rectangle_to_path(TRY(reader.read_rectangle())), move(header.style) }));
             }
             break;
         }
         case Command::FillPath: {
-            u32 segment_count = TRY(reader.read_var_uint()) + 1;
-            auto style = TRY(reader.read_style(style_type));
-            auto path = TRY(reader.read_path(segment_count));
-            TRY(draw_commands.try_append(DrawCommand { move(path), move(style) }));
+            auto header = TRY(reader.read_fill_command_header(style_type));
+            auto path = TRY(reader.read_path(header.count));
+            TRY(draw_commands.try_append(DrawCommand { move(path), move(header.style) }));
             break;
         }
         case Command::DrawLines: {
-            u32 line_count = TRY(reader.read_var_uint()) + 1;
-            auto line_style = TRY(reader.read_style(style_type));
-            auto line_width = TRY(reader.read_unit());
+            auto header = TRY(reader.read_draw_command_header(style_type));
             Path path;
-            for (u32 i = 0; i < line_count; i++) {
+            for (u32 i = 0; i < header.count; i++) {
                 auto line = TRY(reader.read_line());
                 path.move_to(line.a());
                 path.line_to(line.b());
             }
-            TRY(draw_commands.try_append(DrawCommand { move(path), {}, line_style, line_width }));
+            TRY(draw_commands.try_append(DrawCommand { move(path), {}, move(header.line_style), header.line_width }));
             break;
         }
         case Command::DrawLineStrip:
         case Command::DrawLineLoop: {
-            u32 point_count = TRY(reader.read_var_uint());
-            auto line_style = TRY(reader.read_style(style_type));
-            auto line_width = TRY(reader.read_unit());
+            auto header = TRY(reader.read_draw_command_header(style_type));
             Path path;
             path.move_to(TRY(reader.read_point()));
-            for (u32 i = 0; i < point_count; i++)
+            for (u32 i = 0; i < header.count - 1; i++)
                 path.line_to(TRY(reader.read_point()));
             if (command == Command::DrawLineLoop)
                 path.close();
-            TRY(draw_commands.try_append(DrawCommand { move(path), {}, line_style, line_width }));
+            TRY(draw_commands.try_append(DrawCommand { move(path), {}, move(header.line_style), header.line_width }));
             break;
         }
         case Command::DrawLinePath: {
-            u32 segment_count = TRY(reader.read_var_uint()) + 1;
-            auto line_style = TRY(reader.read_style(style_type));
-            auto line_width = TRY(reader.read_unit());
-            auto path = TRY(reader.read_path(segment_count));
-            TRY(draw_commands.try_append(DrawCommand { move(path), {}, line_style, line_width }));
+            auto header = TRY(reader.read_draw_command_header(style_type));
+            auto path = TRY(reader.read_path(header.count));
+            TRY(draw_commands.try_append(DrawCommand { move(path), {}, move(header.line_style), header.line_width }));
             break;
         }
         case Command::OutlineFillPolygon: {
-            u8 segment_info = TRY(stream.read_value<u8>());
-            u8 segment_count = segment_info & 0x3f;
-            auto stroke_type = static_cast<StyleType>((segment_info >> 6) & 0x3);
-            auto fill_style = TRY(reader.read_style(style_type));
-            auto line_style = TRY(reader.read_style(stroke_type));
-            auto line_width = TRY(reader.read_unit());
+            auto header = TRY(reader.read_outline_fill_command_header(style_type));
             Path polygon;
             polygon.move_to(TRY(reader.read_point()));
-            for (u32 i = 0; i < segment_count; i++)
+            for (u32 i = 0; i < header.count - 1; i++)
                 polygon.line_to(TRY(reader.read_point()));
-            TRY(draw_commands.try_append(DrawCommand { move(polygon), move(fill_style), move(line_style), line_width }));
+            TRY(draw_commands.try_append(DrawCommand { move(polygon), move(header.fill_style), move(header.line_style), header.line_width }));
             break;
         }
         case Command::OutlineFillRectangles: {
-            u8 rect_info = TRY(stream.read_value<u8>());
-            u8 rect_count = (rect_info & 0x3f) + 1;
-            auto stroke_type = static_cast<StyleType>((rect_info >> 6) & 0x3);
-            auto fill_style = TRY(reader.read_style(style_type));
-            auto line_style = TRY(reader.read_style(stroke_type));
-            auto line_width = TRY(reader.read_unit());
-            for (u32 i = 0; i < rect_count; i++) {
+            auto header = TRY(reader.read_outline_fill_command_header(style_type));
+            for (u32 i = 0; i < header.count - 1; i++) {
                 TRY(draw_commands.try_append(DrawCommand {
-                    rectangle_to_path(TRY(reader.read_rectangle())), move(fill_style), move(line_style), line_width }));
+                    rectangle_to_path(TRY(reader.read_rectangle())), move(header.fill_style), move(header.line_style), header.line_width }));
             }
             break;
         }
         case Command::OutLineFillPath: {
-            u8 segment_info = TRY(stream.read_value<u8>());
-            u8 segment_count = (segment_info & 0x3f) + 1;
-            auto stroke_type = static_cast<StyleType>((segment_info >> 6) & 0x3);
-            auto fill_style = TRY(reader.read_style(style_type));
-            auto line_style = TRY(reader.read_style(stroke_type));
-            auto line_width = TRY(reader.read_unit());
-            auto path = TRY(reader.read_path(segment_count));
-            TRY(draw_commands.try_append(DrawCommand { move(path), move(fill_style), move(line_style), line_width }));
+            auto header = TRY(reader.read_outline_fill_command_header(style_type));
+            auto path = TRY(reader.read_path(header.count));
+            TRY(draw_commands.try_append(DrawCommand { move(path), move(header.fill_style), move(header.line_style), header.line_width }));
             break;
         }
         default:
@@ -450,7 +462,7 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVG::bitmap(IntSize size) const
     auto bitmap = TRY(Bitmap::create(Gfx::BitmapFormat::BGRA8888, size));
     Painter base_painter { *bitmap };
     AntiAliasingPainter painter { base_painter };
-    for (auto const& command : m_draw_commands) {
+    for (auto const& command : draw_commands()) {
         auto draw_path = command.path.copy_transformed(transform);
         if (command.fill.has_value()) {
             command.fill->visit([&](Color color) { painter.fill_path(draw_path, color, Painter::WindingRule::EvenOdd); },
