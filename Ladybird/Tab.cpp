@@ -41,10 +41,9 @@ static QIcon render_tvg_icon_with_theme_colors(QString name, QPalette const& pal
 
     QFile icon_resource(path);
     VERIFY(icon_resource.open(QIODeviceBase::ReadOnly));
-    auto icon_bytes = icon_resource.readAll();
-    AK::FixedMemoryStream icon_stream { ReadonlyBytes { icon_bytes.data(), static_cast<size_t>(icon_bytes.size()) } };
-    auto icon_data = MUST(Gfx::TinyVGDecodedImageData::decode(icon_stream));
-    auto icon_raster = MUST(icon_data.bitmap(icon_size));
+    auto icon_data = icon_resource.readAll();
+    ReadonlyBytes icon_bytes { icon_data.data(), static_cast<size_t>(icon_data.size()) };
+    auto icon_raster = MUST(Gfx::Bitmap::load_from_bytes(icon_bytes, icon_size));
 
     QIcon icon;
     auto render = [&](QColor color) -> QPixmap {
