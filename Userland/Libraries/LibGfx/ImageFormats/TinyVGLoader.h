@@ -7,9 +7,11 @@
 #pragma once
 
 #include <AK/Forward.h>
+#include <AK/OwnPtr.h>
 #include <AK/Vector.h>
 #include <LibGfx/Color.h>
 #include <LibGfx/Forward.h>
+#include <LibGfx/ImageFormats/ImageDecoder.h>
 #include <LibGfx/PaintStyle.h>
 #include <LibGfx/Path.h>
 
@@ -51,7 +53,7 @@ public:
         return m_draw_commands;
     }
 
-    static ErrorOr<TinyVGDecodedImageData> from_stream(Stream& stream);
+    static ErrorOr<TinyVGDecodedImageData> decode(Stream& stream);
 
 private:
     TinyVGDecodedImageData(IntSize size, Vector<DrawCommand> draw_commands)
@@ -62,6 +64,36 @@ private:
 
     IntSize m_size;
     Vector<DrawCommand> m_draw_commands;
+};
+
+struct TinyVGLoadingContext {
+    ReadonlyBytes data;
+    OwnPtr<TinyVGDecodedImageData> decoded_image {};
+    RefPtr<Bitmap> bitmap {};
+};
+
+class TinyVGImageDecoderPlugin final : public ImageDecoderPlugin {
+public:
+    static bool sniff(ReadonlyBytes);
+    static ErrorOr<NonnullOwnPtr<ImageDecoderPlugin>> create(ReadonlyBytes);
+
+    virtual IntSize size() override;
+    virtual void set_volatile() override;
+    [[nodiscard]] virtual bool set_nonvolatile(bool&) override;
+    virtual ErrorOr<void> initialize() override;
+    virtual bool is_animated() override { return false; }
+    virtual size_t loop_count() override { return 0; }
+    virtual size_t frame_count() override { return 1; }
+    virtual size_t first_animated_frame_index() override { return 0; }
+    virtual ErrorOr<ImageFrameDescriptor> frame(size_t index) override;
+    virtual ErrorOr<Optional<ReadonlyBytes>> icc_data() override { return OptionalNone {}; };
+
+    virtual ~TinyVGImageDecoderPlugin() override = default;
+
+private:
+    TinyVGImageDecoderPlugin(ReadonlyBytes);
+
+    TinyVGLoadingContext m_context;
 };
 
 }

@@ -335,7 +335,7 @@ private:
     ReadonlySpan<Color> m_color_table;
 };
 
-ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::from_stream(Stream& stream)
+ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::decode(Stream& stream)
 {
     auto header = TRY(decode_tinyvg_header(stream));
     if (header.version != 1)
@@ -483,6 +483,56 @@ ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
         }
     }
     return bitmap;
+}
+
+TinyVGImageDecoderPlugin::TinyVGImageDecoderPlugin(ReadonlyBytes bytes)
+    : m_context { bytes }
+{
+}
+
+ErrorOr<NonnullOwnPtr<ImageDecoderPlugin>> TinyVGImageDecoderPlugin::create(ReadonlyBytes bytes)
+{
+    return adopt_nonnull_own_or_enomem(new (nothrow) TinyVGImageDecoderPlugin(bytes));
+}
+
+bool TinyVGImageDecoderPlugin::sniff(ReadonlyBytes bytes)
+{
+    FixedMemoryStream stream { { bytes.data(), bytes.size() } };
+    return !decode_tinyvg_header(stream).is_error();
+}
+
+IntSize TinyVGImageDecoderPlugin::size()
+{
+    if (m_context.decoded_image)
+        return m_context.decoded_image->size();
+    return {};
+}
+
+void TinyVGImageDecoderPlugin::set_volatile()
+{
+    if (m_context.bitmap)
+        m_context.bitmap->set_volatile();
+}
+
+bool TinyVGImageDecoderPlugin::set_nonvolatile(bool& was_purged)
+{
+    if (!m_context.bitmap)
+        return false;
+    return m_context.bitmap->set_nonvolatile(was_purged);
+}
+
+ErrorOr<void> TinyVGImageDecoderPlugin::initialize()
+{
+    FixedMemoryStream stream { { m_context.data.data(), m_context.data.size() } };
+    m_context.decoded_image = make<TinyVGDecodedImageData>(TRY(TinyVGDecodedImageData::decode(stream)));
+    return {};
+}
+
+ErrorOr<ImageFrameDescriptor> TinyVGImageDecoderPlugin::frame(size_t)
+{
+    if (!m_context.bitmap)
+        m_context.bitmap = TRY(m_context.decoded_image->bitmap(m_context.decoded_image->size()));
+    return ImageFrameDescriptor { m_context.bitmap };
 }
 
 }
