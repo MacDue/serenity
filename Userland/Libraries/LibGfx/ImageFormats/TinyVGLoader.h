@@ -20,8 +20,8 @@ namespace Gfx {
 // Current recommended SVG to TVG conversion (without installing tools)
 // (FIXME: Implement our own converter!)
 // 1. (Optional) Convert strokes to fills
-//  * Strokes are not well represented in TVG, converting them to fills
-//    (that still beziers etc, so are scalable) works much better.
+//  * Only round joins/linecaps exist in TVG, so for other stroke kinds converting
+//    them to fills (that still beziers etc, so are scalable) works better.
 //  * This site can do that: https://iconly.io/tools/svg-convert-stroke-to-fill
 // 2. Scale your SVG's width/height to large size (e.g. 1024x?)
 //  * Current converters deal poorly with small values in paths.

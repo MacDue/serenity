@@ -100,7 +100,7 @@ static ErrorOr<TinyVGHeader> decode_tinyvg_header(Stream& stream)
     Array<u8, 2> magic_bytes;
     TRY(stream.read_until_filled(magic_bytes));
     if (magic_bytes != TVG_MAGIC)
-        return Error::from_string_literal("Invalid TVG: incorrect header magic");
+        return Error::from_string_literal("Invalid TinyVG: Incorrect header magic");
     u8 version = TRY(stream.read_value<u8>());
     u8 properties = TRY(stream.read_value<u8>());
     u8 scale = properties & 0xF;
@@ -122,7 +122,7 @@ static ErrorOr<TinyVGHeader> decode_tinyvg_header(Stream& stream)
         height = TRY(stream.read_value<u32>());
         break;
     default:
-        return Error::from_string_literal("Invalid TVG: bad coordinate range");
+        return Error::from_string_literal("Invalid TinyVG: Bad coordinate range");
     }
     auto color_count = TRY(stream.read_value<VarUInt>());
     return TinyVGHeader {
@@ -139,7 +139,7 @@ static ErrorOr<TinyVGHeader> decode_tinyvg_header(Stream& stream)
 static ErrorOr<FixedArray<Color>> decode_color_table(Stream& stream, ColorEncoding encoding, u32 color_count)
 {
     if (encoding == ColorEncoding::Custom)
-        return Error::from_string_literal("Unsupported TVG color encoding");
+        return Error::from_string_literal("Invalid TinyVG: Unsupported color encoding");
     auto color_table = TRY(FixedArray<Color>::create(color_count));
     auto parse_color = [&]() -> ErrorOr<Color> {
         switch (encoding) {
@@ -163,7 +163,7 @@ static ErrorOr<FixedArray<Color>> decode_color_table(Stream& stream, ColorEncodi
             return Color(red * 255, green * 255, blue * 255, alpha * 255);
         }
         default:
-            return Error::from_string_literal("Invalid TVG: bad color encoding");
+            return Error::from_string_literal("Invalid TinyVG: Bad color encoding");
         }
     };
     for (auto& color : color_table) {
@@ -230,7 +230,7 @@ public:
             return Color(Color::Black);
         }
         }
-        return Error::from_string_literal("Invalid TVG: bad style data");
+        return Error::from_string_literal("Invalid TinyVG: Bad style data");
     }
 
     ErrorOr<FloatRect> read_rectangle()
@@ -304,7 +304,7 @@ public:
                     break;
                 }
                 default:
-                    return Error::from_string_literal("Invalid TVG: bad path command");
+                    return Error::from_string_literal("Invalid TinyVG: Bad path command");
                 }
             }
         }
@@ -340,7 +340,7 @@ ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::decode(Stream& stream)
 {
     auto header = TRY(decode_tinyvg_header(stream));
     if (header.version != 1)
-        return Error::from_string_literal("Unsupported TVG version");
+        return Error::from_string_literal("Invalid TinyVG: Unsupported version");
 
     auto color_table = TRY(decode_color_table(stream, header.color_encoding, header.color_count));
     TinyVGReader reader { stream, header, color_table.span() };
@@ -442,7 +442,7 @@ ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::decode(Stream& stream)
             break;
         }
         default:
-            return Error::from_string_literal("Invalid TVG: bad command");
+            return Error::from_string_literal("Invalid TinyVG: Bad command");
         }
     }
 

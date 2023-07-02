@@ -110,7 +110,7 @@ ErrorOr<NonnullRefPtr<Bitmap>> Bitmap::create_wrapper(BitmapFormat format, IntSi
 ErrorOr<NonnullRefPtr<Bitmap>> Bitmap::load_from_file(StringView path, int scale_factor, Optional<IntSize> ideal_size)
 {
     if (scale_factor > 1 && path.starts_with("/res/"sv)) {
-        auto load_scaled_bitmap = [](StringView path, int scale_factor) -> ErrorOr<NonnullRefPtr<Bitmap>> {
+        auto load_scaled_bitmap = [](StringView path, int scale_factor, Optional<IntSize> ideal_size) -> ErrorOr<NonnullRefPtr<Bitmap>> {
             LexicalPath lexical_path { path };
             StringBuilder highdpi_icon_path;
             TRY(highdpi_icon_path.try_appendff("{}/{}-{}x.{}", lexical_path.dirname(), lexical_path.title(), scale_factor, lexical_path.extension()));
@@ -127,7 +127,7 @@ ErrorOr<NonnullRefPtr<Bitmap>> Bitmap::load_from_file(StringView path, int scale
             return bitmap;
         };
 
-        auto scaled_bitmap_or_error = load_scaled_bitmap(path, scale_factor);
+        auto scaled_bitmap_or_error = load_scaled_bitmap(path, scale_factor, ideal_size);
         if (!scaled_bitmap_or_error.is_error())
             return scaled_bitmap_or_error.release_value();
 
