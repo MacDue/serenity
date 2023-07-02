@@ -30,6 +30,9 @@ namespace Gfx {
 // 3. Convert the SVG to a TVG
 //  * This site can do that: https://svg-to-tvg-server.fly.dev/
 
+// Decoder from the "Tiny Vector Graphics" formt (v1.0).
+// https://tinyvg.tech/download/specification.pdf
+
 class TinyVGDecodedImageData {
 public:
     using Style = Variant<Color, NonnullRefPtr<SVGGradientPaintStyle>>;
