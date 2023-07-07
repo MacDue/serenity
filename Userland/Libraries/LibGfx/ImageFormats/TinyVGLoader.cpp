@@ -519,4 +519,9 @@ ErrorOr<ImageFrameDescriptor> TinyVGImageDecoderPlugin::frame(size_t, Optional<I
     return ImageFrameDescriptor { m_context.bitmap };
 }
 
+ErrorOr<VectorImageFrameDescriptor> TinyVGImageDecoderPlugin::vector_frame(size_t)
+{
+    return VectorImageFrameDescriptor { m_context.decoded_image, 0 };
+}
+
 }

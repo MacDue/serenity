@@ -22,7 +22,6 @@
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Orientation.h>
 #include <LibGfx/Palette.h>
-#include <LibImageDecoderClient/Client.h>
 
 namespace ImageViewer {
 
@@ -216,32 +215,31 @@ void ViewWidget::open_file(String const& path, Core::File& file)
 
 ErrorOr<void> ViewWidget::try_open_file(String const& path, Core::File& file)
 {
-    // Spawn a new ImageDecoder service process and connect to it.
-    auto client = TRY(ImageDecoderClient::Client::try_create());
-    auto mime_type = Core::guess_mime_type_based_on_filename(path);
+    // FIXME: Figure out an out-of-process decode what works for vector/raster images.
+    auto decoder = Gfx::ImageDecoder::try_create_for_raw_bytes(file.bytes());
+    if (!decoder) {
+        return Error::from_string_literal("Failed to decode image");
+    }
 
-    if (mime_type == "image/tinyvg"sv) {
-        TRY(file.seek(0, SeekMode::SetPosition));
-        m_image = VectorImage::create(TRY(Gfx::TinyVGDecodedImageData::decode(file)));
-    } else {
-        auto decoded_image_or_none = client->decode_image(TRY(file.read_until_eof()), mime_type);
-        if (!decoded_image_or_none.has_value()) {
-            return Error::from_string_literal("Failed to decode image");
+    Vector<Animation::Frame> frames;
+    frames.ensure_capacity(decoder->frame_count());
+    auto is_vector = decoder->is_vector();
+    for (int i = 0; i < decoder->frame_count(); i++) {
+        if (is_vector) {
+            auto frame_data = TRY(decoder->vector_frame(i));
+            frames.unchecked_append({ VectorImage::create(frame_data.image), frame_data.duration });
+        } else {
+            auto frame_data = TRY(decoder->frame(i));
+            frames.unchecked_append({ BitmapImage::create(frame_data.image), frame_data.duration });
         }
-        auto decoded_image = decoded_image_or_none.release_value();
+    }
 
-        Vector<Animation::Frame> frames;
-        frames.ensure_capacity(decoded_image.frames.size());
-        for (auto& frame : decoded_image.frames)
-            frames.unchecked_append({ BitmapImage::create(*frame.bitmap), frame.duration });
-
-        m_image = frames[0].image;
-        if (decoded_image.is_animated && frames.size() > 1) {
-            m_animation = Animation {
-                decoded_image.loop_count,
-                move(frames)
-            };
-        }
+    m_image = frames[0].image;
+    if (decoded_image.is_animated && frames.size() > 1) {
+        m_animation = Animation {
+            decoded_image.loop_count,
+            move(frames)
+        };
     }
 
     set_original_rect(m_image->rect());

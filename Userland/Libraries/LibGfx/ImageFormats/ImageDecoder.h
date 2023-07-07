@@ -12,6 +12,7 @@
 #include <AK/RefPtr.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Size.h>
+#include <LibGfx/VectorGraphic.h>
 
 namespace Gfx {
 
@@ -22,6 +23,11 @@ static constexpr size_t maximum_height_for_decoded_images = 16384;
 
 struct ImageFrameDescriptor {
     RefPtr<Bitmap> image;
+    int duration { 0 };
+};
+
+struct VectorImageFrameDescriptor {
+    RefPtr<VectorGraphic> image;
     int duration { 0 };
 };
 
@@ -37,11 +43,15 @@ public:
     virtual ErrorOr<void> initialize() = 0;
 
     virtual bool is_animated() = 0;
+
     virtual size_t loop_count() = 0;
     virtual size_t frame_count() = 0;
     virtual size_t first_animated_frame_index() = 0;
-    virtual ErrorOr<ImageFrameDescriptor> frame(size_t index, Optional<IntSize> ideal_size = {}) = 0;
+    virtual ErrorOr<ImageFrameDescriptor> frame(size_t index, Optional<IntSize> ideal_size = {});
     virtual ErrorOr<Optional<ReadonlyBytes>> icc_data() = 0;
+
+    virtual bool is_vector() { return false; }
+    virtual ErrorOr<VectorImageFrameDescriptor> vector_frame(size_t) { VERIFY_NOT_REACHED(); }
 
 protected:
     ImageDecoderPlugin() = default;
@@ -63,6 +73,9 @@ public:
     size_t first_animated_frame_index() const { return m_plugin->first_animated_frame_index(); }
     ErrorOr<ImageFrameDescriptor> frame(size_t index, Optional<IntSize> ideal_size = {}) const { return m_plugin->frame(index, ideal_size); }
     ErrorOr<Optional<ReadonlyBytes>> icc_data() const { return m_plugin->icc_data(); }
+
+    bool is_vector() { return m_plugin->is_vector(); }
+    ErrorOr<VectorImageFrameDescriptor> vector_frame(size_t index) { return m_plugin->vector_frame(index); }
 
 private:
     explicit ImageDecoder(NonnullOwnPtr<ImageDecoderPlugin>);

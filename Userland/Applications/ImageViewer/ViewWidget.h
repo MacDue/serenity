@@ -16,7 +16,6 @@
 #include <LibGUI/Painter.h>
 #include <LibGfx/ImageFormats/TinyVGLoader.h>
 #include <LibGfx/VectorGraphic.h>
-#include <LibImageDecoderClient/Client.h>
 
 namespace ImageViewer {
 
