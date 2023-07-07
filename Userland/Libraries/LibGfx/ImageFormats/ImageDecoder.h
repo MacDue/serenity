@@ -47,7 +47,7 @@ public:
     virtual size_t loop_count() = 0;
     virtual size_t frame_count() = 0;
     virtual size_t first_animated_frame_index() = 0;
-    virtual ErrorOr<ImageFrameDescriptor> frame(size_t index, Optional<IntSize> ideal_size = {});
+    virtual ErrorOr<ImageFrameDescriptor> frame(size_t index, Optional<IntSize> ideal_size = {}) = 0;
     virtual ErrorOr<Optional<ReadonlyBytes>> icc_data() = 0;
 
     virtual bool is_vector() { return false; }
