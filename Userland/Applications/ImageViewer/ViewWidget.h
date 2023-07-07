@@ -147,10 +147,10 @@ private:
     struct Animation {
         struct Frame {
             RefPtr<Image> image;
-            u32 duration { 0 };
+            int duration { 0 };
         };
 
-        u32 loop_count { 0 };
+        size_t loop_count { 0 };
         Vector<Frame> frames;
     };
 

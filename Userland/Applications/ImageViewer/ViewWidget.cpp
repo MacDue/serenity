@@ -216,7 +216,8 @@ void ViewWidget::open_file(String const& path, Core::File& file)
 ErrorOr<void> ViewWidget::try_open_file(String const& path, Core::File& file)
 {
     // FIXME: Figure out an out-of-process decode what works for vector/raster images.
-    auto decoder = Gfx::ImageDecoder::try_create_for_raw_bytes(file.bytes());
+    auto file_data = TRY(file.read_until_eof());
+    auto decoder = Gfx::ImageDecoder::try_create_for_raw_bytes(file_data);
     if (!decoder) {
         return Error::from_string_literal("Failed to decode image");
     }
@@ -224,20 +225,21 @@ ErrorOr<void> ViewWidget::try_open_file(String const& path, Core::File& file)
     Vector<Animation::Frame> frames;
     frames.ensure_capacity(decoder->frame_count());
     auto is_vector = decoder->is_vector();
-    for (int i = 0; i < decoder->frame_count(); i++) {
+    bool is_animated = decoder->is_animated();
+    for (u32 i = 0; i < decoder->frame_count(); i++) {
         if (is_vector) {
             auto frame_data = TRY(decoder->vector_frame(i));
-            frames.unchecked_append({ VectorImage::create(frame_data.image), frame_data.duration });
+            frames.unchecked_append({ VectorImage::create(*frame_data.image), frame_data.duration });
         } else {
             auto frame_data = TRY(decoder->frame(i));
-            frames.unchecked_append({ BitmapImage::create(frame_data.image), frame_data.duration });
+            frames.unchecked_append({ BitmapImage::create(*frame_data.image), frame_data.duration });
         }
     }
 
     m_image = frames[0].image;
-    if (decoded_image.is_animated && frames.size() > 1) {
+    if (is_animated && frames.size() > 1) {
         m_animation = Animation {
-            decoded_image.loop_count,
+            decoder->loop_count(),
             move(frames)
         };
     }
