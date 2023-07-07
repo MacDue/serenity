@@ -49,12 +49,20 @@ void ViewWidget::clear()
 void ViewWidget::flip(Gfx::Orientation orientation)
 {
     m_bitmap = m_bitmap->flipped(orientation).release_value_but_fixme_should_propagate_errors();
+    if (orientation == Gfx::Orientation::Horizontal)
+        apply_vector_transform(Gfx::AffineTransform {}.scale(-1, 1));
+    else
+        apply_vector_transform(Gfx::AffineTransform {}.scale(1, -1));
     scale_image_for_window();
 }
 
 void ViewWidget::rotate(Gfx::RotationDirection rotation_direction)
 {
     m_bitmap = m_bitmap->rotated(rotation_direction).release_value_but_fixme_should_propagate_errors();
+    if (rotation_direction == Gfx::RotationDirection::Clockwise)
+        apply_vector_transform(Gfx::AffineTransform {}.rotate_radians(AK::Pi<float> / 2));
+    else
+        apply_vector_transform(Gfx::AffineTransform {}.rotate_radians(-AK::Pi<float> / 2));
     scale_image_for_window();
 }
 
@@ -133,6 +141,11 @@ void ViewWidget::doubleclick_event(GUI::MouseEvent&)
     on_doubleclick();
 }
 
+void ViewWidget::apply_vector_transform(Gfx::AffineTransform transform)
+{
+    m_vector_transform = transform.multiply(m_vector_transform);
+}
+
 void ViewWidget::paint_event(GUI::PaintEvent& event)
 {
     Frame::paint_event(event);
@@ -143,7 +156,9 @@ void ViewWidget::paint_event(GUI::PaintEvent& event)
 
     Gfx::StylePainter::paint_transparency_grid(painter, frame_inner_rect(), palette());
 
-    if (!m_bitmap.is_null())
+    if (m_tinyvg_data.has_value())
+        m_tinyvg_data->draw_into(painter, content_rect(), m_vector_transform);
+    else if (!m_bitmap.is_null())
         painter.draw_scaled_bitmap(content_rect(), *m_bitmap, m_bitmap->rect(), 1.0f, m_scaling_mode);
 }
 
@@ -180,6 +195,11 @@ ErrorOr<void> ViewWidget::try_open_file(String const& path, Core::File& file)
     auto decoded_image_or_none = client->decode_image(TRY(file.read_until_eof()), mime_type);
     if (!decoded_image_or_none.has_value()) {
         return Error::from_string_literal("Failed to decode image");
+    }
+
+    if (mime_type == "image/tinyvg"sv) {
+        TRY(file.seek(0, SeekMode::SetPosition));
+        m_tinyvg_data = TRY(Gfx::TinyVGDecodedImageData::decode(file));
     }
 
     m_decoded_image = decoded_image_or_none.release_value();

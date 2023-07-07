@@ -440,44 +440,42 @@ ErrorOr<TinyVGDecodedImageData> TinyVGDecodedImageData::decode(Stream& stream)
     return TinyVGDecodedImageData { { header.width, header.height }, move(draw_commands) };
 }
 
-ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
+void TinyVGDecodedImageData::draw_into(Painter& painter, IntRect const& dest, AffineTransform transform) const
 {
-    auto scale_x = float(size.width()) / m_size.width();
-    auto scale_y = float(size.height()) / m_size.height();
-    auto transform = Gfx::AffineTransform {}.scale(scale_x, scale_y);
-    auto bitmap = TRY(Bitmap::create(Gfx::BitmapFormat::BGRA8888, size));
-    Painter base_painter { *bitmap };
-    AntiAliasingPainter painter { base_painter };
+    // Apply the transform then center within destination rectangle (this ignores any translation):
+    auto transformed_rect = transform.map(FloatRect { {}, size() });
+    auto scale = min(float(dest.width()) / transformed_rect.width(), float(dest.height()) / transformed_rect.height());
+    auto centered = FloatRect { {}, transformed_rect.size().scaled_by(scale) }.centered_within(dest.to_type<float>());
+    auto view_transform = AffineTransform {}.translate(centered.location()).multiply(AffineTransform {}.scale(scale, scale)).multiply(AffineTransform {}.translate(-transformed_rect.location())).multiply(transform);
+    AntiAliasingPainter aa_painter { painter };
     for (auto const& command : draw_commands()) {
-        auto draw_path = command.path.copy_transformed(transform);
+        auto draw_path = command.path.copy_transformed(view_transform);
         if (command.fill.has_value()) {
             auto fill_path = draw_path;
             fill_path.close_all_subpaths();
             command.fill->visit(
-                [&](Color color) { painter.fill_path(fill_path, color, Painter::WindingRule::EvenOdd); },
+                [&](Color color) { aa_painter.fill_path(fill_path, color, Painter::WindingRule::EvenOdd); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
-                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
-                    painter.fill_path(fill_path, style, 1.0f, Painter::WindingRule::EvenOdd);
+                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(view_transform);
+                    aa_painter.fill_path(fill_path, style, 1.0f, Painter::WindingRule::EvenOdd);
                 });
         }
         if (command.stroke.has_value()) {
-            // FIXME: A more correct way to non-uniformly scale strokes would be:
-            //  1. Scale the path uniformly by the largest of scale_x/y
-            //  2. Convert that to a fill with .stroke_to_fill()
-            //  3.
-            //     If scale_x > scale_y
-            //        Scale by: (1, scale_y/scale_x)
-            //     else
-            //        Scale by: (scale_x/scale_y, 1)
-            auto stroke_scale = max(scale_x, scale_y);
             command.stroke->visit(
-                [&](Color color) { painter.stroke_path(draw_path, color, command.stroke_width * stroke_scale); },
+                [&](Color color) { aa_painter.stroke_path(draw_path, color, command.stroke_width * scale); },
                 [&](NonnullRefPtr<SVGGradientPaintStyle> style) {
-                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(transform);
-                    painter.stroke_path(draw_path, style, command.stroke_width * stroke_scale);
+                    const_cast<SVGGradientPaintStyle&>(*style).set_gradient_transform(view_transform);
+                    aa_painter.stroke_path(draw_path, style, command.stroke_width * scale);
                 });
         }
     }
+}
+
+ErrorOr<RefPtr<Gfx::Bitmap>> TinyVGDecodedImageData::bitmap(IntSize size) const
+{
+    auto bitmap = TRY(Bitmap::create(Gfx::BitmapFormat::BGRA8888, size));
+    Painter painter { *bitmap };
+    draw_into(painter, IntRect { {}, size });
     return bitmap;
 }
 

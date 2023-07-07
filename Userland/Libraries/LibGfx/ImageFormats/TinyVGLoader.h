@@ -46,6 +46,8 @@ public:
 
     ErrorOr<RefPtr<Gfx::Bitmap>> bitmap(IntSize size) const;
 
+    void draw_into(Painter&, IntRect const& dest, AffineTransform = {}) const;
+
     IntSize size() const
     {
         return m_size;

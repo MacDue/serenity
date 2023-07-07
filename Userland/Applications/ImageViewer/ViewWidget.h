@@ -14,6 +14,7 @@
 #include <LibCore/Timer.h>
 #include <LibGUI/AbstractZoomPanWidget.h>
 #include <LibGUI/Painter.h>
+#include <LibGfx/ImageFormats/TinyVGLoader.h>
 #include <LibImageDecoderClient/Client.h>
 
 namespace ImageViewer {
@@ -64,6 +65,8 @@ private:
     virtual void drop_event(GUI::DropEvent&) override;
     virtual void resize_event(GUI::ResizeEvent&) override;
 
+    void apply_vector_transform(Gfx::AffineTransform);
+
     void set_bitmap(Gfx::Bitmap const* bitmap);
     void animate();
     Vector<DeprecatedString> load_files_from_directory(DeprecatedString const& path) const;
@@ -72,6 +75,8 @@ private:
     String m_path;
     RefPtr<Gfx::Bitmap const> m_bitmap;
     Optional<ImageDecoderClient::DecodedImage> m_decoded_image;
+    Optional<Gfx::TinyVGDecodedImageData> m_tinyvg_data;
+    Gfx::AffineTransform m_vector_transform;
 
     size_t m_current_frame_index { 0 };
     size_t m_loops_completed { 0 };
