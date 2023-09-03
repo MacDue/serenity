@@ -14,6 +14,7 @@
 #include <LibWeb/Layout/SVGSVGBox.h>
 #include <LibWeb/Layout/SVGTextBox.h>
 #include <LibWeb/SVG/SVGForeignObjectElement.h>
+#include <LibWeb/SVG/SVGMaskElement.h>
 #include <LibWeb/SVG/SVGSVGElement.h>
 #include <LibWeb/SVG/SVGSymbolElement.h>
 #include <LibWeb/SVG/SVGUseElement.h>

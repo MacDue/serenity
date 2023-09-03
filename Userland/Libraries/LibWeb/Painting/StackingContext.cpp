@@ -440,22 +440,25 @@ void StackingContext::paint(PaintContext& context) const
     auto mask = paintable_box().computed_values().mask();
     if (mask.has_value() && is<SVGPaintable>(paintable_box())) {
         // Note: SVGs don't use the stacking context affine painting logic below.
+        auto paint_rect = context.enclosing_device_rect(paintable_box().absolute_paint_rect());
 
         auto const& graphics_element = static_cast<SVG::SVGGraphicsElement const&>(*paintable_box().dom_node());
         auto mask = graphics_element.mask();
-        auto* mask_paintable = verify_cast<PaintableBox>(mask->layout_node()->paintable());
-        auto paint_rect = context.enclosing_device_rect(paintable_box().absolute_paint_rect());
-
-        auto bitmap_mask_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
-        if (bitmap_mask_or_error.is_error())
-            return;
-        auto mask_bitmap = bitmap_mask_or_error.release_value();
-        {
-            Gfx::Painter painter(mask_bitmap);
-            painter.translate(-mask_paintable->absolute_paint_rect().location().to_type<int>());
-            auto paint_context = context.clone(painter);
-            paint_context.set_svg_mask_painting(true);
-            paint_node_as_stacking_context(*mask_paintable, paint_context);
+        RefPtr<Gfx::Bitmap> mask_bitmap = {};
+        if (mask && mask->layout_node() && is<PaintableBox>(mask->layout_node()->paintable())) {
+            auto& mask_paintable = static_cast<PaintableBox const&>(*mask->layout_node()->paintable());
+            auto bitmap_mask_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
+            if (bitmap_mask_or_error.is_error())
+                return;
+            mask_bitmap = bitmap_mask_or_error.release_value();
+            {
+                auto mask_rect = context.enclosing_device_rect(mask_paintable.absolute_paint_rect());
+                Gfx::Painter painter(*mask_bitmap);
+                painter.translate(-mask_rect.location().to_type<int>());
+                auto paint_context = context.clone(painter);
+                paint_context.set_svg_mask_painting(true);
+                paint_node_as_stacking_context(mask_paintable, paint_context);
+            }
         }
 
         auto bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
@@ -469,7 +472,8 @@ void StackingContext::paint(PaintContext& context) const
             paint_internal(paint_context);
         }
 
-        bitmap->apply_mask(*mask_bitmap, Gfx::Bitmap::MaskKind::Luminance);
+        if (mask_bitmap)
+            bitmap->apply_mask(*mask_bitmap, Gfx::Bitmap::MaskKind::Luminance);
         context.painter().blit(paint_rect.location().to_type<int>(), *bitmap, bitmap->rect(), opacity);
         return;
     }

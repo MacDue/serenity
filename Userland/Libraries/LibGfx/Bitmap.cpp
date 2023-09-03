@@ -353,7 +353,7 @@ void Bitmap::apply_mask(Gfx::Bitmap const& mask, MaskKind mask_kind)
             auto color = get_pixel(x, y);
             auto mask_color = mask.get_pixel(x, y);
             if (mask_kind == MaskKind::Luminance) {
-                color = color.with_alpha(color.alpha() * mask_color.luminosity() / 255);
+                color = color.with_alpha(color.alpha() * mask_color.alpha() * mask_color.luminosity() / (255 * 255));
             } else {
                 VERIFY(mask_kind == MaskKind::Alpha);
                 color = color.with_alpha(color.alpha() * mask_color.alpha() / 255);
