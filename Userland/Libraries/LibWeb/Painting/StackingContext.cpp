@@ -19,8 +19,10 @@
 #include <LibWeb/Layout/ReplacedBox.h>
 #include <LibWeb/Layout/Viewport.h>
 #include <LibWeb/Painting/PaintableBox.h>
+#include <LibWeb/Painting/SVGPaintable.h>
 #include <LibWeb/Painting/StackingContext.h>
 #include <LibWeb/Painting/TableBordersPainting.h>
+#include <LibWeb/SVG/SVGMaskElement.h>
 
 namespace Web::Painting {
 
@@ -434,6 +436,43 @@ void StackingContext::paint(PaintContext& context) const
     auto opacity = paintable_box().computed_values().opacity();
     if (opacity == 0.0f)
         return;
+
+    auto mask = paintable_box().computed_values().mask();
+    if (mask.has_value() && is<SVGPaintable>(paintable_box())) {
+        // Note: SVGs don't use the stacking context affine painting logic below.
+
+        auto const& graphics_element = static_cast<SVG::SVGGraphicsElement const&>(*paintable_box().dom_node());
+        auto mask = graphics_element.mask();
+        auto* mask_paintable = verify_cast<PaintableBox>(mask->layout_node()->paintable());
+        auto paint_rect = context.enclosing_device_rect(paintable_box().absolute_paint_rect());
+
+        auto bitmap_mask_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
+        if (bitmap_mask_or_error.is_error())
+            return;
+        auto mask_bitmap = bitmap_mask_or_error.release_value();
+        {
+            Gfx::Painter painter(mask_bitmap);
+            painter.translate(-mask_paintable->absolute_paint_rect().location().to_type<int>());
+            auto paint_context = context.clone(painter);
+            paint_context.set_svg_mask_painting(true);
+            paint_node_as_stacking_context(*mask_paintable, paint_context);
+        }
+
+        auto bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
+        if (bitmap_or_error.is_error())
+            return;
+        auto bitmap = bitmap_or_error.release_value();
+        {
+            Gfx::Painter painter(bitmap);
+            painter.translate(-paint_rect.location().to_type<int>());
+            auto paint_context = context.clone(painter);
+            paint_internal(paint_context);
+        }
+
+        bitmap->apply_mask(*mask_bitmap, Gfx::Bitmap::MaskKind::Luminance);
+        context.painter().blit(paint_rect.location().to_type<int>(), *bitmap, bitmap->rect(), opacity);
+        return;
+    }
 
     auto affine_transform = affine_transform_matrix();
     auto translation = context.rounded_device_point(affine_transform.translation().to_type<CSSPixels>()).to_type<int>().to_type<float>();

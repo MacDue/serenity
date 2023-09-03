@@ -6,6 +6,7 @@
 
 #include <LibWeb/Layout/ImageBox.h>
 #include <LibWeb/Painting/SVGGraphicsPaintable.h>
+#include <LibWeb/SVG/SVGMaskElement.h>
 
 namespace Web::Painting {
 
@@ -22,6 +23,18 @@ SVGGraphicsPaintable::SVGGraphicsPaintable(Layout::SVGGraphicsBox const& layout_
 Layout::SVGGraphicsBox const& SVGGraphicsPaintable::layout_box() const
 {
     return static_cast<Layout::SVGGraphicsBox const&>(layout_node());
+}
+
+bool SVGGraphicsPaintable::is_visible(Optional<PaintContext const&> context) const
+{
+    auto base_visibility = Base::is_visible(context);
+    if (!base_visibility)
+        return false;
+    auto const* parent_mask_element = layout_box().dom_node().shadow_including_first_ancestor_of_type<SVG::SVGMaskElement>();
+    if (parent_mask_element) {
+        return context.has_value() && context->is_svg_mask_painting();
+    }
+    return true;
 }
 
 }

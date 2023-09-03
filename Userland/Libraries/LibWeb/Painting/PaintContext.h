@@ -34,6 +34,9 @@ public:
     bool has_focus() const { return m_focus; }
     void set_has_focus(bool focus) { m_focus = focus; }
 
+    bool is_svg_mask_painting() const { return m_svg_mask_painting; }
+    void set_svg_mask_painting(bool svg_mask_painting) { m_svg_mask_painting = svg_mask_painting; }
+
     DevicePixels enclosing_device_pixels(CSSPixels css_pixels) const;
     DevicePixels floored_device_pixels(CSSPixels css_pixels) const;
     DevicePixels rounded_device_pixels(CSSPixels css_pixels) const;
@@ -70,6 +73,7 @@ private:
     bool m_should_show_line_box_borders { false };
     bool m_focus { false };
     CSSPixelPoint m_scroll_offset;
+    bool m_svg_mask_painting { false };
 };
 
 }

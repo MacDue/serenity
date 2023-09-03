@@ -25,7 +25,7 @@ public:
 
     virtual void paint(PaintContext&, PaintPhase) const override;
 
-    bool is_visible() const { return layout_box().is_visible(); }
+    virtual bool is_visible(Optional<PaintContext const&> = {}) const { return layout_box().is_visible(); }
 
     Layout::Box& layout_box() { return static_cast<Layout::Box&>(Paintable::layout_node()); }
     Layout::Box const& layout_box() const { return static_cast<Layout::Box const&>(Paintable::layout_node()); }

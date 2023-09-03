@@ -56,7 +56,7 @@ static Gfx::Painter::WindingRule to_gfx_winding_rule(SVG::FillRule fill_rule)
 
 void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 {
-    if (!is_visible())
+    if (!is_visible(context))
         return;
 
     SVGGraphicsPaintable::paint(context, phase);
