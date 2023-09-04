@@ -203,6 +203,14 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             geometry_box_state.set_content_offset(path_bounding_box.top_left());
             geometry_box_state.set_content_width(path_bounding_box.width());
             geometry_box_state.set_content_height(path_bounding_box.height());
+        } else if (is<SVGGraphicsBox>(descendant) && is<SVG::SVGMaskElement>(descendant.dom_node())) {
+            // // This is kinda a hack... But inside masks you can use relative units.
+            // // These
+            // // CHeck maskContentUnits
+            // auto const& graphics_box = static_cast<SVGGraphicsBox const&>(descendant);
+            // auto& graphics_box_state = m_state.get_mutable(graphics_box);
+            // graphics_box_state.set_content_width(CSSPixels(1));
+            // graphics_box_state.set_content_height(CSSPixels(1));
         } else if (is<SVGSVGBox>(descendant)) {
             SVGFormattingContext nested_context(m_state, static_cast<SVGSVGBox const&>(descendant), this);
             nested_context.run(static_cast<SVGSVGBox const&>(descendant), layout_mode, available_space);

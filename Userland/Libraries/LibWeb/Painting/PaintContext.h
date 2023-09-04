@@ -37,6 +37,16 @@ public:
     bool is_svg_mask_painting() const { return m_svg_mask_painting; }
     void set_svg_mask_painting(bool svg_mask_painting) { m_svg_mask_painting = svg_mask_painting; }
 
+    void set_transform(Gfx::AffineTransform transform)
+    {
+        m_transform = transform;
+    }
+
+    Gfx::AffineTransform const& transform() const
+    {
+        return m_transform;
+    }
+
     DevicePixels enclosing_device_pixels(CSSPixels css_pixels) const;
     DevicePixels floored_device_pixels(CSSPixels css_pixels) const;
     DevicePixels rounded_device_pixels(CSSPixels css_pixels) const;
@@ -74,6 +84,7 @@ private:
     bool m_focus { false };
     CSSPixelPoint m_scroll_offset;
     bool m_svg_mask_painting { false };
+    Gfx::AffineTransform m_transform;
 };
 
 }

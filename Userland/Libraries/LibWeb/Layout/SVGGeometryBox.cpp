@@ -25,7 +25,7 @@ CSSPixelPoint SVGGeometryBox::viewbox_origin() const
     return { svg_box->view_box().value().min_x, svg_box->view_box().value().min_y };
 }
 
-Optional<Gfx::AffineTransform> SVGGeometryBox::layout_transform() const
+Optional<Gfx::AffineTransform> SVGGeometryBox::layout_transform(Gfx::AffineTransform foo) const
 {
     auto& geometry_element = dom_node();
     auto transform = geometry_element.get_transform();
@@ -49,7 +49,7 @@ Optional<Gfx::AffineTransform> SVGGeometryBox::layout_transform() const
         auto scaled_bounding_box = original_bounding_box.scaled(scaling, scaling);
         paint_offset = (paintable_box()->absolute_rect().location() - svg_box->paintable_box()->absolute_rect().location()).to_type<float>() - scaled_bounding_box.location();
     }
-    return Gfx::AffineTransform {}.translate(paint_offset).scale(scaling, scaling).translate(-origin).multiply(transform);
+    return Gfx::AffineTransform {}.translate(paint_offset).scale(scaling, scaling).translate(-origin).multiply(foo).multiply(transform);
 }
 
 JS::GCPtr<Painting::Paintable> SVGGeometryBox::create_paintable() const

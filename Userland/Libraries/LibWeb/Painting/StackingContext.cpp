@@ -452,11 +452,11 @@ void StackingContext::paint(PaintContext& context) const
                 return;
             mask_bitmap = bitmap_mask_or_error.release_value();
             {
-                auto mask_rect = context.enclosing_device_rect(mask_paintable.absolute_paint_rect());
                 Gfx::Painter painter(*mask_bitmap);
-                painter.translate(-mask_rect.location().to_type<int>());
+                painter.translate(-paint_rect.location().to_type<int>());
                 auto paint_context = context.clone(painter);
                 paint_context.set_svg_mask_painting(true);
+                paint_context.set_transform(graphics_element.get_transform());
                 paint_node_as_stacking_context(mask_paintable, paint_context);
             }
         }

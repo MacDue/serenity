@@ -62,6 +62,8 @@ void SVGTextPaintable::paint(PaintContext& context, PaintPhase phase) const
     if (!transform.has_value())
         return;
 
+    transform = Gfx::AffineTransform(context.transform()).multiply(*transform);
+
     // FIXME: Support arbitrary path transforms for fonts.
     // FIMXE: This assumes transform->x_scale() == transform->y_scale().
     auto& scaled_font = layout_node().scaled_font(static_cast<float>(context.device_pixels_per_css_pixel()) * transform->x_scale());
