@@ -25,6 +25,9 @@ public:
 
     virtual void paint(PaintContext&, PaintPhase) const override;
 
+    virtual CSSPixelRect get_masking_area() const { return {}; }
+    virtual void apply_mask(PaintContext&, Gfx::Bitmap&, CSSPixelRect const&) const {};
+
     virtual bool is_visible(Optional<PaintContext const&> = {}) const { return layout_box().is_visible(); }
 
     Layout::Box& layout_box() { return static_cast<Layout::Box&>(Paintable::layout_node()); }

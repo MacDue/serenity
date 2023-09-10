@@ -18,6 +18,8 @@ public:
 
     virtual JS::GCPtr<Layout::Node> create_layout_node(NonnullRefPtr<CSS::StyleProperties>) override;
 
+    CSSPixelRect resolve_masking_area(CSSPixelRect const& mask_target) const;
+
 private:
     SVGMaskElement(DOM::Document&, DOM::QualifiedName);
     virtual void initialize(JS::Realm&) override;

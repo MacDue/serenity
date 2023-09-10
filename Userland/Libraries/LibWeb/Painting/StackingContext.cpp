@@ -76,7 +76,7 @@ static PaintPhase to_paint_phase(StackingContext::StackingContextPaintPhase phas
     }
 }
 
-void StackingContext::paint_node_as_stacking_context(Paintable const& paintable, PaintContext& context) const
+void StackingContext::paint_node_as_stacking_context(Paintable const& paintable, PaintContext& context)
 {
     paint_node(paintable, context, PaintPhase::Background);
     paint_node(paintable, context, PaintPhase::Border);
@@ -90,12 +90,12 @@ void StackingContext::paint_node_as_stacking_context(Paintable const& paintable,
     paint_descendants(context, paintable, StackingContextPaintPhase::FocusAndOverlay);
 }
 
-void StackingContext::paint_descendants(PaintContext& context, Paintable const& paintable, StackingContextPaintPhase phase) const
+void StackingContext::paint_descendants(PaintContext& context, Paintable const& paintable, StackingContextPaintPhase phase)
 {
     paintable.before_children_paint(context, to_paint_phase(phase));
     paintable.apply_clip_overflow_rect(context, to_paint_phase(phase));
 
-    paintable.for_each_child([this, &context, phase](auto& child) {
+    paintable.for_each_child([&context, phase](auto& child) {
         auto* stacking_context = child.stacking_context_rooted_here();
 
         if (child.is_positioned()) {
@@ -178,7 +178,7 @@ void StackingContext::paint_descendants(PaintContext& context, Paintable const& 
     paintable.after_children_paint(context, to_paint_phase(phase));
 }
 
-void StackingContext::paint_child(PaintContext& context, StackingContext const& child) const
+void StackingContext::paint_child(PaintContext& context, StackingContext const& child)
 {
     auto parent_paintable = child.paintable_box().parent();
     if (parent_paintable)
@@ -223,7 +223,7 @@ void StackingContext::paint_internal(PaintContext& context) const
 
     // Draw positioned descendants with z-index `0` or `auto` in tree order. (step 8)
     // FIXME: There's more to this step that we have yet to understand and implement.
-    paintable_box().for_each_in_subtree([this, &context](Paintable const& paintable) {
+    paintable_box().for_each_in_subtree([&context](Paintable const& paintable) {
         auto const& z_index = paintable.computed_values().z_index();
 
         if (!paintable.is_positioned() || (z_index.has_value() && z_index.value() != 0)) {
@@ -437,30 +437,14 @@ void StackingContext::paint(PaintContext& context) const
     if (opacity == 0.0f)
         return;
 
-    auto mask = paintable_box().computed_values().mask();
-    if (mask.has_value() && is<SVGPaintable>(paintable_box())) {
-        // Note: SVGs don't use the stacking context affine painting logic below.
-        auto paint_rect = context.enclosing_device_rect(paintable_box().absolute_paint_rect());
-
-        auto const& graphics_element = static_cast<SVG::SVGGraphicsElement const&>(*paintable_box().dom_node());
-        auto mask = graphics_element.mask();
-        RefPtr<Gfx::Bitmap> mask_bitmap = {};
-        if (mask && mask->layout_node() && is<PaintableBox>(mask->layout_node()->paintable())) {
-            auto& mask_paintable = static_cast<PaintableBox const&>(*mask->layout_node()->paintable());
-            auto bitmap_mask_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
-            if (bitmap_mask_or_error.is_error())
-                return;
-            mask_bitmap = bitmap_mask_or_error.release_value();
-            {
-                Gfx::Painter painter(*mask_bitmap);
-                painter.translate(-paint_rect.location().to_type<int>());
-                auto paint_context = context.clone(painter);
-                paint_context.set_svg_mask_painting(true);
-                paint_context.set_transform(graphics_element.get_transform());
-                paint_node_as_stacking_context(mask_paintable, paint_context);
-            }
-        }
-
+    if (paintable_box().computed_values().mask().has_value()) {
+        // TODO: Support masks and CSS transforms at the same time.
+        // Note: Currently only SVG masking is implemented (which does not use
+        // CSS transforms anyway).
+        auto masking_area = paintable_box().get_masking_area();
+        if (masking_area.is_empty())
+            return;
+        auto paint_rect = context.enclosing_device_rect(masking_area);
         auto bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size().to_type<int>());
         if (bitmap_or_error.is_error())
             return;
@@ -471,9 +455,7 @@ void StackingContext::paint(PaintContext& context) const
             auto paint_context = context.clone(painter);
             paint_internal(paint_context);
         }
-
-        if (mask_bitmap)
-            bitmap->apply_mask(*mask_bitmap, Gfx::Bitmap::MaskKind::Luminance);
+        paintable_box().apply_mask(context, bitmap, masking_area);
         context.painter().blit(paint_rect.location().to_type<int>(), *bitmap, bitmap->rect(), opacity);
         return;
     }

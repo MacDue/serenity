@@ -30,4 +30,9 @@ JS::GCPtr<Layout::Node> SVGMaskElement::create_layout_node(NonnullRefPtr<CSS::St
     return heap().allocate_without_realm<Layout::SVGGraphicsBox>(document(), *this, move(style));
 }
 
+CSSPixelRect SVGMaskElement::resolve_masking_area(CSSPixelRect const& mask_target) const
+{
+    return mask_target.inflated(mask_target.size().scaled(CSSPixels(2) / 10));
+}
+
 }

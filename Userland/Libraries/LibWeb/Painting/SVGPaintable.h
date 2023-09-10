@@ -17,6 +17,9 @@ class SVGPaintable : public PaintableBox {
 public:
     Layout::SVGBox const& layout_box() const;
 
+    virtual CSSPixelRect get_masking_area() const override;
+    virtual void apply_mask(PaintContext&, Gfx::Bitmap& target, CSSPixelRect const& masking_area) const override;
+
 protected:
     SVGPaintable(Layout::SVGBox const&);
 
