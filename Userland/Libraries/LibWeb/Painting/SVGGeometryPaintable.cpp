@@ -78,7 +78,7 @@ void SVGGeometryPaintable::paint(PaintContext& context, PaintPhase phase) const
 
     auto maybe_view_box = geometry_element.view_box();
 
-    auto transform = layout_box().layout_transform(context.transform());
+    auto transform = layout_box().layout_transform(context.svg_transform());
     if (!transform.has_value())
         return;
 

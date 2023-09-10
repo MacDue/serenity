@@ -47,6 +47,10 @@ void SVGPaintable::apply_mask(PaintContext& context, Gfx::Bitmap& target, CSSPix
         return;
     auto const& graphics_element = static_cast<SVG::SVGGraphicsElement const&>(*dom_node());
     auto mask = graphics_element.mask();
+    if (mask->mask_content_units() != SVG::MaskContentUnits::UserSpaceOnUse) {
+        dbgln("SVG: maskContentUnits=objectBoundingBox is not supported");
+        return;
+    }
     auto mask_rect = context.enclosing_device_rect(masking_area);
     RefPtr<Gfx::Bitmap> mask_bitmap = {};
     if (mask && mask->layout_node() && is<PaintableBox>(mask->layout_node()->paintable())) {
@@ -60,10 +64,11 @@ void SVGPaintable::apply_mask(PaintContext& context, Gfx::Bitmap& target, CSSPix
             painter.translate(-mask_rect.location().to_type<int>());
             auto paint_context = context.clone(painter);
             paint_context.set_svg_mask_painting(true);
-            paint_context.set_transform(graphics_element.get_transform());
+            paint_context.set_svg_transform(graphics_element.get_transform());
             StackingContext::paint_node_as_stacking_context(mask_paintable, paint_context);
         }
     }
+    // TODO: Follow mask-type attribute to select between alpha/luminance masks.
     if (mask_bitmap)
         target.apply_mask(*mask_bitmap, Gfx::Bitmap::MaskKind::Luminance);
     return;
