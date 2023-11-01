@@ -14,6 +14,7 @@
 #include <AK/Try.h>
 #include <LibCore/MappedFile.h>
 #include <LibCore/Resource.h>
+#include <LibGfx/AntiAliasingPainter.h>
 #include <LibGfx/Font/OpenType/Cmap.h>
 #include <LibGfx/Font/OpenType/Font.h>
 #include <LibGfx/Font/OpenType/Glyf.h>
@@ -708,14 +709,10 @@ float Font::glyphs_horizontal_kerning(u32 left_glyph_id, u32 right_glyph_id, flo
     return 0.0f;
 }
 
-RefPtr<Gfx::Bitmap> Font::rasterize_glyph(u32 glyph_id, float x_scale, float y_scale, Gfx::GlyphSubpixelOffset subpixel_offset) const
+Optional<Glyf::Glyph> Font::extract_and_append_glyph_path_to(Gfx::Path& path, u32 glyph_id, float x_scale, float y_scale) const
 {
-    if (auto bitmap = color_bitmap(glyph_id)) {
-        return bitmap;
-    }
-
     if (!m_loca.has_value() || !m_glyf.has_value()) {
-        return nullptr;
+        return {};
     }
 
     if (glyph_id >= glyph_count()) {
@@ -727,11 +724,11 @@ RefPtr<Gfx::Bitmap> Font::rasterize_glyph(u32 glyph_id, float x_scale, float y_s
 
     // If a glyph has no outline, then loca[n] = loca [n+1].
     if (glyph_offset0 == glyph_offset1)
-        return nullptr;
+        return {};
 
     auto glyph = m_glyf->glyph(glyph_offset0);
     if (!glyph.has_value())
-        return nullptr;
+        return {};
 
     i16 ascender = 0;
     i16 descender = 0;
@@ -744,13 +741,59 @@ RefPtr<Gfx::Bitmap> Font::rasterize_glyph(u32 glyph_id, float x_scale, float y_s
         descender = m_hhea.descender();
     }
 
-    return glyph->rasterize(ascender, descender, x_scale, y_scale, subpixel_offset, [&](u16 glyph_id) {
+    bool success = glyph->append_path(path, ascender, descender, x_scale, y_scale, [&](u16 glyph_id) {
         if (glyph_id >= glyph_count()) {
             glyph_id = 0;
         }
         auto glyph_offset = m_loca->get_glyph_offset(glyph_id);
         return m_glyf->glyph(glyph_offset);
     });
+
+    if (success)
+        return glyph;
+    return {};
+}
+
+bool Font::append_glyph_path_to(Gfx::Path& path, u32 glyph_id, float x_scale, float y_scale) const
+{
+    return extract_and_append_glyph_path_to(path, glyph_id, x_scale, y_scale).has_value();
+}
+
+RefPtr<Gfx::Bitmap> Font::rasterize_glyph(u32 glyph_id, float x_scale, float y_scale, Gfx::GlyphSubpixelOffset subpixel_offset) const
+{
+    if (auto bitmap = color_bitmap(glyph_id)) {
+        return bitmap;
+    }
+
+    Gfx::Path path;
+    auto glyph = extract_and_append_glyph_path_to(path, glyph_id, x_scale, y_scale);
+    if (!glyph.has_value())
+        return {};
+
+    auto min_point = glyph->min_point();
+    auto max_point = glyph->max_point();
+
+    i16 ascender = 0;
+    i16 descender = 0;
+
+    if (m_os2.has_value() && m_os2->use_typographic_metrics()) {
+        ascender = m_os2->typographic_ascender();
+        descender = m_os2->typographic_descender();
+    } else {
+        ascender = m_hhea.ascender();
+        descender = m_hhea.descender();
+    }
+
+    auto delta = max_point - min_point;
+
+    u32 width = (u32)(ceilf(delta.x() * x_scale)) + 2;
+    u32 height = (u32)(ceilf((ascender - descender) * y_scale)) + 2;
+    auto bitmap = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, { width, height }).release_value_but_fixme_should_propagate_errors();
+    Gfx::Painter painter { bitmap };
+    Gfx::AntiAliasingPainter aa_painter(painter);
+    aa_painter.translate(subpixel_offset.to_float_point());
+    aa_painter.fill_path(path, Gfx::Color::White);
+    return bitmap;
 }
 
 u32 Font::glyph_count() const

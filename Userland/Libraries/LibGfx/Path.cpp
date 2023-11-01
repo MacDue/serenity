@@ -9,6 +9,8 @@
 #include <AK/Math.h>
 #include <AK/QuickSort.h>
 #include <AK/StringBuilder.h>
+#include <AK/TypeCasts.h>
+#include <LibGfx/Font/ScaledFont.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/Path.h>
 
@@ -156,6 +158,53 @@ void Path::elliptical_arc_to(FloatPoint point, FloatSize radii, float x_axis_rot
         theta_1,
         theta_delta);
 }
+
+static bool should_paint_as_space(u32 code_point)
+{
+    return is_ascii_space(code_point) || code_point == 0xa0;
+}
+
+void Path::text(Utf8View text, Font const& font)
+{
+    if (!is<ScaledFont>(font)) {
+        // FIXME: This API only accepts Gfx::Font for ease of use.
+        dbgln("Cannot path-ify bitmap fonts!");
+        return;
+    }
+
+    auto& scaled_font = static_cast<ScaledFont const&>(font);
+    float space_width = font.glyph_width(' ') + font.glyph_spacing();
+
+    u32 last_code_point = 0;
+
+    auto point = last_point();
+    point.translate_by(0, -font.pixel_metrics().ascent);
+    move_to(point);
+
+    for (auto code_point_iterator = text.begin(); code_point_iterator != text.end(); ++code_point_iterator) {
+        auto code_point = *code_point_iterator;
+        if (should_paint_as_space(code_point)) {
+            point.translate_by(space_width, 0);
+            last_code_point = code_point;
+            continue;
+        }
+
+        auto kerning = font.glyphs_horizontal_kerning(last_code_point, code_point);
+        if (kerning != 0.0f)
+            point.translate_by(kerning, 0);
+
+        auto it = code_point_iterator; // The callback function will advance the iterator, so create a copy for this lookup.
+        auto glyph_width = font.glyph_or_emoji_width(it) + font.glyph_spacing();
+
+        move_to(point);
+        auto glyph_id = scaled_font.glyph_id_for_code_point(code_point);
+        scaled_font.append_glyph_path_to(*this, glyph_id);
+
+        point.translate_by(glyph_width, 0);
+        last_code_point = code_point;
+    }
+}
+
 FloatPoint Path::last_point()
 {
     FloatPoint last_point { 0, 0 };

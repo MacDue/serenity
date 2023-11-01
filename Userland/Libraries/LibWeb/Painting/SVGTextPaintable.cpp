@@ -37,14 +37,22 @@ void SVGTextPaintable::paint(PaintContext& context, PaintPhase phase) const
     if (phase != PaintPhase::Foreground)
         return;
 
-    auto& painter = context.painter();
     auto const& dom_node = layout_box().dom_node();
     auto paint_transform = computed_transforms().svg_to_device_pixels_transform(context);
-    auto& scaled_font = layout_box().scaled_font(paint_transform.x_scale());
-    auto text_rect = context.enclosing_device_rect(absolute_rect()).to_type<int>();
+    auto& font = layout_box().font();
+    auto text_rect = absolute_rect().to_type<int>();
     auto text_contents = dom_node.text_contents();
 
-    painter.draw_text_run(text_rect.bottom_left(), Utf8View { text_contents }, scaled_font, layout_node().computed_values().fill()->as_color(), text_rect);
+    Gfx::Path text_path;
+    text_path.move_to(text_rect.bottom_left().to_type<float>());
+    text_path.text(Utf8View { text_contents }, font);
+    text_path = text_path.copy_transformed(paint_transform);
+
+    context.painter().fill_path({
+        .path = text_path,
+        .color = layout_node().computed_values().fill()->as_color(),
+        .winding_rule = Gfx::Painter::WindingRule::Nonzero,
+    });
 }
 
 }
