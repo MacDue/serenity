@@ -80,7 +80,7 @@ public:
             case Type::Simple:
                 return append_simple_path(path, font_ascender, font_descender, x_scale, y_scale);
             case Type::Composite:
-                return append_composite_path(path, font_descender, x_scale, y_scale, glyph_callback);
+                return append_composite_path(path, font_ascender, x_scale, y_scale, glyph_callback);
             }
             VERIFY_NOT_REACHED();
         }
