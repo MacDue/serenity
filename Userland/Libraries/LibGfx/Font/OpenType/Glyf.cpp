@@ -258,16 +258,13 @@ void Glyf::Glyph::append_path_impl(Gfx::Path& path, Gfx::AffineTransform const& 
     // Prepare to render glyph.
     PointIterator point_iterator(m_slice, num_points, flags_offset, x_offset, y_offset, transform);
 
-    auto start_point = path.last_point();
     u32 current_point_index = 0;
     for (u16 contour_index = 0; contour_index < m_num_contours; contour_index++) {
         u32 current_contour_last_point_index = be_u16(m_slice.offset(contour_index * 2));
 
         Vector<PointIterator::Item> points;
         while (current_point_index <= current_contour_last_point_index) {
-            auto foo = *point_iterator.next();
-            foo.point += start_point;
-            points.append(foo);
+            points.append(*point_iterator.next());
             current_point_index++;
         }
 
@@ -312,6 +309,7 @@ bool Glyf::Glyph::append_simple_path(Gfx::Path& path, i16 font_ascender, i16 fon
         return false;
     }
     auto affine = Gfx::AffineTransform()
+                      .translate(path.last_point())
                       .scale(x_scale, -y_scale)
                       .translate(-m_xmin, -font_ascender);
     append_path_impl(path, affine);

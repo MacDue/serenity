@@ -48,7 +48,14 @@ public:
     Optional<ReadonlyBytes> glyph_program(u32 glyph_id) const;
 
 private:
-    Optional<Glyf::Glyph> extract_and_append_glyph_path_to(Gfx::Path&, u32 glyph_id, float x_scale, float y_scale) const;
+    struct AscenderAndDescender {
+        i16 ascender;
+        i16 descender;
+    };
+
+    AscenderAndDescender resolve_ascender_and_descender() const;
+
+    Optional<Glyf::Glyph> extract_and_append_glyph_path_to(Gfx::Path&, u32 glyph_id, i16 ascender, i16 descender, float x_scale, float y_scale) const;
 
     RefPtr<Gfx::Bitmap> color_bitmap(u32 glyph_id) const;
 

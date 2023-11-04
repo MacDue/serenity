@@ -46,10 +46,9 @@ void SVGTextPaintable::paint(PaintContext& context, PaintPhase phase) const
     Gfx::Path text_path;
     text_path.move_to(text_rect.bottom_left().to_type<float>());
     text_path.text(Utf8View { text_contents }, font);
-    text_path = text_path.copy_transformed(paint_transform);
 
     context.painter().fill_path({
-        .path = text_path,
+        .path = text_path.copy_transformed(paint_transform),
         .color = layout_node().computed_values().fill()->as_color(),
         .winding_rule = Gfx::Painter::WindingRule::Nonzero,
     });

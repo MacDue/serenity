@@ -85,8 +85,8 @@ public:
             VERIFY_NOT_REACHED();
         }
 
-        Gfx::IntPoint max_point() const { return { m_xmax, m_ymax }; }
-        Gfx::IntPoint min_point() const { return { m_xmin, m_ymin }; }
+        i16 xmax() const { return m_xmax; }
+        i16 xmin() const { return m_xmin; }
 
         int ascender() const { return m_ymax; }
         int descender() const { return m_ymin; }
@@ -150,6 +150,7 @@ public:
         bool append_composite_path(Gfx::Path& path, i16 font_ascender, float x_scale, float y_scale, GlyphCb glyph_callback) const
         {
             auto affine = Gfx::AffineTransform()
+                              .translate(path.last_point())
                               .scale(x_scale, -y_scale)
                               .translate(-m_xmin, -font_ascender);
             resolve_composite_path_loop(path, affine, glyph_callback);

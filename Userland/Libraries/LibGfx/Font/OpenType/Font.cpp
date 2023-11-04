@@ -709,7 +709,22 @@ float Font::glyphs_horizontal_kerning(u32 left_glyph_id, u32 right_glyph_id, flo
     return 0.0f;
 }
 
-Optional<Glyf::Glyph> Font::extract_and_append_glyph_path_to(Gfx::Path& path, u32 glyph_id, float x_scale, float y_scale) const
+Font::AscenderAndDescender Font::resolve_ascender_and_descender() const
+{
+    i16 ascender = 0;
+    i16 descender = 0;
+
+    if (m_os2.has_value() && m_os2->use_typographic_metrics()) {
+        ascender = m_os2->typographic_ascender();
+        descender = m_os2->typographic_descender();
+    } else {
+        ascender = m_hhea.ascender();
+        descender = m_hhea.descender();
+    }
+    return { ascender, descender };
+}
+
+Optional<Glyf::Glyph> Font::extract_and_append_glyph_path_to(Gfx::Path& path, u32 glyph_id, i16 ascender, i16 descender, float x_scale, float y_scale) const
 {
     if (!m_loca.has_value() || !m_glyf.has_value()) {
         return {};
@@ -730,17 +745,6 @@ Optional<Glyf::Glyph> Font::extract_and_append_glyph_path_to(Gfx::Path& path, u3
     if (!glyph.has_value())
         return {};
 
-    i16 ascender = 0;
-    i16 descender = 0;
-
-    if (m_os2.has_value() && m_os2->use_typographic_metrics()) {
-        ascender = m_os2->typographic_ascender();
-        descender = m_os2->typographic_descender();
-    } else {
-        ascender = m_hhea.ascender();
-        descender = m_hhea.descender();
-    }
-
     bool success = glyph->append_path(path, ascender, descender, x_scale, y_scale, [&](u16 glyph_id) {
         if (glyph_id >= glyph_count()) {
             glyph_id = 0;
@@ -756,42 +760,27 @@ Optional<Glyf::Glyph> Font::extract_and_append_glyph_path_to(Gfx::Path& path, u3
 
 bool Font::append_glyph_path_to(Gfx::Path& path, u32 glyph_id, float x_scale, float y_scale) const
 {
-    return extract_and_append_glyph_path_to(path, glyph_id, x_scale, y_scale).has_value();
+    auto ascender_and_descender = resolve_ascender_and_descender();
+    return extract_and_append_glyph_path_to(path, glyph_id, ascender_and_descender.ascender, ascender_and_descender.descender, x_scale, y_scale).has_value();
 }
 
 RefPtr<Gfx::Bitmap> Font::rasterize_glyph(u32 glyph_id, float x_scale, float y_scale, Gfx::GlyphSubpixelOffset subpixel_offset) const
 {
-    if (auto bitmap = color_bitmap(glyph_id)) {
+    if (auto bitmap = color_bitmap(glyph_id))
         return bitmap;
-    }
 
+    auto ascender_and_descender = resolve_ascender_and_descender();
     Gfx::Path path;
-    auto glyph = extract_and_append_glyph_path_to(path, glyph_id, x_scale, y_scale);
+    path.move_to(subpixel_offset.to_float_point());
+    auto glyph = extract_and_append_glyph_path_to(path, glyph_id, ascender_and_descender.ascender, ascender_and_descender.descender, x_scale, y_scale);
     if (!glyph.has_value())
         return {};
 
-    auto min_point = glyph->min_point();
-    auto max_point = glyph->max_point();
-
-    i16 ascender = 0;
-    i16 descender = 0;
-
-    if (m_os2.has_value() && m_os2->use_typographic_metrics()) {
-        ascender = m_os2->typographic_ascender();
-        descender = m_os2->typographic_descender();
-    } else {
-        ascender = m_hhea.ascender();
-        descender = m_hhea.descender();
-    }
-
-    auto delta = max_point - min_point;
-
-    u32 width = (u32)(ceilf(delta.x() * x_scale)) + 2;
-    u32 height = (u32)(ceilf((ascender - descender) * y_scale)) + 2;
+    u32 width = (u32)(ceilf((glyph->xmax() - glyph->xmin()) * x_scale)) + 2;
+    u32 height = (u32)(ceilf((ascender_and_descender.ascender - ascender_and_descender.descender) * y_scale)) + 2;
     auto bitmap = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, { width, height }).release_value_but_fixme_should_propagate_errors();
     Gfx::Painter painter { bitmap };
     Gfx::AntiAliasingPainter aa_painter(painter);
-    aa_painter.translate(subpixel_offset.to_float_point());
     aa_painter.fill_path(path, Gfx::Color::White);
     return bitmap;
 }
