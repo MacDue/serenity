@@ -37,14 +37,14 @@ void RecordingPainter::blit_corner_clipping(NonnullRefPtr<BorderRadiusCornerClip
 void RecordingPainter::fill_rect(Gfx::IntRect const& rect, Color color)
 {
     push_command(FillRect {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .color = color,
     });
 }
 
 void RecordingPainter::fill_path(FillPathUsingColorParams params)
 {
-    auto aa_translation = state().translation.map(params.translation.value_or(Gfx::FloatPoint {}));
+    auto aa_translation = params.translation.value_or(Gfx::FloatPoint {});
     auto path_bounding_rect = params.path.bounding_box().translated(aa_translation).to_type<int>();
     push_command(FillPathUsingColor {
         .path_bounding_rect = path_bounding_rect,
@@ -57,7 +57,7 @@ void RecordingPainter::fill_path(FillPathUsingColorParams params)
 
 void RecordingPainter::fill_path(FillPathUsingPaintStyleParams params)
 {
-    auto aa_translation = state().translation.map(params.translation.value_or(Gfx::FloatPoint {}));
+    auto aa_translation = params.translation.value_or(Gfx::FloatPoint {});
     auto path_bounding_rect = params.path.bounding_box().translated(aa_translation).to_type<int>();
     push_command(FillPathUsingPaintStyle {
         .path_bounding_rect = path_bounding_rect,
@@ -71,7 +71,7 @@ void RecordingPainter::fill_path(FillPathUsingPaintStyleParams params)
 
 void RecordingPainter::stroke_path(StrokePathUsingColorParams params)
 {
-    auto aa_translation = state().translation.map(params.translation.value_or(Gfx::FloatPoint {}));
+    auto aa_translation = params.translation.value_or(Gfx::FloatPoint {});
     auto path_bounding_rect = params.path.bounding_box().translated(aa_translation).to_type<int>();
     push_command(StrokePathUsingColor {
         .path_bounding_rect = path_bounding_rect,
@@ -84,7 +84,7 @@ void RecordingPainter::stroke_path(StrokePathUsingColorParams params)
 
 void RecordingPainter::stroke_path(StrokePathUsingPaintStyleParams params)
 {
-    auto aa_translation = state().translation.map(params.translation.value_or(Gfx::FloatPoint {}));
+    auto aa_translation = params.translation.value_or(Gfx::FloatPoint {});
     auto path_bounding_rect = params.path.bounding_box().translated(aa_translation).to_type<int>();
     push_command(StrokePathUsingPaintStyle {
         .path_bounding_rect = path_bounding_rect,
@@ -99,7 +99,7 @@ void RecordingPainter::stroke_path(StrokePathUsingPaintStyleParams params)
 void RecordingPainter::draw_ellipse(Gfx::IntRect const& a_rect, Color color, int thickness)
 {
     push_command(DrawEllipse {
-        .rect = state().translation.map(a_rect),
+        .rect = a_rect,
         .color = color,
         .thickness = thickness,
     });
@@ -108,7 +108,7 @@ void RecordingPainter::draw_ellipse(Gfx::IntRect const& a_rect, Color color, int
 void RecordingPainter::fill_ellipse(Gfx::IntRect const& a_rect, Color color, Gfx::AntiAliasingPainter::BlendMode blend_mode)
 {
     push_command(FillElipse {
-        .rect = state().translation.map(a_rect),
+        .rect = a_rect,
         .color = color,
         .blend_mode = blend_mode,
     });
@@ -117,7 +117,7 @@ void RecordingPainter::fill_ellipse(Gfx::IntRect const& a_rect, Color color, Gfx
 void RecordingPainter::fill_rect_with_linear_gradient(Gfx::IntRect const& gradient_rect, LinearGradientData const& data)
 {
     push_command(PaintLinearGradient {
-        .gradient_rect = state().translation.map(gradient_rect),
+        .gradient_rect = gradient_rect,
         .linear_gradient_data = data,
     });
 }
@@ -125,7 +125,7 @@ void RecordingPainter::fill_rect_with_linear_gradient(Gfx::IntRect const& gradie
 void RecordingPainter::fill_rect_with_conic_gradient(Gfx::IntRect const& rect, ConicGradientData const& data, Gfx::IntPoint const& position)
 {
     push_command(PaintConicGradient {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .conic_gradient_data = data,
         .position = position });
 }
@@ -133,7 +133,7 @@ void RecordingPainter::fill_rect_with_conic_gradient(Gfx::IntRect const& rect, C
 void RecordingPainter::fill_rect_with_radial_gradient(Gfx::IntRect const& rect, RadialGradientData const& data, Gfx::IntPoint center, Gfx::IntSize size)
 {
     push_command(PaintRadialGradient {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .radial_gradient_data = data,
         .center = center,
         .size = size });
@@ -142,7 +142,7 @@ void RecordingPainter::fill_rect_with_radial_gradient(Gfx::IntRect const& rect, 
 void RecordingPainter::draw_rect(Gfx::IntRect const& rect, Color color, bool rough)
 {
     push_command(DrawRect {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .color = color,
         .rough = rough });
 }
@@ -150,7 +150,7 @@ void RecordingPainter::draw_rect(Gfx::IntRect const& rect, Color color, bool rou
 void RecordingPainter::draw_scaled_bitmap(Gfx::IntRect const& dst_rect, Gfx::Bitmap const& bitmap, Gfx::IntRect const& src_rect, float opacity, Gfx::Painter::ScalingMode scaling_mode)
 {
     push_command(DrawScaledBitmap {
-        .dst_rect = state().translation.map(dst_rect),
+        .dst_rect = dst_rect,
         .bitmap = bitmap,
         .src_rect = src_rect,
         .opacity = opacity,
@@ -162,8 +162,8 @@ void RecordingPainter::draw_line(Gfx::IntPoint from, Gfx::IntPoint to, Color col
 {
     push_command(DrawLine {
         .color = color,
-        .from = state().translation.map(from),
-        .to = state().translation.map(to),
+        .from = from,
+        .to = to,
         .thickness = thickness,
         .style = style,
         .alternate_color = alternate_color,
@@ -173,7 +173,7 @@ void RecordingPainter::draw_line(Gfx::IntPoint from, Gfx::IntPoint to, Color col
 void RecordingPainter::draw_text(Gfx::IntRect const& rect, StringView raw_text, Gfx::TextAlignment alignment, Color color, Gfx::TextElision elision, Gfx::TextWrapping wrapping)
 {
     push_command(DrawText {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .raw_text = String::from_utf8(raw_text).release_value_but_fixme_should_propagate_errors(),
         .alignment = alignment,
         .color = color,
@@ -185,7 +185,7 @@ void RecordingPainter::draw_text(Gfx::IntRect const& rect, StringView raw_text, 
 void RecordingPainter::draw_text(Gfx::IntRect const& rect, StringView raw_text, Gfx::Font const& font, Gfx::TextAlignment alignment, Color color, Gfx::TextElision elision, Gfx::TextWrapping wrapping)
 {
     push_command(DrawText {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .raw_text = String::from_utf8(raw_text).release_value_but_fixme_should_propagate_errors(),
         .alignment = alignment,
         .color = color,
@@ -198,7 +198,7 @@ void RecordingPainter::draw_text(Gfx::IntRect const& rect, StringView raw_text, 
 void RecordingPainter::draw_signed_distance_field(Gfx::IntRect const& dst_rect, Color color, Gfx::GrayscaleBitmap const& sdf, float smoothing)
 {
     push_command(DrawSignedDistanceField {
-        .rect = state().translation.map(dst_rect),
+        .rect = dst_rect,
         .color = color,
         .sdf = sdf,
         .smoothing = smoothing,
@@ -207,40 +207,32 @@ void RecordingPainter::draw_signed_distance_field(Gfx::IntRect const& dst_rect, 
 
 void RecordingPainter::draw_text_run(Gfx::IntPoint baseline_start, Utf8View string, Gfx::Font const& font, Color color, Gfx::IntRect const& rect)
 {
-    auto glyph_run = Gfx::get_glyph_run(state().translation.map(baseline_start).to_type<float>(), string, font);
+    auto glyph_run = Gfx::get_glyph_run(baseline_start.to_type<float>(), string, font);
     push_command(DrawGlyphRun {
         .glyph_run = glyph_run,
         .color = color,
-        .rect = state().translation.map(rect),
+        .rect = rect,
     });
 }
 
 void RecordingPainter::add_clip_rect(Gfx::IntRect const& rect)
 {
-    auto prev_clip_rect = state().clip_rect;
-    if (!state().clip_rect.has_value()) {
-        state().clip_rect = state().translation.map(rect);
-    } else {
-        state().clip_rect->intersect(state().translation.map(rect));
-    }
-
-    if (prev_clip_rect != state().clip_rect)
-        push_command(SetClipRect { .rect = *state().clip_rect });
+    push_command(AddClipRect { .rect = rect });
 }
 
 void RecordingPainter::translate(int dx, int dy)
 {
-    m_state_stack.last().translation.translate(dx, dy);
+    translate({ dx, dy });
 }
 
 void RecordingPainter::translate(Gfx::IntPoint delta)
 {
-    m_state_stack.last().translation.translate(delta.to_type<float>());
+    push_command(Translate { .delta = delta });
 }
 
 void RecordingPainter::set_translation(int x, int y)
 {
-    m_state_stack.last().translation.set_translation(x, y);
+    push_command(SetTranslation { .translation = { x, y } });
 }
 
 void RecordingPainter::set_font(Gfx::Font const& font)
@@ -250,29 +242,19 @@ void RecordingPainter::set_font(Gfx::Font const& font)
 
 void RecordingPainter::save()
 {
-    m_state_stack.append(m_state_stack.last());
+    push_command(Save {});
 }
 
 void RecordingPainter::restore()
 {
-    auto prev_clip_rect = state().clip_rect;
-
-    VERIFY(m_state_stack.size() > 1);
-    m_state_stack.take_last();
-
-    if (state().clip_rect != prev_clip_rect) {
-        if (state().clip_rect.has_value())
-            push_command(SetClipRect { .rect = *state().clip_rect });
-        else
-            push_command(ClearClipRect {});
-    }
+    push_command(Restore {});
 }
 
 void RecordingPainter::push_stacking_context(PushStackingContextParams params)
 {
     push_command(PushStackingContext {
         .opacity = params.opacity,
-        .bounding_rect = state().translation.map(params.bounding_rect),
+        .bounding_rect = params.bounding_rect,
         .image_rendering = params.image_rendering,
         .transform = {
             .origin = params.transform.origin,
@@ -289,8 +271,8 @@ void RecordingPainter::pop_stacking_context()
 void RecordingPainter::paint_progressbar(Gfx::IntRect frame_rect, Gfx::IntRect progress_rect, Palette palette, int min, int max, int value, StringView text)
 {
     push_command(PaintProgressbar {
-        .frame_rect = state().translation.map(frame_rect),
-        .progress_rect = state().translation.map(progress_rect),
+        .frame_rect = frame_rect,
+        .progress_rect = progress_rect,
         .palette = palette,
         .min = min,
         .max = max,
@@ -301,13 +283,13 @@ void RecordingPainter::paint_progressbar(Gfx::IntRect frame_rect, Gfx::IntRect p
 
 void RecordingPainter::paint_frame(Gfx::IntRect rect, Palette palette, Gfx::FrameStyle style)
 {
-    push_command(PaintFrame { state().translation.map(rect), palette, style });
+    push_command(PaintFrame { rect, palette, style });
 }
 
 void RecordingPainter::apply_backdrop_filter(Gfx::IntRect const& backdrop_region, BorderRadiiData const& border_radii_data, CSS::ResolvedBackdropFilter const& backdrop_filter)
 {
     push_command(ApplyBackdropFilter {
-        .backdrop_region = state().translation.map(backdrop_region),
+        .backdrop_region = backdrop_region,
         .border_radii_data = border_radii_data,
         .backdrop_filter = backdrop_filter,
     });
@@ -337,7 +319,7 @@ void RecordingPainter::paint_text_shadow(int blur_radius, Gfx::IntRect bounding_
         .font = font,
         .color = color,
         .fragment_baseline = fragment_baseline,
-        .draw_location = state().translation.map(draw_location) });
+        .draw_location = draw_location });
 }
 
 void RecordingPainter::fill_rect_with_rounded_corners(Gfx::IntRect const& rect, Color color, Gfx::AntiAliasingPainter::CornerRadius top_left_radius, Gfx::AntiAliasingPainter::CornerRadius top_right_radius, Gfx::AntiAliasingPainter::CornerRadius bottom_right_radius, Gfx::AntiAliasingPainter::CornerRadius bottom_left_radius)
@@ -348,7 +330,7 @@ void RecordingPainter::fill_rect_with_rounded_corners(Gfx::IntRect const& rect, 
     }
 
     push_command(FillRectWithRoundedCorners {
-        .rect = state().translation.map(rect),
+        .rect = rect,
         .color = color,
         .top_left_radius = top_left_radius,
         .top_right_radius = top_right_radius,
@@ -374,8 +356,8 @@ void RecordingPainter::fill_rect_with_rounded_corners(Gfx::IntRect const& a_rect
 void RecordingPainter::draw_triangle_wave(Gfx::IntPoint a_p1, Gfx::IntPoint a_p2, Color color, int amplitude, int thickness = 1)
 {
     push_command(DrawTriangleWave {
-        .p1 = state().translation.map(a_p1),
-        .p2 = state().translation.map(a_p2),
+        .p1 = a_p1,
+        .p2 = a_p2,
         .color = color,
         .amplitude = amplitude,
         .thickness = thickness });
@@ -418,6 +400,12 @@ void RecordingPainter::execute(PaintingCommandExecutor& executor)
         }
 
         auto result = command.visit(
+            [&](Save const&) {
+                return executor.save();
+            },
+            [&](Restore const&) {
+                return executor.restore();
+            },
             [&](DrawGlyphRun const& command) {
                 return executor.draw_glyph_run(command.glyph_run, command.color);
             },
@@ -430,11 +418,14 @@ void RecordingPainter::execute(PaintingCommandExecutor& executor)
             [&](DrawScaledBitmap const& command) {
                 return executor.draw_scaled_bitmap(command.dst_rect, command.bitmap, command.src_rect, command.opacity, command.scaling_mode);
             },
-            [&](SetClipRect const& command) {
-                return executor.set_clip_rect(command.rect);
+            [&](AddClipRect const& command) {
+                return executor.add_clip_rect(command.rect);
             },
-            [&](ClearClipRect const&) {
-                return executor.clear_clip_rect();
+            [&](Translate const& command) {
+                return executor.translate(command.delta);
+            },
+            [&](SetTranslation const& command) {
+                return executor.set_translation(command.translation);
             },
             [&](SetFont const& command) {
                 return executor.set_font(command.font);

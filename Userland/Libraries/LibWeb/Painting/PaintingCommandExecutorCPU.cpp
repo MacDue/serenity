@@ -24,6 +24,20 @@ PaintingCommandExecutorCPU::PaintingCommandExecutorCPU(Gfx::Bitmap& bitmap)
         .scaling_mode = {} });
 }
 
+CommandResult PaintingCommandExecutorCPU::save()
+{
+    auto& painter = this->painter();
+    painter.save();
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorCPU::restore()
+{
+    auto& painter = this->painter();
+    painter.restore();
+    return CommandResult::Continue;
+}
+
 CommandResult PaintingCommandExecutorCPU::draw_glyph_run(Vector<Gfx::DrawGlyphOrEmoji> const& glyph_run, Color const& color)
 {
     auto& painter = this->painter();
@@ -64,18 +78,24 @@ CommandResult PaintingCommandExecutorCPU::draw_scaled_bitmap(Gfx::IntRect const&
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorCPU::set_clip_rect(Gfx::IntRect const& rect)
+CommandResult PaintingCommandExecutorCPU::add_clip_rect(Gfx::IntRect const& rect)
 {
     auto& painter = this->painter();
-    painter.clear_clip_rect();
     painter.add_clip_rect(rect);
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorCPU::clear_clip_rect()
+CommandResult PaintingCommandExecutorCPU::set_translation(Gfx::IntPoint translation)
 {
     auto& painter = this->painter();
-    painter.clear_clip_rect();
+    painter.translate(-painter.translation() + translation);
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorCPU::translate(Gfx::IntPoint delta)
+{
+    auto& painter = this->painter();
+    painter.translate(delta);
     return CommandResult::Continue;
 }
 
@@ -120,9 +140,8 @@ CommandResult PaintingCommandExecutorCPU::push_stacking_context(float opacity,
         stacking_contexts.append(StackingContext {
             .painter = MaybeOwned(painter()),
             .opacity = 1,
-            .destination = bounding_rect,
-            .scaling_mode = Gfx::Painter::ScalingMode::None,
-        });
+            .destination = {},
+            .scaling_mode = {} });
         return CommandResult::Continue;
     }
 

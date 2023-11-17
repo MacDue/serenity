@@ -17,6 +17,20 @@ PaintingCommandExecutorGPU::~PaintingCommandExecutorGPU()
 {
 }
 
+CommandResult PaintingCommandExecutorGPU::save()
+{
+    auto& painter = this->painter();
+    painter.save();
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorGPU::restore()
+{
+    auto& painter = this->painter();
+    painter.restore();
+    return CommandResult::Continue;
+}
+
 CommandResult PaintingCommandExecutorGPU::draw_glyph_run(Vector<Gfx::DrawGlyphOrEmoji> const& glyph_run, Color const& color)
 {
     painter().draw_glyph_run(glyph_run, color);
@@ -57,15 +71,21 @@ CommandResult PaintingCommandExecutorGPU::draw_scaled_bitmap(Gfx::IntRect const&
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorGPU::set_clip_rect(Gfx::IntRect const& rect)
+CommandResult PaintingCommandExecutorGPU::add_clip_rect(Gfx::IntRect const&)
 {
-    painter().set_clip_rect(rect);
+    // FIXME:
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorGPU::clear_clip_rect()
+CommandResult PaintingCommandExecutorGPU::translate(Gfx::IntPoint)
 {
-    painter().clear_clip_rect();
+    // FIXME:
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorGPU::set_translation(Gfx::IntPoint)
+{
+    // FIXME:
     return CommandResult::Continue;
 }
 

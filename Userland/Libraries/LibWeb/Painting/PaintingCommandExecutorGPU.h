@@ -13,12 +13,15 @@ namespace Web::Painting {
 
 class PaintingCommandExecutorGPU : public PaintingCommandExecutor {
 public:
+    CommandResult save() override;
+    CommandResult restore() override;
     CommandResult draw_glyph_run(Vector<Gfx::DrawGlyphOrEmoji> const& glyph_run, Color const&) override;
     CommandResult draw_text(Gfx::IntRect const& rect, String const& raw_text, Gfx::TextAlignment alignment, Color const&, Gfx::TextElision, Gfx::TextWrapping, Optional<NonnullRefPtr<Gfx::Font>> const&) override;
     CommandResult fill_rect(Gfx::IntRect const& rect, Color const&) override;
     CommandResult draw_scaled_bitmap(Gfx::IntRect const& dst_rect, Gfx::Bitmap const& bitmap, Gfx::IntRect const& src_rect, float opacity, Gfx::Painter::ScalingMode scaling_mode) override;
-    CommandResult set_clip_rect(Gfx::IntRect const& rect) override;
-    CommandResult clear_clip_rect() override;
+    CommandResult add_clip_rect(Gfx::IntRect const& rect) override;
+    CommandResult translate(Gfx::IntPoint delta) override;
+    CommandResult set_translation(Gfx::IntPoint translation) override;
     CommandResult set_font(Gfx::Font const&) override;
     CommandResult push_stacking_context(float opacity, Gfx::IntRect bounding_rect, CSS::ImageRendering image_rendering, StackingContextTransform transform, Optional<StackingContextMask> mask) override;
     CommandResult pop_stacking_context() override;

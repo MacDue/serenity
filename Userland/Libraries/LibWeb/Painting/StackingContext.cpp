@@ -296,21 +296,20 @@ void StackingContext::paint(PaintContext& context) const
         return;
 
     auto scale_factor = context.device_pixels_per_css_pixel();
-    auto matrix = transform_matrix();
-    auto scale_translation_to_css_pixels = [&](Gfx::FloatMatrix4x4& matrix) {
+    auto matrix_with_scaled_translation = [=](Gfx::FloatMatrix4x4 matrix) {
         auto* m = matrix.elements();
         m[0][3] *= scale_factor;
         m[1][3] *= scale_factor;
         m[2][3] *= scale_factor;
+        return matrix;
     };
-    scale_translation_to_css_pixels(matrix);
     RecordingPainter::PushStackingContextParams push_stacking_context_params {
         .opacity = opacity,
         .bounding_rect = context.enclosing_device_rect(paintable_box().absolute_paint_rect()).to_type<int>(),
         .image_rendering = paintable_box().computed_values().image_rendering(),
         .transform = {
             .origin = transform_origin().scaled(scale_factor),
-            .matrix = matrix,
+            .matrix = matrix_with_scaled_translation(transform_matrix()),
         },
     };
 

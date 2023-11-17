@@ -77,11 +77,21 @@ struct DrawScaledBitmap {
     [[nodiscard]] Gfx::IntRect bounding_rect() const { return dst_rect; }
 };
 
-struct SetClipRect {
+struct AddClipRect {
     Gfx::IntRect rect;
 };
 
-struct ClearClipRect { };
+struct Translate {
+    Gfx::IntPoint delta;
+};
+
+struct SetTranslation {
+    Gfx::IntPoint translation;
+};
+
+struct Save { };
+
+struct Restore { };
 
 struct SetFont {
     NonnullRefPtr<Gfx::Font> font;
@@ -299,12 +309,15 @@ struct BlitCornerClipping {
 };
 
 using PaintingCommand = Variant<
+    Save,
+    Restore,
     DrawGlyphRun,
     DrawText,
     FillRect,
     DrawScaledBitmap,
-    SetClipRect,
-    ClearClipRect,
+    AddClipRect,
+    Translate,
+    SetTranslation,
     SetFont,
     PushStackingContext,
     PopStackingContext,
@@ -335,12 +348,15 @@ class PaintingCommandExecutor {
 public:
     virtual ~PaintingCommandExecutor() = default;
 
+    virtual CommandResult save() = 0;
+    virtual CommandResult restore() = 0;
     virtual CommandResult draw_glyph_run(Vector<Gfx::DrawGlyphOrEmoji> const& glyph_run, Color const&) = 0;
     virtual CommandResult draw_text(Gfx::IntRect const&, String const&, Gfx::TextAlignment alignment, Color const&, Gfx::TextElision, Gfx::TextWrapping, Optional<NonnullRefPtr<Gfx::Font>> const&) = 0;
     virtual CommandResult fill_rect(Gfx::IntRect const&, Color const&) = 0;
     virtual CommandResult draw_scaled_bitmap(Gfx::IntRect const& dst_rect, Gfx::Bitmap const& bitmap, Gfx::IntRect const& src_rect, float opacity, Gfx::Painter::ScalingMode scaling_mode) = 0;
-    virtual CommandResult set_clip_rect(Gfx::IntRect const& rect) = 0;
-    virtual CommandResult clear_clip_rect() = 0;
+    virtual CommandResult add_clip_rect(Gfx::IntRect const& rect) = 0;
+    virtual CommandResult translate(Gfx::IntPoint point) = 0;
+    virtual CommandResult set_translation(Gfx::IntPoint point) = 0;
     virtual CommandResult set_font(Gfx::Font const& font) = 0;
     virtual CommandResult push_stacking_context(float opacity, Gfx::IntRect bounding_rect, CSS::ImageRendering image_rendering, StackingContextTransform transform, Optional<StackingContextMask> mask) = 0;
     virtual CommandResult pop_stacking_context() = 0;
@@ -375,6 +391,8 @@ public:
 
 class RecordingPainter {
 public:
+    RecordingPainter() = default;
+
     void fill_rect(Gfx::IntRect const& rect, Color color);
 
     struct FillPathUsingColorParams {
@@ -474,18 +492,6 @@ public:
 
     void execute(PaintingCommandExecutor&);
 
-    RecordingPainter()
-    {
-        m_state_stack.append(State());
-    }
-
-    struct State {
-        Gfx::AffineTransform translation;
-        Optional<Gfx::IntRect> clip_rect;
-    };
-    State& state() { return m_state_stack.last(); }
-    State const& state() const { return m_state_stack.last(); }
-
 private:
     void push_command(PaintingCommand command)
     {
@@ -493,7 +499,6 @@ private:
     }
 
     Vector<PaintingCommand> m_painting_commands;
-    Vector<State> m_state_stack;
 };
 
 class RecordingPainterStateSaver {
