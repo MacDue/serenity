@@ -27,7 +27,6 @@
 #include <LibGfx/TextElision.h>
 #include <LibGfx/TextLayout.h>
 #include <LibGfx/TextWrapping.h>
-#include <LibWeb/CSS/Enums.h>
 #include <LibWeb/Painting/BorderRadiiData.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
 #include <LibWeb/Painting/GradientData.h>
@@ -87,25 +86,30 @@ struct SetFont {
     NonnullRefPtr<Gfx::Font> font;
 };
 
-struct StackingContextTransform {
-    Gfx::FloatPoint origin;
-    Gfx::FloatMatrix4x4 matrix;
-};
-
-struct StackingContextMask {
-    NonnullRefPtr<Gfx::Bitmap> mask_bitmap;
-    Gfx::Bitmap::MaskKind mask_kind;
-};
-
 struct PushStackingContext {
+    bool semitransparent_or_has_non_identity_transform;
+    bool has_fixed_position;
     float opacity;
-    Gfx::IntRect bounding_rect;
-    CSS::ImageRendering image_rendering;
-    StackingContextTransform transform;
-    Optional<StackingContextMask> mask = {};
+    Gfx::FloatRect source_rect;
+    Gfx::FloatRect transformed_destination_rect;
+    Gfx::IntPoint painter_location;
 };
 
-struct PopStackingContext { };
+struct PopStackingContext {
+    bool semitransparent_or_has_non_identity_transform;
+    Gfx::Painter::ScalingMode scaling_mode;
+};
+
+struct PushStackingContextWithMask {
+    Gfx::IntRect paint_rect;
+};
+
+struct PopStackingContextWithMask {
+    Gfx::IntRect paint_rect;
+    RefPtr<Gfx::Bitmap> mask_bitmap;
+    Gfx::Bitmap::MaskKind mask_kind;
+    float opacity;
+};
 
 struct PaintLinearGradient {
     Gfx::IntRect gradient_rect;
@@ -308,6 +312,8 @@ using PaintingCommand = Variant<
     SetFont,
     PushStackingContext,
     PopStackingContext,
+    PushStackingContextWithMask,
+    PopStackingContextWithMask,
     PaintLinearGradient,
     PaintRadialGradient,
     PaintConicGradient,
@@ -342,8 +348,10 @@ public:
     virtual CommandResult set_clip_rect(Gfx::IntRect const& rect) = 0;
     virtual CommandResult clear_clip_rect() = 0;
     virtual CommandResult set_font(Gfx::Font const& font) = 0;
-    virtual CommandResult push_stacking_context(float opacity, Gfx::IntRect bounding_rect, CSS::ImageRendering image_rendering, StackingContextTransform transform, Optional<StackingContextMask> mask) = 0;
-    virtual CommandResult pop_stacking_context() = 0;
+    virtual CommandResult push_stacking_context(bool semitransparent_or_has_non_identity_transform, float opacity, Gfx::FloatRect const& source_rect, Gfx::FloatRect const& transformed_destination_rect, Gfx::IntPoint const& painter_location) = 0;
+    virtual CommandResult pop_stacking_context(bool semitransparent_or_has_non_identity_transform, Gfx::Painter::ScalingMode scaling_mode) = 0;
+    virtual CommandResult push_stacking_context_with_mask(Gfx::IntRect const& paint_rect) = 0;
+    virtual CommandResult pop_stacking_context_with_mask(Gfx::IntRect const& paint_rect, RefPtr<Gfx::Bitmap> const& mask_bitmap, Gfx::Bitmap::MaskKind mask_kind, float opacity) = 0;
     virtual CommandResult paint_linear_gradient(Gfx::IntRect const&, LinearGradientData const&) = 0;
     virtual CommandResult paint_radial_gradient(Gfx::IntRect const& rect, RadialGradientData const&, Gfx::IntPoint const& center, Gfx::IntSize const& size) = 0;
     virtual CommandResult paint_conic_gradient(Gfx::IntRect const& rect, ConicGradientData const&, Gfx::IntPoint const& position) = 0;
@@ -437,7 +445,6 @@ public:
 
     void translate(int dx, int dy);
     void translate(Gfx::IntPoint delta);
-    void set_translation(int x, int y);
 
     void set_font(Gfx::Font const& font);
 
@@ -445,14 +452,23 @@ public:
     void restore();
 
     struct PushStackingContextParams {
+        bool semitransparent_or_has_non_identity_transform;
+        bool has_fixed_position;
         float opacity;
-        Gfx::IntRect bounding_rect;
-        CSS::ImageRendering image_rendering;
-        StackingContextTransform transform;
-        Optional<StackingContextMask> mask = {};
+        Gfx::FloatRect source_rect;
+        Gfx::FloatRect transformed_destination_rect;
+        Gfx::IntPoint painter_location;
     };
     void push_stacking_context(PushStackingContextParams params);
-    void pop_stacking_context();
+
+    struct PopStackingContextParams {
+        bool semitransparent_or_has_non_identity_transform;
+        Gfx::Painter::ScalingMode scaling_mode;
+    };
+    void pop_stacking_context(PopStackingContextParams params);
+
+    void push_stacking_context_with_mask(Gfx::IntRect paint_rect);
+    void pop_stacking_context_with_mask(RefPtr<Gfx::Bitmap> mask_bitmap, Gfx::Bitmap::MaskKind mask_kind, Gfx::IntRect paint_rect, float opacity);
 
     void sample_under_corners(NonnullRefPtr<BorderRadiusCornerClipper> corner_clipper);
     void blit_corner_clipping(NonnullRefPtr<BorderRadiusCornerClipper> corner_clipper);

@@ -6,7 +6,6 @@
 
 #include <LibGfx/Filters/StackBlurFilter.h>
 #include <LibGfx/StylePainter.h>
-#include <LibWeb/CSS/ComputedValues.h>
 #include <LibWeb/Painting/BorderRadiusCornerClipper.h>
 #include <LibWeb/Painting/FilterPainting.h>
 #include <LibWeb/Painting/PaintingCommandExecutorCPU.h>
@@ -18,10 +17,7 @@ namespace Web::Painting {
 PaintingCommandExecutorCPU::PaintingCommandExecutorCPU(Gfx::Bitmap& bitmap)
     : m_target_bitmap(bitmap)
 {
-    stacking_contexts.append({ .painter = AK::make<Gfx::Painter>(bitmap),
-        .opacity = 1.0f,
-        .destination = {},
-        .scaling_mode = {} });
+    stacking_contexts.append({ Gfx::Painter(bitmap), {}, 1.0f });
 }
 
 CommandResult PaintingCommandExecutorCPU::draw_glyph_run(Vector<Gfx::DrawGlyphOrEmoji> const& glyph_run, Color const& color)
@@ -86,111 +82,107 @@ CommandResult PaintingCommandExecutorCPU::set_font(Gfx::Font const& font)
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorCPU::push_stacking_context(float opacity,
-    Gfx::IntRect bounding_rect,
-    CSS::ImageRendering image_rendering,
-    StackingContextTransform transform,
-    Optional<StackingContextMask> mask)
+CommandResult PaintingCommandExecutorCPU::push_stacking_context(bool semitransparent_or_has_non_identity_transform, float opacity, Gfx::FloatRect const& source_rect, Gfx::FloatRect const& transformed_destination_rect, Gfx::IntPoint const& painter_location)
 {
-    if (mask.has_value()) {
-        // TODO: Support masks and CSS transforms at the same time.
-        // Note: Currently only SVG masking is implemented (which does not use CSS transforms anyway).
-        auto bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, mask->mask_bitmap->size());
-        if (bitmap_or_error.is_error())
-            return CommandResult::Continue;
-        auto bitmap = bitmap_or_error.release_value();
-        stacking_contexts.append(StackingContext {
-            .painter = AK::make<Gfx::Painter>(bitmap),
-            .opacity = 1,
-            .destination = bounding_rect,
-            .scaling_mode = Gfx::Painter::ScalingMode::None,
-            .mask = mask });
-        painter().translate(-bounding_rect.location());
-        return CommandResult::Continue;
-    }
+    auto& painter = this->painter();
+    if (semitransparent_or_has_non_identity_transform) {
+        auto destination_rect = transformed_destination_rect.to_rounded<int>();
 
-    // FIXME: This extracts the affine 2D part of the full transformation matrix.
-    // Use the whole matrix when we get better transformation support in LibGfx or use LibGL for drawing the bitmap
-    auto affine_transform = Gfx::extract_2d_affine_transform(transform.matrix);
+        // FIXME: We should find a way to scale the paintable, rather than paint into a separate bitmap,
+        // then scale it. This snippet now copies the background at the destination, then scales it down/up
+        // to the size of the source (which could add some artefacts, though just scaling the bitmap already does that).
+        // We need to copy the background at the destination because a bunch of our rendering effects now rely on
+        // being able to sample the painter (see border radii, shadows, filters, etc).
+        Gfx::FloatPoint destination_clipped_fixup {};
+        auto try_get_scaled_destination_bitmap = [&]() -> ErrorOr<NonnullRefPtr<Gfx::Bitmap>> {
+            Gfx::IntRect actual_destination_rect;
+            auto bitmap = TRY(painter.get_region_bitmap(destination_rect, Gfx::BitmapFormat::BGRA8888, actual_destination_rect));
+            // get_region_bitmap() may clip to a smaller region if the requested rect goes outside the painter, so we need to account for that.
+            destination_clipped_fixup = Gfx::FloatPoint { destination_rect.location() - actual_destination_rect.location() };
+            destination_rect = actual_destination_rect;
+            if (source_rect.size() != transformed_destination_rect.size()) {
+                auto sx = static_cast<float>(source_rect.width()) / transformed_destination_rect.width();
+                auto sy = static_cast<float>(source_rect.height()) / transformed_destination_rect.height();
+                bitmap = TRY(bitmap->scaled(sx, sy));
+                destination_clipped_fixup.scale_by(sx, sy);
+            }
+            return bitmap;
+        };
 
-    if (opacity == 1.0 && affine_transform.is_identity_or_translation()) {
-        // OPTIMIZATION: This is a simple translation use previous stacking context's painter.
-        painter().save();
-        painter().translate(affine_transform.translation().to_rounded<int>());
-        stacking_contexts.append(StackingContext {
-            .painter = MaybeOwned(painter()),
-            .opacity = 1,
-            .destination = bounding_rect,
-            .scaling_mode = Gfx::Painter::ScalingMode::None,
-        });
-        return CommandResult::Continue;
-    }
-
-    auto& current_painter = this->painter();
-    auto source_rect = bounding_rect.to_type<float>().translated(-transform.origin);
-    auto transformed_destination_rect = affine_transform.map(source_rect).translated(transform.origin);
-    auto destination_rect = transformed_destination_rect.to_rounded<int>();
-
-    // FIXME: We should find a way to scale the paintable, rather than paint into a separate bitmap,
-    // then scale it. This snippet now copies the background at the destination, then scales it down/up
-    // to the size of the source (which could add some artefacts, though just scaling the bitmap already does that).
-    // We need to copy the background at the destination because a bunch of our rendering effects now rely on
-    // being able to sample the painter (see border radii, shadows, filters, etc).
-    Gfx::FloatPoint destination_clipped_fixup {};
-    auto try_get_scaled_destination_bitmap = [&]() -> ErrorOr<NonnullRefPtr<Gfx::Bitmap>> {
-        Gfx::IntRect actual_destination_rect;
-        auto bitmap = TRY(current_painter.get_region_bitmap(destination_rect, Gfx::BitmapFormat::BGRA8888, actual_destination_rect));
-        // get_region_bitmap() may clip to a smaller region if the requested rect goes outside the painter, so we need to account for that.
-        destination_clipped_fixup = Gfx::FloatPoint { destination_rect.location() - actual_destination_rect.location() };
-        destination_rect = actual_destination_rect;
-        if (source_rect.size() != transformed_destination_rect.size()) {
-            auto sx = static_cast<float>(source_rect.width()) / transformed_destination_rect.width();
-            auto sy = static_cast<float>(source_rect.height()) / transformed_destination_rect.height();
-            bitmap = TRY(bitmap->scaled(sx, sy));
-            destination_clipped_fixup.scale_by(sx, sy);
+        auto bitmap_or_error = try_get_scaled_destination_bitmap();
+        if (bitmap_or_error.is_error()) {
+            // NOTE: If the creation of the bitmap fails, we need to skip all painting commands that belong to this stacking context.
+            //       We don't interrupt the execution of painting commands because get_region_bitmap() returns an error if the requested
+            //       region is outside of the viewport (mmap fails to allocate a zero-size region), which means we can safely proceed
+            //       with execution of commands outside of this stacking context.
+            // FIXME: Change the get_region_bitmap() API to return ErrorOr<Optional<Bitmap>> and exit the execution of commands here
+            //        if we run out of memory.
+            return CommandResult::SkipStackingContext;
         }
-        return bitmap;
-    };
+        auto bitmap = bitmap_or_error.release_value_but_fixme_should_propagate_errors();
 
-    auto bitmap_or_error = try_get_scaled_destination_bitmap();
-    if (bitmap_or_error.is_error()) {
-        // NOTE: If the creation of the bitmap fails, we need to skip all painting commands that belong to this stacking context.
-        //       We don't interrupt the execution of painting commands because get_region_bitmap() returns an error if the requested
-        //       region is outside of the viewport (mmap fails to allocate a zero-size region), which means we can safely proceed
-        //       with execution of commands outside of this stacking context.
-        // FIXME: Change the get_region_bitmap() API to return ErrorOr<Optional<Bitmap>> and exit the execution of commands here
-        //        if we run out of memory.
-        return CommandResult::SkipStackingContext;
+        Gfx::Painter stacking_context_painter(bitmap);
+
+        stacking_context_painter.translate(painter_location + destination_clipped_fixup.to_type<int>());
+
+        stacking_contexts.append(StackingContext {
+            .painter = stacking_context_painter,
+            .destination = destination_rect,
+            .opacity = opacity,
+        });
+    } else {
+        painter.save();
     }
-
-    auto bitmap = bitmap_or_error.release_value();
-    stacking_contexts.append(StackingContext {
-        .painter = AK::make<Gfx::Painter>(bitmap),
-        .opacity = opacity,
-        .destination = destination_rect,
-        .scaling_mode = CSS::to_gfx_scaling_mode(image_rendering, destination_rect, destination_rect) });
-    painter().translate(-bounding_rect.location() + destination_clipped_fixup.to_type<int>());
 
     return CommandResult::Continue;
 }
 
-CommandResult PaintingCommandExecutorCPU::pop_stacking_context()
+CommandResult PaintingCommandExecutorCPU::pop_stacking_context(bool semitransparent_or_has_non_identity_transform, Gfx::Painter::ScalingMode scaling_mode)
 {
-    auto stacking_context = stacking_contexts.take_last();
-    if (!stacking_context.painter.is_owned()) {
-        // This stacking context was a simple translation, that used the previous stacking context's painter.
-        painter().restore();
-    } else {
-        auto bitmap = stacking_context.painter->target();
-        if (stacking_context.mask.has_value())
-            bitmap->apply_mask(*stacking_context.mask->mask_bitmap, stacking_context.mask->mask_kind);
+    if (semitransparent_or_has_non_identity_transform) {
+        auto stacking_context = stacking_contexts.take_last();
+        auto bitmap = stacking_context.painter.target();
         auto destination_rect = stacking_context.destination;
+
         if (destination_rect.size() == bitmap->size()) {
             painter().blit(destination_rect.location(), *bitmap, bitmap->rect(), stacking_context.opacity);
         } else {
-            painter().draw_scaled_bitmap(destination_rect, *bitmap, bitmap->rect(), stacking_context.opacity, stacking_context.scaling_mode);
+            painter().draw_scaled_bitmap(destination_rect, *bitmap, bitmap->rect(), stacking_context.opacity, scaling_mode);
         }
+    } else {
+        painter().restore();
     }
+
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorCPU::push_stacking_context_with_mask(Gfx::IntRect const& paint_rect)
+{
+    auto bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, paint_rect.size());
+    if (bitmap_or_error.is_error())
+        return CommandResult::Continue;
+    auto bitmap = bitmap_or_error.release_value();
+
+    Gfx::Painter stacking_context_painter(bitmap);
+
+    stacking_context_painter.translate(-paint_rect.location());
+
+    stacking_contexts.append(StackingContext {
+        .painter = stacking_context_painter,
+        .destination = {},
+        .opacity = 1,
+    });
+
+    return CommandResult::Continue;
+}
+
+CommandResult PaintingCommandExecutorCPU::pop_stacking_context_with_mask(Gfx::IntRect const& paint_rect, RefPtr<Gfx::Bitmap> const& mask_bitmap, Gfx::Bitmap::MaskKind mask_kind, float opacity)
+{
+    auto stacking_context = stacking_contexts.take_last();
+    auto bitmap = stacking_context.painter.target();
+    if (mask_bitmap)
+        bitmap->apply_mask(*mask_bitmap, mask_kind);
+    painter().blit(paint_rect.location(), *bitmap, bitmap->rect(), opacity);
     return CommandResult::Continue;
 }
 
