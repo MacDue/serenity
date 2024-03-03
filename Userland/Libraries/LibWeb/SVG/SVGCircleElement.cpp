@@ -10,6 +10,7 @@
 #include <LibWeb/SVG/AttributeNames.h>
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGCircleElement.h>
+#include <LibWeb/SVG/SVGViewport.h>
 
 namespace Web::SVG {
 
@@ -39,7 +40,7 @@ void SVGCircleElement::apply_presentational_hints(CSS::StyleProperties& style) c
     if (auto cy_value = parse_css_value(parsing_context, cy_attribute.value_or(String {}), CSS::PropertyID::Cy))
         style.set_property(CSS::PropertyID::Cy, cy_value.release_nonnull());
 
-    auto r_attribute = attribute(SVG::AttributeNames::x);
+    auto r_attribute = attribute(SVG::AttributeNames::r);
     if (auto r_value = parse_css_value(parsing_context, r_attribute.value_or(String {}), CSS::PropertyID::R))
         style.set_property(CSS::PropertyID::R, r_value.release_nonnull());
 }
@@ -49,7 +50,7 @@ Gfx::Path SVGCircleElement::get_path(CSSPixelSize viewport_size)
     auto* node = layout_node();
     auto cx = float(node->computed_values().cx().to_px(*node, viewport_size.width()));
     auto cy = float(node->computed_values().cy().to_px(*node, viewport_size.height()));
-    auto r = float(node->computed_values().r().to_px(*node, viewport_size.width()));
+    auto r = float(node->computed_values().r().to_px(*node, normalized_diagonal_length(viewport_size)));
 
     Gfx::Path path;
 
