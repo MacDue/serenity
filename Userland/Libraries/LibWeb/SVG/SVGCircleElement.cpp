@@ -5,6 +5,8 @@
  */
 
 #include <LibWeb/Bindings/Intrinsics.h>
+#include <LibWeb/CSS/Parser/Parser.h>
+#include <LibWeb/Layout/Node.h>
 #include <LibWeb/SVG/AttributeNames.h>
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGCircleElement.h>
@@ -24,9 +26,10 @@ void SVGCircleElement::initialize(JS::Realm& realm)
     set_prototype(&Bindings::ensure_web_prototype<Bindings::SVGCircleElementPrototype>(realm, "SVGCircleElement"_fly_string));
 }
 
-void SVGSVGElement::apply_presentational_hints(CSS::StyleProperties& style) const
+void SVGCircleElement::apply_presentational_hints(CSS::StyleProperties& style) const
 {
     Base::apply_presentational_hints(style);
+    auto parsing_context = CSS::Parser::ParsingContext { document(), CSS::Parser::ParsingContext::Mode::SVGPresentationAttribute };
 
     auto cx_attribute = attribute(SVG::AttributeNames::cx);
     if (auto cx_value = parse_css_value(parsing_context, cx_attribute.value_or(String {}), CSS::PropertyID::Cx))
@@ -44,9 +47,9 @@ void SVGSVGElement::apply_presentational_hints(CSS::StyleProperties& style) cons
 Gfx::Path SVGCircleElement::get_path(CSSPixelSize viewport_size)
 {
     auto* node = layout_node();
-    auto cx = float(node->computed_style().cx().to_px(node, viewport_size.width));
-    auto cy = float(node->computed_style().cy().to_px(node, viewport_size.height));
-    auto r = float(node->computed_style().r().to_px(node, viewport_size.width));
+    auto cx = float(node->computed_values().cx().to_px(*node, viewport_size.width()));
+    auto cy = float(node->computed_values().cy().to_px(*node, viewport_size.height()));
+    auto r = float(node->computed_values().r().to_px(*node, viewport_size.width()));
 
     Gfx::Path path;
 
