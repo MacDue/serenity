@@ -24,38 +24,35 @@ void SVGCircleElement::initialize(JS::Realm& realm)
     set_prototype(&Bindings::ensure_web_prototype<Bindings::SVGCircleElementPrototype>(realm, "SVGCircleElement"_fly_string));
 }
 
-void SVGCircleElement::attribute_changed(FlyString const& name, Optional<String> const& value)
+void SVGSVGElement::apply_presentational_hints(CSS::StyleProperties& style) const
 {
-    SVGGeometryElement::attribute_changed(name, value);
+    Base::apply_presentational_hints(style);
 
-    if (name == SVG::AttributeNames::cx) {
-        m_center_x = AttributeParser::parse_coordinate(value.value_or(String {}));
-        m_path.clear();
-    } else if (name == SVG::AttributeNames::cy) {
-        m_center_y = AttributeParser::parse_coordinate(value.value_or(String {}));
-        m_path.clear();
-    } else if (name == SVG::AttributeNames::r) {
-        m_radius = AttributeParser::parse_positive_length(value.value_or(String {}));
-        m_path.clear();
-    }
+    auto cx_attribute = attribute(SVG::AttributeNames::cx);
+    if (auto cx_value = parse_css_value(parsing_context, cx_attribute.value_or(String {}), CSS::PropertyID::Cx))
+        style.set_property(CSS::PropertyID::Cx, cx_value.release_nonnull());
+
+    auto cy_attribute = attribute(SVG::AttributeNames::cy);
+    if (auto cy_value = parse_css_value(parsing_context, cy_attribute.value_or(String {}), CSS::PropertyID::Cy))
+        style.set_property(CSS::PropertyID::Cy, cy_value.release_nonnull());
+
+    auto r_attribute = attribute(SVG::AttributeNames::x);
+    if (auto r_value = parse_css_value(parsing_context, r_attribute.value_or(String {}), CSS::PropertyID::R))
+        style.set_property(CSS::PropertyID::R, r_value.release_nonnull());
 }
 
-Gfx::Path& SVGCircleElement::get_path()
+Gfx::Path SVGCircleElement::get_path(CSSPixelSize viewport_size)
 {
-    if (m_path.has_value())
-        return m_path.value();
-
-    float cx = m_center_x.value_or(0);
-    float cy = m_center_y.value_or(0);
-    float r = m_radius.value_or(0);
+    auto* node = layout_node();
+    auto cx = float(node->computed_style().cx().to_px(node, viewport_size.width));
+    auto cy = float(node->computed_style().cy().to_px(node, viewport_size.height));
+    auto r = float(node->computed_style().r().to_px(node, viewport_size.width));
 
     Gfx::Path path;
 
     // A zero radius disables rendering.
-    if (r == 0) {
-        m_path = move(path);
-        return m_path.value();
-    }
+    if (r == 0)
+        return {};
 
     bool large_arc = false;
     bool sweep = true;
@@ -75,38 +72,28 @@ Gfx::Path& SVGCircleElement::get_path()
     // 5. arc with a segment-completing close path operation.
     path.arc_to({ cx + r, cy }, r, large_arc, sweep);
 
-    m_path = move(path);
-    return m_path.value();
+    return path;
 }
 
 // https://www.w3.org/TR/SVG11/shapes.html#CircleElementCXAttribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGCircleElement::cx() const
 {
-    // FIXME: Populate the unit type when it is parsed (0 here is "unknown").
     // FIXME: Create a proper animated value when animations are supported.
-    auto base_length = SVGLength::create(realm(), 0, m_center_x.value_or(0));
-    auto anim_length = SVGLength::create(realm(), 0, m_center_x.value_or(0));
-    return SVGAnimatedLength::create(realm(), move(base_length), move(anim_length));
+    TODO();
 }
 
 // https://www.w3.org/TR/SVG11/shapes.html#CircleElementCYAttribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGCircleElement::cy() const
 {
-    // FIXME: Populate the unit type when it is parsed (0 here is "unknown").
     // FIXME: Create a proper animated value when animations are supported.
-    auto base_length = SVGLength::create(realm(), 0, m_center_y.value_or(0));
-    auto anim_length = SVGLength::create(realm(), 0, m_center_y.value_or(0));
-    return SVGAnimatedLength::create(realm(), move(base_length), move(anim_length));
+    TODO();
 }
 
 // https://www.w3.org/TR/SVG11/shapes.html#CircleElementRAttribute
 JS::NonnullGCPtr<SVGAnimatedLength> SVGCircleElement::r() const
 {
-    // FIXME: Populate the unit type when it is parsed (0 here is "unknown").
     // FIXME: Create a proper animated value when animations are supported.
-    auto base_length = SVGLength::create(realm(), 0, m_radius.value_or(0));
-    auto anim_length = SVGLength::create(realm(), 0, m_radius.value_or(0));
-    return SVGAnimatedLength::create(realm(), move(base_length), move(anim_length));
+    TODO();
 }
 
 }

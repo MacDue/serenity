@@ -43,11 +43,8 @@ void SVGEllipseElement::attribute_changed(FlyString const& name, Optional<String
     }
 }
 
-Gfx::Path& SVGEllipseElement::get_path()
+Gfx::Path SVGEllipseElement::get_path(CSSPixelSize viewport_size)
 {
-    if (m_path.has_value())
-        return m_path.value();
-
     float rx = m_radius_x.value_or(0);
     float ry = m_radius_y.value_or(0);
     float cx = m_center_x.value_or(0);
@@ -80,8 +77,7 @@ Gfx::Path& SVGEllipseElement::get_path()
     // 5. arc with a segment-completing close path operation.
     path.elliptical_arc_to({ cx + rx, cy }, radii, x_axis_rotation, large_arc, sweep);
 
-    m_path = move(path);
-    return m_path.value();
+    return path;
 }
 
 // https://www.w3.org/TR/SVG11/shapes.html#EllipseElementCXAttribute
