@@ -402,6 +402,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             for_each_in_subtree(descendant, [&](Node const& child_of_svg_container) {
                 if (!is<SVGBox>(child_of_svg_container))
                     return TraversalDecision::Continue;
+                // Masks do not change the bounding box of their parents.
                 if (is<SVGMaskBox>(child_of_svg_container))
                     return TraversalDecision::SkipChildrenAndContinue;
                 auto& box_state = m_state.get(static_cast<SVGBox const&>(child_of_svg_container));
@@ -421,6 +422,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
         return IterationDecision::Continue;
     });
 
+    // Lay out masks last (as their parent needs to be sized first).
     box.for_each_in_subtree_of_type<SVGMaskBox>([&](SVGMaskBox const& mask_box) {
         auto& mask_state = m_state.get_mutable(static_cast<Box const&>(mask_box));
         auto parent_viewbox_transform = viewbox_transform;
@@ -434,6 +436,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             mask_state.set_content_width(viewport_width);
             mask_state.set_content_height(viewport_height);
         }
+        // Pretend masks are a viewport so we can scale the contents depending on the `maskContentUnits`.
         SVGFormattingContext nested_context(m_state, static_cast<Box const&>(mask_box), this, parent_viewbox_transform);
         mask_state.set_has_definite_width(true);
         mask_state.set_has_definite_height(true);
