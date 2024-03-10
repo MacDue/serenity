@@ -17,6 +17,12 @@ class SVGMaskPaintable : public SVGGraphicsPaintable {
 public:
     static JS::NonnullGCPtr<SVGMaskPaintable> create(Layout::SVGMaskBox const&);
 
+    bool forms_unconnected_subtree() const override
+    {
+        // Masks should not be painted (i.e. reachable) unless referenced by another element.
+        return true;
+    }
+
 protected:
     SVGMaskPaintable(Layout::SVGMaskBox const&);
 };

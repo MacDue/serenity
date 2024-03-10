@@ -24,12 +24,6 @@ SVGGraphicsPaintable::SVGGraphicsPaintable(Layout::SVGGraphicsBox const& layout_
 {
 }
 
-bool SVGGraphicsPaintable::forms_unconnected_subtree() const
-{
-    // Masks should not be painted (i.e. reachable) unless referenced by another element.
-    return is<SVG::SVGMaskElement>(dom_node());
-}
-
 Layout::SVGGraphicsBox const& SVGGraphicsPaintable::layout_box() const
 {
     return static_cast<Layout::SVGGraphicsBox const&>(layout_node());
