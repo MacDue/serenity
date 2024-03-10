@@ -29,6 +29,7 @@ void SVGMaskElement::initialize(JS::Realm& realm)
 
 JS::GCPtr<Layout::Node> SVGMaskElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties>)
 {
+    // Masks are handled as a special case in the TreeBuilder.
     return nullptr;
 }
 

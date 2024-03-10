@@ -396,14 +396,18 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
     // https://svgwg.org/svg2-draft/struct.html#Groups
     // 5.2. Grouping: the ‘g’ element
     // The ‘g’ element is a container element for grouping together related graphics elements.
-    box.for_each_in_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
+    box.for_each_in_inclusive_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
         if (is_container_element(descendant)) {
             Gfx::BoundingBox<CSSPixels> bounding_box;
-            descendant.for_each_in_subtree_of_type<SVGBox>([&](SVGBox const& child_of_svg_container) {
-                auto& box_state = m_state.get(child_of_svg_container);
+            for_each_in_subtree(descendant, [&](Node const& child_of_svg_container) {
+                if (!is<SVGBox>(child_of_svg_container))
+                    return TraversalDecision::Continue;
+                if (is<SVGMaskBox>(child_of_svg_container))
+                    return TraversalDecision::SkipChildrenAndContinue;
+                auto& box_state = m_state.get(static_cast<SVGBox const&>(child_of_svg_container));
                 bounding_box.add_point(box_state.offset);
                 bounding_box.add_point(box_state.offset.translated(box_state.content_width(), box_state.content_height()));
-                return IterationDecision::Continue;
+                return TraversalDecision::Continue;
             });
 
             auto& box_state = m_state.get_mutable(descendant);

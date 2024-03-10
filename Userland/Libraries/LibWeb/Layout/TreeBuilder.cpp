@@ -396,6 +396,10 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
 
     if (is<SVG::SVGGraphicsElement>(dom_node)) {
         auto& graphics_element = static_cast<SVG::SVGGraphicsElement&>(dom_node);
+        // Create the layout tree for the SVG mask as a child of the masked element.
+        // Note: This will create a new subtree for each use of the mask (so there's
+        // not a 1-to-1 mapping from DOM node to mask layout node). Each use of a
+        // mask may laid out differently so this duplication is necessary.
         if (auto mask = graphics_element.mask()) {
             TemporaryChange<bool> layout_mask(context.layout_svg_mask, true);
             push_parent(verify_cast<NodeWithStyle>(*layout_node));

@@ -10,7 +10,7 @@
 #include <LibWeb/DOM/Event.h>
 #include <LibWeb/DOM/ShadowRoot.h>
 #include <LibWeb/Layout/Box.h>
-#include <LibWeb/Layout/SVGBox.h>
+#include <LibWeb/Layout/SVGGraphicsBox.h>
 #include <LibWeb/Namespace.h>
 #include <LibWeb/SVG/AttributeNames.h>
 #include <LibWeb/SVG/SVGSVGElement.h>
@@ -185,7 +185,7 @@ JS::GCPtr<SVGElement> SVGUseElement::animated_instance_root() const
 
 JS::GCPtr<Layout::Node> SVGUseElement::create_layout_node(NonnullRefPtr<CSS::StyleProperties> style)
 {
-    return heap().allocate_without_realm<Layout::SVGBox>(document(), *this, move(style));
+    return heap().allocate_without_realm<Layout::SVGGraphicsBox>(document(), *this, move(style));
 }
 
 }

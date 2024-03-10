@@ -23,13 +23,17 @@ public:
 
     virtual Optional<ViewBox> view_box() const override
     {
+        // maskContentUnits = objectBoundingBox acts like the mask is sized to the bounding box
+        // of the target element, with a viewBox of "0 0 1 1".
         if (mask_content_units() == MaskContentUnits::ObjectBoundingBox)
             return ViewBox { 0, 0, 1, 1 };
         return {};
     }
+
     virtual Optional<PreserveAspectRatio> preserve_aspect_ratio() const override
     {
-        return PreserveAspectRatio { PreserveAspectRatio::Align::None, PreserveAspectRatio::MeetOrSlice::Meet };
+        // preserveAspectRatio = none (allow mask to be scaled in both x and y to match target size)
+        return PreserveAspectRatio { PreserveAspectRatio::Align::None, {} };
     }
 
     virtual void attribute_changed(FlyString const& name, Optional<String> const& value) override;
