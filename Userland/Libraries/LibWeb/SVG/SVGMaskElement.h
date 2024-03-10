@@ -8,15 +8,29 @@
 
 #include <LibWeb/SVG/AttributeParser.h>
 #include <LibWeb/SVG/SVGGraphicsElement.h>
+#include <LibWeb/SVG/SVGViewport.h>
 
 namespace Web::SVG {
 
-class SVGMaskElement final : public SVGGraphicsElement {
+class SVGMaskElement final : public SVGGraphicsElement
+    , public SVGViewport {
+
     WEB_PLATFORM_OBJECT(SVGMaskElement, SVGGraphicsElement);
     JS_DECLARE_ALLOCATOR(SVGMaskElement);
 
 public:
     virtual ~SVGMaskElement() override;
+
+    virtual Optional<ViewBox> view_box() const override
+    {
+        if (mask_content_units() == MaskContentUnits::ObjectBoundingBox)
+            return ViewBox { 0, 0, 1, 1 };
+        return {};
+    }
+    virtual Optional<PreserveAspectRatio> preserve_aspect_ratio() const override
+    {
+        return PreserveAspectRatio { PreserveAspectRatio::Align::None, PreserveAspectRatio::MeetOrSlice::Meet };
+    }
 
     virtual void attribute_changed(FlyString const& name, Optional<String> const& value) override;
 

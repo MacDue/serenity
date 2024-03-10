@@ -26,6 +26,7 @@
 #include <LibWeb/Layout/ListItemBox.h>
 #include <LibWeb/Layout/ListItemMarkerBox.h>
 #include <LibWeb/Layout/Node.h>
+#include <LibWeb/Layout/SVGMaskBox.h>
 #include <LibWeb/Layout/TableGrid.h>
 #include <LibWeb/Layout/TableWrapper.h>
 #include <LibWeb/Layout/TextNode.h>
@@ -335,6 +336,10 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
         display = CSS::Display(CSS::DisplayOutside::Inline, CSS::DisplayInside::Flow);
     }
 
+    if (context.layout_svg_mask && is<SVG::SVGMaskElement>(dom_node)) {
+        layout_node = document.heap().allocate_without_realm<Layout::SVGMaskBox>(document, static_cast<SVG::SVGMaskElement&>(dom_node), *style);
+    }
+
     if (!layout_node)
         return;
 
@@ -387,6 +392,16 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
             slottable.visit([&](auto& node) { create_layout_tree(node, context); });
 
         pop_parent();
+    }
+
+    if (is<SVG::SVGGraphicsElement>(dom_node)) {
+        auto& graphics_element = static_cast<SVG::SVGGraphicsElement&>(dom_node);
+        if (auto mask = graphics_element.mask()) {
+            TemporaryChange<bool> layout_mask(context.layout_svg_mask, true);
+            push_parent(verify_cast<NodeWithStyle>(*layout_node));
+            create_layout_tree(const_cast<SVG::SVGMaskElement&>(*mask), context);
+            pop_parent();
+        }
     }
 
     // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
