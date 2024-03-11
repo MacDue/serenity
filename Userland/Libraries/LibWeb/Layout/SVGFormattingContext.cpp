@@ -289,7 +289,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
         return CSSPixels {};
     }();
 
-    auto layout_descendants = [&](Node const& descendant) {
+    for_each_in_subtree(box, [&](Node const& descendant) {
         if (is<SVGMaskBox>(descendant))
             return TraversalDecision::SkipChildrenAndContinue;
         if (is<SVG::SVGViewport>(descendant.dom_node())) {
@@ -389,14 +389,12 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             graphics_box_state.set_computed_svg_path(move(path));
         }
         return TraversalDecision::Continue;
-    };
-
-    for_each_in_subtree(box, layout_descendants);
+    });
 
     // https://svgwg.org/svg2-draft/struct.html#Groups
     // 5.2. Grouping: the ‘g’ element
     // The ‘g’ element is a container element for grouping together related graphics elements.
-    box.for_each_in_inclusive_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
+    box.for_each_in_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
         if (is_container_element(descendant)) {
             Gfx::BoundingBox<CSSPixels> bounding_box;
             for_each_in_subtree(descendant, [&](Node const& child_of_svg_container) {
