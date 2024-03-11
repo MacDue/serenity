@@ -35,7 +35,7 @@ Optional<CSSPixelRect> SVGGraphicsPaintable::get_masking_area() const
     auto* mask_box = graphics_element.layout_node()->first_child_of_type<Layout::SVGMaskBox>();
     if (!mask_box)
         return {};
-    return mask_box->paintable_box()->absolute_border_box_rect();
+    return mask_box->dom_node().resolve_masking_area(mask_box->paintable_box()->absolute_border_box_rect());
 }
 
 static Gfx::Bitmap::MaskKind mask_type_to_gfx_mask_kind(CSS::MaskType mask_type)
