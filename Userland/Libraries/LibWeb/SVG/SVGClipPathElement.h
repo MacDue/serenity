@@ -22,6 +22,9 @@ public:
 
     virtual Optional<ViewBox> view_box() const override
     {
+        // Same trick as SVGMaskElement.
+        if (clip_path_units() == MaskContentUnits::ObjectBoundingBox)
+            return ViewBox { 0, 0, 1, 1 };
         return {};
     }
 
@@ -29,6 +32,8 @@ public:
     {
         return PreserveAspectRatio { PreserveAspectRatio::Align::None, {} };
     }
+
+    virtual void attribute_changed(FlyString const& name, Optional<String> const& value) override;
 
     ClipPathUnits clip_path_units() const
     {
