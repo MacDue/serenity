@@ -30,6 +30,11 @@ public:
         return PreserveAspectRatio { PreserveAspectRatio::Align::None, {} };
     }
 
+    ClipPathUnits clip_path_units() const
+    {
+        return m_clip_path_units.value_or(ClipPathUnits::UserSpaceOnUse);
+    }
+
     virtual JS::GCPtr<Layout::Node> create_layout_node(NonnullRefPtr<CSS::StyleProperties>) override;
 
 private:
