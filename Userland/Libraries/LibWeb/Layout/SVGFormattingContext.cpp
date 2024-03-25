@@ -431,6 +431,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             content_units = static_cast<SVGClipBox const&>(descendant).dom_node().clip_path_units();
         else
             return TraversalDecision::Continue;
+        // FIXME: Somehow limit <clipPath> contents to: shape elements, <text>, and <use>.
         auto& layout_state = m_state.get_mutable(static_cast<Box const&>(descendant));
         auto parent_viewbox_transform = viewbox_transform;
         if (content_units == SVG::SVGUnits::ObjectBoundingBox) {
