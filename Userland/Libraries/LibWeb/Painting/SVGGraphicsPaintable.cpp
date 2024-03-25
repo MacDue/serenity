@@ -75,11 +75,12 @@ RefPtr<Gfx::Bitmap> SVGGraphicsPaintable::calculate_mask(PaintContext& context, 
 {
     auto const& graphics_element = verify_cast<SVG::SVGGraphicsElement const>(*dom_node());
     auto mask_rect = context.enclosing_device_rect(masking_area);
-    auto paint_mask_or_clip = [&](PaintableBox const& mask_paintable) -> RefPtr<Gfx::Bitmap> {
+    auto paint_mask_or_clip = [&](PaintableBox const& mask_paintable, bool is_clip_path = false) -> RefPtr<Gfx::Bitmap> {
         auto mask_bitmap_or_error = Gfx::Bitmap::create(Gfx::BitmapFormat::BGRA8888, mask_rect.size().to_type<int>());
         RefPtr<Gfx::Bitmap> mask_bitmap = {};
         if (mask_bitmap_or_error.is_error())
             return {};
+        (void)is_clip_path;
         mask_bitmap = mask_bitmap_or_error.release_value();
         CommandList painting_commands;
         RecordingPainter recording_painter(painting_commands);
@@ -99,7 +100,7 @@ RefPtr<Gfx::Bitmap> SVGGraphicsPaintable::calculate_mask(PaintContext& context, 
     }
     if (auto* clip_box = graphics_element.layout_node()->first_child_of_type<Layout::SVGClipBox>()) {
         auto& clip_paintable = static_cast<PaintableBox const&>(*clip_box->paintable());
-        auto clip_bitmap = paint_mask_or_clip(clip_paintable);
+        auto clip_bitmap = paint_mask_or_clip(clip_paintable, true);
         if (mask_bitmap && clip_bitmap)
             mask_bitmap->apply_mask(*clip_bitmap, Gfx::Bitmap::MaskKind::Alpha);
         if (!mask_bitmap)
