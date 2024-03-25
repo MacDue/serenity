@@ -26,6 +26,7 @@
 #include <LibWeb/Layout/ListItemBox.h>
 #include <LibWeb/Layout/ListItemMarkerBox.h>
 #include <LibWeb/Layout/Node.h>
+#include <LibWeb/Layout/SVGClipBox.h>
 #include <LibWeb/Layout/SVGMaskBox.h>
 #include <LibWeb/Layout/TableGrid.h>
 #include <LibWeb/Layout/TableWrapper.h>
@@ -349,6 +350,10 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
         // We're here if our parent is a use of an SVG mask, but we don't want to lay out any <mask> elements that could be a child of this mask.
         context.layout_svg_mask = false;
     }
+    if (context.layout_svg_clip_path && is<SVG::SVGClipPathElement>(dom_node)) {
+        layout_node = document.heap().allocate_without_realm<Layout::SVGClipBox>(document, static_cast<SVG::SVGClipPathElement&>(dom_node), *style);
+        context.layout_svg_clip_path = false;
+    }
 
     if (!layout_node)
         return;
@@ -413,6 +418,12 @@ void TreeBuilder::create_layout_tree(DOM::Node& dom_node, TreeBuilder::Context& 
             TemporaryChange<bool> layout_mask(context.layout_svg_mask, true);
             push_parent(verify_cast<NodeWithStyle>(*layout_node));
             create_layout_tree(const_cast<SVG::SVGMaskElement&>(*mask), context);
+            pop_parent();
+        }
+        if (auto clip_path = graphics_element.clip_path()) {
+            TemporaryChange<bool> layout_mask(context.layout_svg_clip_path, true);
+            push_parent(verify_cast<NodeWithStyle>(*layout_node));
+            create_layout_tree(const_cast<SVG::SVGClipPathElement&>(*clip_path), context);
             pop_parent();
         }
     }

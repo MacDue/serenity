@@ -12,12 +12,14 @@
 #include <LibGfx/Font/ScaledFont.h>
 #include <LibGfx/TextLayout.h>
 #include <LibWeb/Layout/BlockFormattingContext.h>
+#include <LibWeb/Layout/SVGClipBox.h>
 #include <LibWeb/Layout/SVGFormattingContext.h>
 #include <LibWeb/Layout/SVGGeometryBox.h>
 #include <LibWeb/Layout/SVGMaskBox.h>
 #include <LibWeb/Layout/SVGSVGBox.h>
 #include <LibWeb/Layout/SVGTextBox.h>
 #include <LibWeb/Layout/SVGTextPathBox.h>
+#include <LibWeb/SVG/SVGClipPathElement.h>
 #include <LibWeb/SVG/SVGForeignObjectElement.h>
 #include <LibWeb/SVG/SVGGElement.h>
 #include <LibWeb/SVG/SVGMaskElement.h>
@@ -290,7 +292,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
     }();
 
     for_each_in_subtree(box, [&](Node const& descendant) {
-        if (is<SVGMaskBox>(descendant))
+        if (is<SVGMaskBox>(descendant) || is<SVGClipBox>(descendant))
             return TraversalDecision::SkipChildrenAndContinue;
         if (is<SVG::SVGViewport>(descendant.dom_node())) {
             // Layout for a nested SVG viewport.
@@ -439,6 +441,27 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
         mask_state.set_has_definite_width(true);
         mask_state.set_has_definite_height(true);
         nested_context.run(static_cast<Box const&>(mask_box), layout_mode, available_space);
+        return IterationDecision::Continue;
+    });
+
+    box.for_each_in_subtree_of_type<SVGClipBox>([&](SVGClipBox const& clip_box) {
+        auto& mask_state = m_state.get_mutable(static_cast<Box const&>(clip_box));
+        auto parent_viewbox_transform = viewbox_transform;
+        // if (mask_box.dom_node().mask_content_units() == SVG::MaskContentUnits::ObjectBoundingBox) {
+        //     auto* masked_node = mask_box.parent();
+        //     auto& masked_node_state = m_state.get(*masked_node);
+        //     mask_state.set_content_width(masked_node_state.content_width());
+        //     mask_state.set_content_height(masked_node_state.content_height());
+        //     parent_viewbox_transform = Gfx::AffineTransform {}.translate(masked_node_state.offset.to_type<float>());
+        // } else {
+        mask_state.set_content_width(viewport_width);
+        mask_state.set_content_height(viewport_height);
+        // }
+        // Pretend masks are a viewport so we can scale the contents depending on the `maskContentUnits`.
+        SVGFormattingContext nested_context(m_state, static_cast<Box const&>(clip_box), this, parent_viewbox_transform);
+        mask_state.set_has_definite_width(true);
+        mask_state.set_has_definite_height(true);
+        nested_context.run(static_cast<Box const&>(clip_box), layout_mode, available_space);
         return IterationDecision::Continue;
     });
 }
