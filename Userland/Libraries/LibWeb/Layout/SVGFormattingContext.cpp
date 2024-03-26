@@ -402,8 +402,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
             for_each_in_subtree(descendant, [&](Node const& child_of_svg_container) {
                 if (!is<SVGBox>(child_of_svg_container))
                     return TraversalDecision::Continue;
-                // Masks do not change the bounding box of their parents.
-                if (is<SVGMaskBox>(child_of_svg_container))
+                // Masks/clips do not change the bounding box of their parents.
+                if (is<SVGMaskBox>(child_of_svg_container) || is<SVGClipBox>(child_of_svg_container))
                     return TraversalDecision::SkipChildrenAndContinue;
                 auto& box_state = m_state.get(static_cast<SVGBox const&>(child_of_svg_container));
                 bounding_box.add_point(box_state.offset);
