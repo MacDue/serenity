@@ -3,7 +3,6 @@ set(SOURCES
     AntiAliasingPainter.cpp
     Bitmap.cpp
     BitmapMixer.cpp
-    Canvas.cpp
     CMYKBitmap.cpp
     ClassicStylePainter.cpp
     ClassicWindowTheme.cpp
