@@ -61,7 +61,7 @@ Gfx::Color border_color(BorderEdge edge, BordersDataDevicePixels const& borders_
     return border_data.color;
 }
 
-void paint_border(Gfx::Painter& painter, BorderEdge edge, DevicePixelRect const& rect, Gfx::AntiAliasingPainter::CornerRadius const& radius, Gfx::AntiAliasingPainter::CornerRadius const& opposite_radius, BordersDataDevicePixels const& borders_data, Gfx::Path& path, bool last)
+void paint_border(Gfx::Canvas& painter, BorderEdge edge, DevicePixelRect const& rect, Gfx::AntiAliasingPainter::CornerRadius const& radius, Gfx::AntiAliasingPainter::CornerRadius const& opposite_radius, BordersDataDevicePixels const& borders_data, Gfx::Path& path, bool last)
 {
     auto const& border_data = [&] {
         switch (edge) {
@@ -80,76 +80,76 @@ void paint_border(Gfx::Painter& painter, BorderEdge edge, DevicePixelRect const&
         return;
 
     auto color = border_color(edge, borders_data);
-    auto border_style = border_data.line_style;
+    // auto border_style = border_data.line_style;
 
     struct Points {
         DevicePixelPoint p1;
         DevicePixelPoint p2;
     };
 
-    auto points_for_edge = [](BorderEdge edge, DevicePixelRect const& rect) -> Points {
-        switch (edge) {
-        case BorderEdge::Top:
-            return { rect.top_left(), rect.top_right().moved_left(1) };
-        case BorderEdge::Right:
-            return { rect.top_right().moved_left(1), rect.bottom_right().translated(-1) };
-        case BorderEdge::Bottom:
-            return { rect.bottom_left().moved_up(1), rect.bottom_right().translated(-1) };
-        default: // Edge::Left
-            return { rect.top_left(), rect.bottom_left().moved_up(1) };
-        }
-    };
+    // auto points_for_edge = [](BorderEdge edge, DevicePixelRect const& rect) -> Points {
+    //     switch (edge) {
+    //     case BorderEdge::Top:
+    //         return { rect.top_left(), rect.top_right().moved_left(1) };
+    //     case BorderEdge::Right:
+    //         return { rect.top_right().moved_left(1), rect.bottom_right().translated(-1) };
+    //     case BorderEdge::Bottom:
+    //         return { rect.bottom_left().moved_up(1), rect.bottom_right().translated(-1) };
+    //     default: // Edge::Left
+    //         return { rect.top_left(), rect.bottom_left().moved_up(1) };
+    //     }
+    // };
 
-    auto gfx_line_style = Gfx::Painter::LineStyle::Solid;
-    switch (border_style) {
-    case CSS::LineStyle::None:
-    case CSS::LineStyle::Hidden:
-        return;
-    case CSS::LineStyle::Dotted:
-        gfx_line_style = Gfx::Painter::LineStyle::Dotted;
-        break;
-    case CSS::LineStyle::Dashed:
-        gfx_line_style = Gfx::Painter::LineStyle::Dashed;
-        break;
-    case CSS::LineStyle::Solid:
-        gfx_line_style = Gfx::Painter::LineStyle::Solid;
-        break;
-    case CSS::LineStyle::Double:
-    case CSS::LineStyle::Groove:
-    case CSS::LineStyle::Ridge:
-    case CSS::LineStyle::Inset:
-    case CSS::LineStyle::Outset:
-        // FIXME: Implement these
-        break;
-    }
+    // auto gfx_line_style = Gfx::Painter::LineStyle::Solid;
+    // switch (border_style) {
+    // case CSS::LineStyle::None:
+    // case CSS::LineStyle::Hidden:
+    //     return;
+    // case CSS::LineStyle::Dotted:
+    //     gfx_line_style = Gfx::Painter::LineStyle::Dotted;
+    //     break;
+    // case CSS::LineStyle::Dashed:
+    //     gfx_line_style = Gfx::Painter::LineStyle::Dashed;
+    //     break;
+    // case CSS::LineStyle::Solid:
+    //     gfx_line_style = Gfx::Painter::LineStyle::Solid;
+    //     break;
+    // case CSS::LineStyle::Double:
+    // case CSS::LineStyle::Groove:
+    // case CSS::LineStyle::Ridge:
+    // case CSS::LineStyle::Inset:
+    // case CSS::LineStyle::Outset:
+    //     // FIXME: Implement these
+    //     break;
+    // }
 
-    if (gfx_line_style != Gfx::Painter::LineStyle::Solid) {
-        auto [p1, p2] = points_for_edge(edge, rect);
-        switch (edge) {
-        case BorderEdge::Top:
-            p1.translate_by(border_data.width / 2, border_data.width / 2);
-            p2.translate_by(-border_data.width / 2, border_data.width / 2);
-            break;
-        case BorderEdge::Right:
-            p1.translate_by(-border_data.width / 2, border_data.width / 2);
-            p2.translate_by(-border_data.width / 2, -border_data.width / 2);
-            break;
-        case BorderEdge::Bottom:
-            p1.translate_by(border_data.width / 2, -border_data.width / 2);
-            p2.translate_by(-border_data.width / 2, -border_data.width / 2);
-            break;
-        case BorderEdge::Left:
-            p1.translate_by(border_data.width / 2, border_data.width / 2);
-            p2.translate_by(border_data.width / 2, -border_data.width / 2);
-            break;
-        }
-        if (border_style == CSS::LineStyle::Dotted) {
-            painter.draw_line(p1.to_type<int>(), p2.to_type<int>(), color, border_data.width.value(), gfx_line_style);
-            return;
-        }
-        painter.draw_line(p1.to_type<int>(), p2.to_type<int>(), color, border_data.width.value(), gfx_line_style);
-        return;
-    }
+    // if (gfx_line_style != Gfx::Painter::LineStyle::Solid) {
+    //     auto [p1, p2] = points_for_edge(edge, rect);
+    //     switch (edge) {
+    //     case BorderEdge::Top:
+    //         p1.translate_by(border_data.width / 2, border_data.width / 2);
+    //         p2.translate_by(-border_data.width / 2, border_data.width / 2);
+    //         break;
+    //     case BorderEdge::Right:
+    //         p1.translate_by(-border_data.width / 2, border_data.width / 2);
+    //         p2.translate_by(-border_data.width / 2, -border_data.width / 2);
+    //         break;
+    //     case BorderEdge::Bottom:
+    //         p1.translate_by(border_data.width / 2, -border_data.width / 2);
+    //         p2.translate_by(-border_data.width / 2, -border_data.width / 2);
+    //         break;
+    //     case BorderEdge::Left:
+    //         p1.translate_by(border_data.width / 2, border_data.width / 2);
+    //         p2.translate_by(border_data.width / 2, -border_data.width / 2);
+    //         break;
+    //     }
+    //     if (border_style == CSS::LineStyle::Dotted) {
+    //         // painter.draw_line(p1.to_type<int>(), p2.to_type<int>(), color, border_data.width.value(), gfx_line_style);
+    //         return;
+    //     }
+    //     painter.draw_line(p1.to_type<int>(), p2.to_type<int>(), color, border_data.width.value(), gfx_line_style);
+    //     return;
+    // }
 
     auto draw_border = [&](Vector<Gfx::FloatPoint> const& points, bool joined_corner_has_inner_corner, bool opposite_joined_corner_has_inner_corner, Gfx::FloatSize joined_inner_corner_offset, Gfx::FloatSize opposite_joined_inner_corner_offset, bool ready_to_draw) {
         int current = 0;
@@ -189,8 +189,7 @@ void paint_border(Gfx::Painter& painter, BorderEdge edge, DevicePixelRect const&
         // If joined borders have the same color, combine them to draw together.
         if (ready_to_draw) {
             path.close_all_subpaths();
-            Gfx::AntiAliasingPainter aa_painter(painter);
-            aa_painter.fill_path(path, color, Gfx::Painter::WindingRule::EvenOdd);
+            painter.fill_path(path, color, Gfx::Painter::WindingRule::EvenOdd);
             path.clear();
         }
     };
@@ -490,7 +489,7 @@ void paint_border(Gfx::Painter& painter, BorderEdge edge, DevicePixelRect const&
     }
 }
 
-void paint_all_borders(Gfx::Painter& painter, DevicePixelRect const& border_rect, CornerRadii const& corner_radii, BordersDataDevicePixels const& borders_data)
+void paint_all_borders(Gfx::Canvas& painter, DevicePixelRect const& border_rect, CornerRadii const& corner_radii, BordersDataDevicePixels const& borders_data)
 {
     if (borders_data.top.width <= 0 && borders_data.right.width <= 0 && borders_data.left.width <= 0 && borders_data.bottom.width <= 0)
         return;

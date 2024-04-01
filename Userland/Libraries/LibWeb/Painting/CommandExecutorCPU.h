@@ -7,6 +7,7 @@
 #pragma once
 
 #include <AK/MaybeOwned.h>
+#include <LibGfx/Canvas.h>
 #include <LibWeb/Painting/RecordingPainter.h>
 
 namespace Web::Painting {
@@ -57,20 +58,7 @@ public:
 
 private:
     Gfx::Bitmap& m_target_bitmap;
-    Vector<RefPtr<BorderRadiusCornerClipper>> m_corner_clippers;
-
-    struct StackingContext {
-        MaybeOwned<Gfx::Painter> painter;
-        float opacity;
-        Gfx::IntRect destination;
-        Gfx::Painter::ScalingMode scaling_mode;
-        Optional<StackingContextMask> mask = {};
-    };
-
-    [[nodiscard]] Gfx::Painter const& painter() const { return *stacking_contexts.last().painter; }
-    [[nodiscard]] Gfx::Painter& painter() { return *stacking_contexts.last().painter; }
-
-    Vector<StackingContext> stacking_contexts;
+    Gfx::Canvas m_canvas;
 };
 
 }
