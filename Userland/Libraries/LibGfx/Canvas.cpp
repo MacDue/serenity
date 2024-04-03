@@ -81,11 +81,15 @@ void Canvas::fill_path(Path const& path, PaintStyle const& style, float opacity,
 
 void Canvas::stroke_path(Path const& path, Color color, float thickness)
 {
+    if (thickness <= 0)
+        return;
     return fill_path(path.stroke_to_fill(thickness), color);
 }
 
 void Canvas::stroke_path(Path const& path, PaintStyle const& style, float thickness, float opacity)
 {
+    if (thickness <= 0)
+        return;
     return fill_path(path.stroke_to_fill(thickness), style, opacity);
 }
 
