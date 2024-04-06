@@ -396,6 +396,7 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
     // https://svgwg.org/svg2-draft/struct.html#Groups
     // 5.2. Grouping: the ‘g’ element
     // The ‘g’ element is a container element for grouping together related graphics elements.
+
     box.for_each_in_subtree_of_type<SVGBox>([&](SVGBox const& descendant) {
         if (is_container_element(descendant)) {
             Gfx::BoundingBox<CSSPixels> bounding_box;
@@ -405,6 +406,8 @@ void SVGFormattingContext::run(Box const& box, LayoutMode layout_mode, Available
                 // Masks/clips do not change the bounding box of their parents.
                 if (is<SVGMaskBox>(child_of_svg_container) || is<SVGClipBox>(child_of_svg_container))
                     return TraversalDecision::SkipChildrenAndContinue;
+                if (is_container_element(child_of_svg_container))
+                    return TraversalDecision::Continue;
                 auto& box_state = m_state.get(static_cast<SVGBox const&>(child_of_svg_container));
                 bounding_box.add_point(box_state.offset);
                 bounding_box.add_point(box_state.offset.translated(box_state.content_width(), box_state.content_height()));
