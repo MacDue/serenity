@@ -443,9 +443,9 @@ void SVGFormattingContext::layout_container_element(SVGBox const& container)
         if (is<SVGMaskBox>(child) || is<SVGClipBox>(child))
             return;
         layout_svg_element(child);
-        auto& box_state = m_state.get(child);
-        bounding_box.add_point(box_state.offset);
-        bounding_box.add_point(box_state.offset.translated(box_state.content_width(), box_state.content_height()));
+        auto& child_state = m_state.get(child);
+        bounding_box.add_point(child_state.offset);
+        bounding_box.add_point(child_state.offset.translated(child_state.content_width(), child_state.content_height()));
     });
     box_state.set_content_x(bounding_box.x());
     box_state.set_content_y(bounding_box.y());

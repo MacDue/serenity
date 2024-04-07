@@ -247,14 +247,10 @@ Optional<float> SVGGraphicsElement::stroke_width() const
 
 JS::NonnullGCPtr<Geometry::DOMRect> SVGGraphicsElement::get_b_box(Optional<SVGBoundingBoxOptions>)
 {
-    return Geometry::DOMRect::create(realm());
-    // if (!layout_node())
-    const_cast<DOM::Document&>(document()).update_layout();
+    if (!layout_node())
+        const_cast<DOM::Document&>(document()).update_layout();
     auto svg_element_rect = shadow_including_first_ancestor_of_type<SVG::SVGSVGElement>()->paintable_box()->absolute_rect();
-    ;
     auto inverse_transform = static_cast<Painting::SVGGraphicsPaintable&>(*paintable_box()).computed_transforms().svg_to_css_pixels_transform().inverse();
-    // dbgln("{}, {}, {}", svg_element_rect, inverse_transform,       paintable_box()->absolute_rect().to_type<float>() );
-
     return Geometry::DOMRect::create(realm(),
         inverse_transform->map(
             paintable_box()->absolute_rect().to_type<float>().translated(-svg_element_rect.location().to_type<float>())));
