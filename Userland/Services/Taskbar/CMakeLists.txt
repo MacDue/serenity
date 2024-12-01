@@ -12,6 +12,7 @@ set(SOURCES
     TaskbarButton.cpp
     TaskbarWindow.cpp
     WindowList.cpp
+    TaskbarFrame.cpp
 )
 
 serenity_bin(Taskbar)

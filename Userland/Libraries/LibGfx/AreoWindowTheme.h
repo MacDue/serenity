@@ -18,6 +18,10 @@ class AreoWindowTheme : public ClassicWindowTheme {
     {
         return titlebar_rect(type, mode, window_rect, palette);
     }
+    virtual bool frame_uses_alpha(WindowState, Palette const&) const override
+    {
+        return true;
+    }
     virtual Vector<IntRect> layout_buttons(WindowType, WindowMode, IntRect const& window_rect, Palette const&, size_t buttons) const override;
 
     virtual float frame_alpha_hit_threshold(WindowState) const override { return 0.6f; }

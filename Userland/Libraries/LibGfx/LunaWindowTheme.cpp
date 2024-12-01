@@ -14,7 +14,7 @@
 
 namespace Gfx {
 
-static const Array s_luna_title_gradient {
+static Array const s_luna_title_gradient {
     ColorStop { Color(9, 151, 255), 0.00f },
     ColorStop { Color(0, 83, 238), 0.14f },
     ColorStop { Color(0, 80, 238), 0.40f },
@@ -122,13 +122,14 @@ void LunaWindowTheme::paint_normal_frame(Painter& painter, WindowState window_st
         for (unsigned x = 0; x < s_window_border_radius_mask.width(); x++) {
             auto bit = s_window_border_radius_mask.bit_at(x, y);
             auto bit2 = s_window_border_radius_accent.bit_at(x, y);
+            Gfx::IntRect point(0, 0, 1, 1);
             if (bit) {
-                painter.set_pixel(loc.translated(x, y), Color());
-                painter.set_pixel(loc2.translated(5 - x, y), Color());
+                painter.clear_rect(point.translated(loc).translated(x, y), Color());
+                painter.clear_rect(point.translated(loc2).translated(5 - x, y), Color());
             }
             if (bit2) {
-                painter.set_pixel(loc.translated(x, y), base_color);
-                painter.set_pixel(loc2.translated(5 - x, y), base_color);
+                painter.clear_rect(point.translated(loc).translated(x, y), base_color);
+                painter.clear_rect(point.translated(loc2).translated(5 - x, y), base_color);
             }
         }
     }

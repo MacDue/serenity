@@ -93,7 +93,6 @@ set(SOURCES
     TextLayout.cpp
     Triangle.cpp
     VectorGraphic.cpp
-    WindowTheme.cpp
     LunaWindowTheme.cpp
     AreoWindowTheme.cpp
 )

@@ -19,6 +19,10 @@ class LunaWindowTheme : public ClassicWindowTheme {
     {
         return titlebar_rect(type, mode, window_rect, palette);
     }
+    virtual bool frame_uses_alpha(WindowState, Palette const&) const override
+    {
+        return true;
+    }
     virtual Vector<IntRect> layout_buttons(WindowType, WindowMode, IntRect const& window_rect, Palette const&, size_t buttons) const override;
 
     virtual void paint_taskbar(Painter&, IntRect const& taskbar_rect, Palette const&) const override;
