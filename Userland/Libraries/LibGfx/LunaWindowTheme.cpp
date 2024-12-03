@@ -172,12 +172,8 @@ void LunaWindowTheme::paint_button(Painter& painter, IntRect const& rect, Palett
     if (focused)
         return;
 
-    painter.fill_rect_with_linear_gradient(rect,
-        s_button_gradient_base,
-        180);
-    painter.fill_rect_with_linear_gradient(rect,
-        s_button_gradient_overlay,
-        160);
+    painter.fill_rect_with_linear_gradient(rect, s_button_gradient_base, 180);
+    painter.fill_rect_with_linear_gradient(rect, s_button_gradient_overlay, 160);
     painter.draw_rect(rect, Color(38, 83, 174));
 }
 
