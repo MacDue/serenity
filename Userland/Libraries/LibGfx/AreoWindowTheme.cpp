@@ -14,7 +14,8 @@
 
 namespace Gfx {
 
-static const Array s_areo_title_gradient {
+// TODO: Somehow allow colors to be configured in the theme .ini file.
+static Array const s_areo_title_gradient {
     ColorStop { Color(25, 40, 55, 191), 0.35f },
     ColorStop { Color(65, 85, 100, 191), 0.40f },
     ColorStop { Color(65, 85, 100, 191), 0.42f },
@@ -55,9 +56,9 @@ static constexpr Gfx::CharacterBitmap s_window_border_radius_accent2 {
 IntRect AreoWindowTheme::titlebar_rect(WindowType window_type, WindowMode window_mode, IntRect const& window_rect, Palette const& palette) const
 {
     auto window_titlebar_height = titlebar_height(window_type, window_mode, palette);
-    // TODO:
+    // FIXME: Theme notifications.
     if (window_type == WindowType::Notification)
-        return {};
+        return ClassicWindowTheme::titlebar_rect(window_type, window_mode, window_rect, palette);
     return { 0, 0, window_rect.width() + palette.window_border_thickness() * 2, window_titlebar_height };
 }
 
@@ -66,8 +67,6 @@ void AreoWindowTheme::paint_normal_frame(Painter& painter, WindowState window_st
     (void)window_state;
     (void)icon;
     (void)window_modified;
-
-    (void)s_window_border_radius_mask;
 
     auto base_color = Color(2, 3, 4, 219);
 
@@ -108,17 +107,18 @@ void AreoWindowTheme::paint_normal_frame(Painter& painter, WindowState window_st
             auto bit = s_window_border_radius_mask.bit_at(x, y);
             auto bit2 = s_window_border_radius_accent.bit_at(x, y);
             auto bit3 = s_window_border_radius_accent2.bit_at(x, y);
+            Gfx::IntRect point(0, 0, 1, 1);
             if (bit) {
-                painter.set_pixel(loc.translated(x, y), Color());
-                painter.set_pixel(loc2.translated(5 - x, y), Color());
+                painter.clear_rect(point.translated(loc).translated(x, y), Color());
+                painter.clear_rect(point.translated(loc2).translated(5 - x, y), Color());
             }
             if (bit2) {
-                painter.set_pixel(loc.translated(x, y), base_color, true);
-                painter.set_pixel(loc2.translated(5 - x, y), base_color, true);
+                painter.fill_rect(point.translated(loc).translated(x, y), base_color);
+                painter.fill_rect(point.translated(loc2).translated(5 - x, y), base_color);
             }
             if (bit3) {
-                painter.set_pixel(loc.translated(x, y), Color(235, 235, 236, 170), true);
-                painter.set_pixel(loc2.translated(5 - x, y), Color(235, 235, 236, 170), true);
+                painter.fill_rect(point.translated(loc).translated(x, y), Color(235, 235, 236, 170));
+                painter.fill_rect(point.translated(loc2).translated(5 - x, y), Color(235, 235, 236, 170));
             }
         }
     }
@@ -135,7 +135,11 @@ Vector<IntRect> AreoWindowTheme::layout_buttons(WindowType window_type, WindowMo
 
 void AreoWindowTheme::paint_taskbar(Painter& painter, IntRect const& taskbar_rect, Palette const&) const
 {
+    auto base_color = Color(2, 3, 4, 219);
+    painter.clear_rect(taskbar_rect, Color::Transparent);
     painter.fill_rect_with_linear_gradient(taskbar_rect, s_areo_title_gradient, 45, 0.9f);
+    painter.draw_line(taskbar_rect.top_left(), taskbar_rect.top_right(), base_color, 1);
+    painter.draw_line(taskbar_rect.top_left().translated(0, 1), taskbar_rect.top_right().translated(0, 1), Color(235, 235, 236, 170), 1);
 }
 
 }
