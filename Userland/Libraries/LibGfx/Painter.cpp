@@ -623,9 +623,9 @@ void Painter::draw_rect_with_thickness(IntRect const& rect, Color color, int thi
     IntPoint p3 = { rect.location().x() + rect.width(), rect.location().y() + rect.height() };
     IntPoint p4 = { rect.location().x(), rect.location().y() + rect.height() };
 
-    draw_line(p1, p2, color, thickness);
+    draw_line(p1.translated(1, 0), p2.translated(-1, 0), color, thickness);
     draw_line(p2, p3, color, thickness);
-    draw_line(p3, p4, color, thickness);
+    draw_line(p4.translated(1, 0), p3.translated(-1, 0), color, thickness);
     draw_line(p4, p1, color, thickness);
 }
 
@@ -1939,6 +1939,13 @@ void Painter::draw_line(IntPoint a_p1, IntPoint a_p2, Color color, int thickness
 
     auto alternate_color_is_transparent = alternate_color == Color::Transparent;
 
+    auto round_up_amount = [](int n, int multiple) {
+        int remainder = n % multiple;
+        if (remainder > 0)
+            return multiple - remainder;
+        return 0;
+    };
+
     // Special case: vertical line.
     if (point1.x() == point2.x()) {
         int const x = point1.x();
@@ -1967,9 +1974,9 @@ void Painter::draw_line(IntPoint a_p1, IntPoint a_p2, Color color, int thickness
                 }
             }
         } else {
+            max_y += round_up_amount(max_y - min_y, thickness);
             for (int y = min_y; y <= max_y; y += thickness)
                 draw_physical_pixel({ x, y }, color, thickness);
-            draw_physical_pixel({ x, max_y }, color, thickness);
         }
         return;
     }
@@ -2002,9 +2009,9 @@ void Painter::draw_line(IntPoint a_p1, IntPoint a_p2, Color color, int thickness
                 }
             }
         } else {
+            max_x += round_up_amount(max_x - min_x, thickness);
             for (int x = min_x; x <= max_x; x += thickness)
                 draw_physical_pixel({ x, y }, color, thickness);
-            draw_physical_pixel({ max_x, y }, color, thickness);
         }
         return;
     }
