@@ -30,6 +30,20 @@ struct Sample {
     static_assert(!first_is_one_of(SamplesPerPixel, 8u, 16u, 32u), "EdgeFlagPathRasterizer: Invalid samples per pixel!");
 };
 
+// One-bit sample (used for no anti-aliasing).
+template<>
+struct Sample<1> {
+    using Type = u8;
+    static constexpr Array nrooks_subpixel_offsets {
+        (0.0f / 1.0f),
+    };
+
+    static u8 compute_coverage(Type sample)
+    {
+        return coverage_lut[sample];
+    }
+};
+
 // See paper for diagrams for how these offsets work, but they allow for nicely spread out samples in each pixel.
 template<>
 struct Sample<8> {
@@ -230,6 +244,7 @@ private:
     } m_edge_table;
 };
 
+extern template class EdgeFlagPathRasterizer<1>;
 extern template class EdgeFlagPathRasterizer<8>;
 extern template class EdgeFlagPathRasterizer<16>;
 extern template class EdgeFlagPathRasterizer<32>;

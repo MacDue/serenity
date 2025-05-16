@@ -466,6 +466,7 @@ void AntiAliasingPainter::fill_path(Path const& path, PaintStyle const& paint_st
     rasterizer.fill(m_underlying_painter, path, paint_style, opacity, winding_rule, m_transform.translation());
 }
 
+template class EdgeFlagPathRasterizer<1>;
 template class EdgeFlagPathRasterizer<8>;
 template class EdgeFlagPathRasterizer<16>;
 template class EdgeFlagPathRasterizer<32>;
