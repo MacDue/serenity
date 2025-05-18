@@ -736,8 +736,8 @@ void draw_gouraud_triangle(Gfx::Painter& painter, NonnullRefPtr<ColorSpace> colo
 
     auto paint_style = GouraudPaintStyle::create(move(color_space), move(functions), move(points), move(colors));
 
-    // To hide triangle edges. (Setting this to <8> is useful for debugging; it makes triangle edges visible.)
-    using NoAARasterizer = Gfx::EdgeFlagPathRasterizer<1>;
+    // To hide triangle edges. (Setting this to <Gfx::Sample8xAA> is useful for debugging; it makes triangle edges visible.)
+    using NoAARasterizer = Gfx::EdgeFlagPathRasterizer<Gfx::Sample8xNoAA>;
     NoAARasterizer rasterizer(enclosing_int_rect(triangle_path.bounding_box()).size());
     rasterizer.fill(painter, triangle_path, paint_style, 1.0f, Gfx::WindingRule::Nonzero);
 }
