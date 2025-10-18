@@ -33,6 +33,8 @@ protected:
 private:
     template<typename Callback>
     PDFErrorOr<Gfx::FloatPoint> for_each_glyph_position(Gfx::FloatPoint, ByteString const&, Renderer const&, Callback callback);
+    PDFErrorOr<Gfx::FloatPoint> draw_transformed_glyphs(Gfx::Painter&, Gfx::FloatPoint, ByteString const&, Renderer const&);
+    PDFErrorOr<Gfx::FloatPoint> draw_axis_aligned_glyphs(Gfx::Painter&, Gfx::FloatPoint, ByteString const&, Renderer const&);
 
     RefPtr<Encoding> m_encoding;
     RefPtr<StreamObject> m_to_unicode;
